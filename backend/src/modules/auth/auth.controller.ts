@@ -65,3 +65,47 @@ export const refreshToken = async (req: Request, res: Response, next: NextFuncti
     next(err);
   }
 };
+
+/**
+ * PUT /api/v1/auth/pin
+ * Body: { pin } — authenticated (parent JWT).
+ * Sets or rotates the parent's device-unlock PIN.
+ */
+export const setPin = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    await authService.setParentPin(req.user!.userId, req.body.pin);
+    respond(res, 200, { pin_set: true }, req);
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * POST /api/v1/auth/pin/verify
+ * Body: { email, pin }
+ * Returns a short-lived scoped token when the PIN is correct.
+ */
+export const verifyPin = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { email, pin } = req.body;
+    const session = await authService.verifyPin(email, pin);
+    respond(res, 200, session, req);
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * POST /api/v1/auth/biometric-token
+ * Body: { email, password }
+ * Returns a short-lived scoped token for biometric-unlock flows.
+ */
+export const biometricToken = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { email, password } = req.body;
+    const session = await authService.issueBiometricToken(email, password);
+    respond(res, 200, session, req);
+  } catch (err) {
+    next(err);
+  }
+};

@@ -5,8 +5,16 @@
 
 import { Router } from 'express';
 import { authLimiter } from '../../middleware/rateLimiter';
+import { authenticateJWT } from '../../middleware/auth';
 import { validate } from '../../middleware/validate';
-import { loginSchema, refreshTokenSchema, registerSchema } from './auth.dto';
+import {
+  biometricTokenSchema,
+  loginSchema,
+  refreshTokenSchema,
+  registerSchema,
+  setPinSchema,
+  verifyPinSchema,
+} from './auth.dto';
 import * as authController from './auth.controller';
 
 const router = Router();
@@ -21,5 +29,15 @@ router.post('/login', authLimiter, validate(loginSchema), authController.login);
 
 // POST /api/v1/auth/refresh-token
 router.post('/refresh-token', authLimiter, validate(refreshTokenSchema), authController.refreshToken);
+
+// PUT /api/v1/auth/pin — set/rotate the parent's device-unlock PIN
+router.put('/pin', authenticateJWT, validate(setPinSchema), authController.setPin);
+
+// POST /api/v1/auth/pin/verify — returns a short-lived scoped token
+router.post('/pin/verify', authLimiter, validate(verifyPinSchema), authController.verifyPin);
+
+// POST /api/v1/auth/biometric-token — short-lived scoped token after
+// a successful biometric prompt (password is exchanged once).
+router.post('/biometric-token', authLimiter, validate(biometricTokenSchema), authController.biometricToken);
 
 export default router;

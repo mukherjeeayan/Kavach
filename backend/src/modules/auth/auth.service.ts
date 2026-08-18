@@ -7,6 +7,7 @@ import pool, { query } from '../../config/database';
 import { UnauthorizedError, ConflictError } from '../../utils/errors';
 import {
   signAccessToken,
+  signScopedToken,
   issueRefreshToken,
   hashToken,
   verifyRefreshToken,
@@ -165,5 +166,66 @@ export const refreshAccessToken = async (
   return {
     token: signAccessToken(decoded.userId, 'parent'),
     refresh_token: await issueRefreshToken(decoded.userId),
+  };
+};
+
+/**
+ * Set (or rotate) the parent's device-unlock PIN. Stored as a bcrypt
+ * hash — never plaintext.
+ */
+export const setParentPin = async (parentId: string, pin: string): Promise<void> => {
+  const pinHash = await bcrypt.hash(pin, bcryptRounds);
+  await query(`UPDATE parents SET parental_pin_hash = $1 WHERE id = $2`, [pinHash, parentId]);
+};
+
+/**
+ * Verify the parent's PIN and return a short-lived scoped token used
+ * to unlock parent controls on the child's device.
+ */
+export const verifyPin = async (
+  email: string,
+  pin: string
+): Promise<{ token: string; user: AuthUser }> => {
+  const result = await query(
+    `SELECT id, email, name, parental_pin_hash FROM parents WHERE email = $1`,
+    [email.toLowerCase().trim()]
+  );
+  const row = result.rows[0];
+  const valid = row && row.parental_pin_hash && (await bcrypt.compare(pin, row.parental_pin_hash));
+
+  if (!valid) {
+    throw new UnauthorizedError('Invalid PIN');
+  }
+
+  const user: AuthUser = { id: row.id, email: row.email, name: row.name };
+  return {
+    token: signScopedToken(row.id, 'parent', 'pin', '15m'),
+    user,
+  };
+};
+
+/**
+ * Exchange the parent's password for a short-lived scoped token used
+ * immediately after a successful biometric prompt.
+ */
+export const issueBiometricToken = async (
+  email: string,
+  password: string
+): Promise<{ token: string; user: AuthUser }> => {
+  const result = await query(
+    `SELECT id, email, name, password_hash FROM parents WHERE email = $1`,
+    [email.toLowerCase().trim()]
+  );
+  const row = result.rows[0];
+  const valid = row && password && (await bcrypt.compare(password, row.password_hash));
+
+  if (!valid) {
+    throw new UnauthorizedError('Invalid email or password');
+  }
+
+  const user: AuthUser = { id: row.id, email: row.email, name: row.name };
+  return {
+    token: signScopedToken(row.id, 'parent', 'biometric', '15m'),
+    user,
   };
 };

@@ -3,6 +3,7 @@ package com.safeguard.parentalcontrol.repository.onboarding
 import android.os.Build
 import android.util.Log
 import com.safeguard.parentalcontrol.data.local.OnboardingStore
+import com.safeguard.parentalcontrol.data.local.ParentPinStore
 import com.safeguard.parentalcontrol.data.local.TokenStore
 import com.safeguard.parentalcontrol.data.remote.api.AuthApi
 import com.safeguard.parentalcontrol.data.remote.dto.ApiResponse
@@ -11,6 +12,7 @@ import com.safeguard.parentalcontrol.data.remote.dto.CreateChildRequest
 import com.safeguard.parentalcontrol.data.remote.dto.DeviceDto
 import com.safeguard.parentalcontrol.data.remote.dto.LoginRequest
 import com.safeguard.parentalcontrol.data.remote.dto.RegisterDeviceRequest
+import com.safeguard.parentalcontrol.data.remote.dto.SetPinRequest
 import com.safeguard.parentalcontrol.data.remote.dto.UserDto
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -19,7 +21,8 @@ import javax.inject.Singleton
 class OnboardingRepositoryImpl @Inject constructor(
     private val api: AuthApi,
     private val tokenStore: TokenStore,
-    private val onboardingStore: OnboardingStore
+    private val onboardingStore: OnboardingStore,
+    private val parentPinStore: ParentPinStore
 ) : OnboardingRepository {
 
     override fun isOnboarded(): Boolean = onboardingStore.isOnboarded()
@@ -98,9 +101,30 @@ class OnboardingRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun setParentPin(pin: String): Result<Unit> {
+        // Local digest is the source of truth for offline unlocking —
+        // store it even if the server call fails.
+        if (!parentPinStore.setPin(pin)) {
+            return Result.failure(IllegalArgumentException("PIN must be 4-6 digits"))
+        }
+        return try {
+            val response = api.setPin(SetPinRequest(pin = pin.trim()))
+            if (response.isSuccessful) {
+                Result.success(Unit)
+            } else {
+                Log.w(TAG, "Server PIN update failed (HTTP ${response.code()}) — local digest kept")
+                Result.success(Unit)
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Server PIN update unavailable — local digest kept", e)
+            Result.success(Unit)
+        }
+    }
+
     override fun logout() {
         tokenStore.clear()
         onboardingStore.clear()
+        parentPinStore.clear()
         Log.i(TAG, "Session cleared")
     }
 

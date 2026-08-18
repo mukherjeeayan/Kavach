@@ -15,6 +15,19 @@ const refreshExpiresIn = (process.env.JWT_REFRESH_EXPIRES_IN || '7d') as jwt.Sig
 export const signAccessToken = (userId: string, role: string): string =>
   jwt.sign({ userId, role }, accessSecret, { algorithm: 'HS256', expiresIn: accessExpiresIn });
 
+/**
+ * Short-lived scoped token used for secondary authentication factors
+ * (PIN verification, biometric unlock). Carries a `scope` claim so
+ * callers can distinguish these from full access tokens.
+ */
+export const signScopedToken = (
+  userId: string,
+  role: string,
+  scope: string,
+  expiresIn: jwt.SignOptions['expiresIn'] = '15m'
+): string =>
+  jwt.sign({ userId, role, scope }, accessSecret, { algorithm: 'HS256', expiresIn });
+
 export const signRefreshToken = (userId: string): string =>
   jwt.sign({ userId }, refreshSecret, { algorithm: 'HS256', expiresIn: refreshExpiresIn });
 

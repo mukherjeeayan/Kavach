@@ -1,6 +1,7 @@
 package com.safeguard.parentalcontrol.di
 
 import com.safeguard.parentalcontrol.data.local.OnboardingStore
+import com.safeguard.parentalcontrol.data.local.ParentPinStore
 import com.safeguard.parentalcontrol.data.local.TokenStore
 import com.safeguard.parentalcontrol.data.remote.api.AuthApi
 import com.safeguard.parentalcontrol.repository.onboarding.OnboardingRepository
@@ -32,8 +33,9 @@ object OnboardingModule {
     fun provideOnboardingRepository(
         api: AuthApi,
         tokenStore: TokenStore,
-        onboardingStore: OnboardingStore
+        onboardingStore: OnboardingStore,
+        parentPinStore: ParentPinStore
     ): OnboardingRepository {
-        return OnboardingRepositoryImpl(api, tokenStore, onboardingStore)
+        return OnboardingRepositoryImpl(api, tokenStore, onboardingStore, parentPinStore)
     }
 }

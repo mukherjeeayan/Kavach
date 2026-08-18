@@ -14,7 +14,10 @@ import android.os.IBinder
 import android.util.Log
 import com.safeguard.parentalcontrol.BuildConfig
 import com.safeguard.parentalcontrol.data.local.OnboardingStore
+import com.safeguard.parentalcontrol.data.local.dao.ScheduledLockDao
+import com.safeguard.parentalcontrol.data.local.dao.ScreenTimeDao
 import com.safeguard.parentalcontrol.data.local.entity.AppBlockRuleEntity
+import com.safeguard.parentalcontrol.data.local.entity.ScheduledLockEntity
 import com.safeguard.parentalcontrol.repository.appblock.AppBlockingRepository
 import com.safeguard.parentalcontrol.security.TamperDetector
 import com.safeguard.parentalcontrol.security.TamperState
@@ -25,6 +28,10 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Date
+import java.util.Locale
 import javax.inject.Inject
 
 /**
@@ -54,6 +61,12 @@ class AppBlockingService : Service() {
     @Inject
     lateinit var onboardingStore: OnboardingStore
 
+    @Inject
+    lateinit var screenTimeDao: ScreenTimeDao
+
+    @Inject
+    lateinit var scheduledLockDao: ScheduledLockDao
+
     private val serviceScope = CoroutineScope(Dispatchers.Default + Job())
     private var monitoringJob: Job? = null
     private var tamperCheckJob: Job? = null
@@ -62,6 +75,14 @@ class AppBlockingService : Service() {
     // during the 1-second polling loop.
     @Volatile
     private var blockedPackages: Set<String> = emptySet()
+
+    // Scheduled lock windows cached from Room (server-synced).
+    @Volatile
+    private var lockWindows: List<ScheduledLockEntity> = emptyList()
+
+    // Foreground-time accumulation between DB flushes (screen time).
+    private val usageAccumulator = mutableMapOf<String, Int>()
+    private var usageTicks = 0
 
     // ── Lifecycle ─────────────────────────────────────────────────
 
@@ -81,6 +102,14 @@ class AppBlockingService : Service() {
                 if (BuildConfig.DEBUG) {
                     Log.d(TAG, "Blocked list updated: ${blockedPackages.size} apps")
                 }
+            }
+        }
+
+        // Keep scheduled lock windows in memory (server-synced by the
+        // periodic worker); enforcement evaluates them every tick.
+        serviceScope.launch {
+            scheduledLockDao.getAll().collect { locks ->
+                lockWindows = locks
             }
         }
 
@@ -116,12 +145,30 @@ class AppBlockingService : Service() {
             while (isActive) {
                 try {
                     val currentForegroundPackage = getCurrentForegroundApp(usageStatsManager)
+                    val lockActive = isLockWindowActive()
 
-                    if (currentForegroundPackage != null &&
-                        blockedPackages.contains(currentForegroundPackage) &&
-                        currentForegroundPackage != packageName // Never block ourselves
-                    ) {
-                        killBlockedApp(activityManager, currentForegroundPackage)
+                    if (currentForegroundPackage != null) {
+                        if (lockActive) {
+                            // Scheduled lock window: allow only the
+                            // launcher, system UI, settings and ourselves.
+                            if (currentForegroundPackage !in lockAllowlist()) {
+                                killBlockedApp(activityManager, currentForegroundPackage)
+                            }
+                        } else if (
+                            blockedPackages.contains(currentForegroundPackage) &&
+                            currentForegroundPackage != packageName // Never block ourselves
+                        ) {
+                            killBlockedApp(activityManager, currentForegroundPackage)
+                        }
+
+                        // Screen-time recording (per-app foreground seconds)
+                        usageAccumulator[currentForegroundPackage] =
+                            (usageAccumulator[currentForegroundPackage] ?: 0) + 1
+                    }
+
+                    if (++usageTicks >= SCREEN_TIME_FLUSH_TICKS) {
+                        usageTicks = 0
+                        flushUsageAccumulator()
                     }
                 } catch (e: Exception) {
                     Log.e(TAG, "Error in monitoring loop", e)
@@ -191,6 +238,85 @@ class AppBlockingService : Service() {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK
         }
         startActivity(homeIntent)
+    }
+
+    /**
+     * True when the current time falls inside any active lock window
+     * that targets this device (or all devices). Backend encodes
+     * day_of_week as 0=Sunday..6=Saturday; null = every day.
+     */
+    private fun isLockWindowActive(): Boolean {
+        val now = Calendar.getInstance()
+        val minutesNow = now.get(Calendar.HOUR_OF_DAY) * 60 + now.get(Calendar.MINUTE)
+        val todayDow = now.get(Calendar.DAY_OF_WEEK) - 1 // 0=Sunday..6=Saturday
+
+        return lockWindows.any { window ->
+            if (!window.isActive) return@any false
+            if (window.deviceId != null && window.deviceId != getDeviceIdentifier()) {
+                return@any false
+            }
+            if (window.dayOfWeek != null && window.dayOfWeek != todayDow) {
+                return@any false
+            }
+
+            val start = parseMinutes(window.startTime)
+            val end = parseMinutes(window.endTime)
+            if (start == null || end == null) return@any false
+
+            if (start <= end) {
+                minutesNow in start until end
+            } else {
+                // Window crosses midnight (e.g. 22:00 -> 02:00)
+                minutesNow >= start || minutesNow < end
+            }
+        }
+    }
+
+    /**
+     * Packages that must stay usable even during a lock window:
+     * our own app (parent access), the launcher, system UI and
+     * settings (permission granting must remain possible).
+     */
+    private fun lockAllowlist(): Set<String> {
+        val allowlist = mutableSetOf(
+            packageName,
+            "com.android.systemui",
+            "com.android.settings"
+        )
+        val launcher = packageManager.resolveActivity(
+            Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME),
+            0
+        )?.activityInfo?.packageName
+        if (launcher != null) allowlist.add(launcher)
+        return allowlist
+    }
+
+    private fun parseMinutes(hhmm: String): Int? {
+        val parts = hhmm.split(":")
+        if (parts.size != 2) return null
+        val hours = parts[0].toIntOrNull() ?: return null
+        val minutes = parts[1].toIntOrNull() ?: return null
+        return hours * 60 + minutes
+    }
+
+    /**
+     * Writes accumulated foreground seconds into Room. Rows are
+     * "since last successful upload" deltas; the periodic sync worker
+     * uploads and clears them.
+     */
+    private suspend fun flushUsageAccumulator() {
+        if (usageAccumulator.isEmpty()) return
+        val today = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
+        val snapshot = usageAccumulator.toMap()
+        usageAccumulator.clear()
+        for ((pkg, seconds) in snapshot) {
+            if (seconds <= 0) continue
+            try {
+                screenTimeDao.addSeconds(pkg, null, seconds, today)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to record screen time for $pkg", e)
+            }
+        }
     }
 
     // ── Tamper / Root / Bypass Detection ──────────────────────────
@@ -296,5 +422,6 @@ class AppBlockingService : Service() {
         private const val MONITORING_INTERVAL_MS = 1000L           // 1 second
         private const val MONITORING_WINDOW_MS = 2000L             // 2 seconds
         private const val TAMPER_CHECK_INTERVAL_MS = 30_000L       // 30 seconds
+        private const val SCREEN_TIME_FLUSH_TICKS = 30             // flush every ~30s
     }
 }

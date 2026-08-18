@@ -68,11 +68,23 @@ import appBlockingRoutes from './modules/appblocking/appBlocking.routes';
 import deviceAlertRoutes from './modules/devices/deviceAlert.routes';
 import childrenRoutes from './modules/children/children.routes';
 import deviceRoutes from './modules/devices/device.routes';
+import screentimeRoutes from './modules/screentime/screentime.routes';
+import screentimeDeviceRoutes from './modules/screentime/screentimeDevice.routes';
+import locksRoutes from './modules/locks/locks.routes';
+import locationRoutes from './modules/location/location.routes';
+import locationDeviceRoutes from './modules/location/locationDevice.routes';
+import contactsRoutes from './modules/contacts/contacts.routes';
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/children/:childId/apps', appBlockingRoutes);
 app.use('/api/v1/children', childrenRoutes);
+app.use('/api/v1/children', screentimeRoutes);
+app.use('/api/v1/children', locksRoutes);
+app.use('/api/v1/children', locationRoutes);
+app.use('/api/v1/children', contactsRoutes);
 app.use('/api/v1/devices', deviceAlertRoutes);
 app.use('/api/v1/devices', deviceRoutes);
+app.use('/api/v1/devices', screentimeDeviceRoutes);
+app.use('/api/v1/devices', locationDeviceRoutes);
 
 // Global Error Handler (must be last)
 app.use(errorHandler);

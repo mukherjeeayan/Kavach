@@ -26,15 +26,17 @@ import com.safeguard.parentalcontrol.ui.screens.onboarding.steps.ChildStep
 import com.safeguard.parentalcontrol.ui.screens.onboarding.steps.DeviceStep
 import com.safeguard.parentalcontrol.ui.screens.onboarding.steps.LoginStep
 import com.safeguard.parentalcontrol.ui.screens.onboarding.steps.PermissionsStep
+import com.safeguard.parentalcontrol.ui.screens.onboarding.steps.PinStep
 import com.safeguard.parentalcontrol.viewmodel.onboarding.OnboardingStep
 import com.safeguard.parentalcontrol.viewmodel.onboarding.OnboardingViewModel
 
 /**
- * Four-step parent onboarding:
+ * Five-step parent onboarding:
  *  1. Login (parent credentials)
  *  2. Select or create the child profile
  *  3. Register this device
- *  4. Grant the permissions enforcement needs
+ *  4. Set the parental unlock PIN
+ *  5. Grant the permissions enforcement needs
  *
  * The final step gates on all permissions; the child should not be
  * able to reach the dashboard with blocking crippled.
@@ -70,6 +72,7 @@ fun OnboardingScreen(
                 OnboardingStep.Login -> "Sign in with your parent account"
                 OnboardingStep.Child -> "Who will use this device?"
                 OnboardingStep.Device -> "Name this device"
+                OnboardingStep.Pin -> "Choose a parent PIN"
                 OnboardingStep.Permissions -> "Grant protection permissions"
                 OnboardingStep.Done -> ""
             },
@@ -103,6 +106,10 @@ fun OnboardingScreen(
                 onRegister = { name ->
                     selectedChild?.let { viewModel.registerDevice(it, name) }
                 }
+            )
+            OnboardingStep.Pin -> PinStep(
+                isLoading = isLoading,
+                onSave = viewModel::savePin
             )
             OnboardingStep.Permissions -> PermissionsStep(
                 context = context,

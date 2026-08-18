@@ -1,8 +1,10 @@
 package com.safeguard.parentalcontrol
 
 import com.safeguard.parentalcontrol.data.local.OnboardingStore
+import com.safeguard.parentalcontrol.data.local.ParentPinStore
 import com.safeguard.parentalcontrol.ui.screens.appblock.AppBlockingScreen
 import com.safeguard.parentalcontrol.ui.screens.onboarding.OnboardingScreen
+import com.safeguard.parentalcontrol.ui.screens.parentlock.ParentLockScreen
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -23,6 +25,9 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var onboardingStore: OnboardingStore
 
+    @Inject
+    lateinit var parentPinStore: ParentPinStore
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -32,10 +37,11 @@ class MainActivity : ComponentActivity() {
                 color = MaterialTheme.colorScheme.background
             ) {
                 SafeGuardNavigation(
-                    startDestination = if (onboardingStore.isOnboarded()) {
-                        "dashboard"
-                    } else {
-                        "onboarding"
+                    parentPinStore = parentPinStore,
+                    startDestination = when {
+                        !onboardingStore.isOnboarded() -> "onboarding"
+                        parentPinStore.hasPin() -> "gate"
+                        else -> "dashboard"
                     }
                 )
             }
@@ -44,7 +50,10 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun SafeGuardNavigation(startDestination: String) {
+fun SafeGuardNavigation(
+    parentPinStore: ParentPinStore,
+    startDestination: String
+) {
     val navController = rememberNavController()
 
     NavHost(navController = navController, startDestination = startDestination) {
@@ -53,6 +62,16 @@ fun SafeGuardNavigation(startDestination: String) {
                 onComplete = {
                     navController.navigate("dashboard") {
                         popUpTo("onboarding") { inclusive = true }
+                    }
+                }
+            )
+        }
+        composable("gate") {
+            ParentLockScreen(
+                pinStore = parentPinStore,
+                onUnlocked = {
+                    navController.navigate("dashboard") {
+                        popUpTo("gate") { inclusive = true }
                     }
                 }
             )

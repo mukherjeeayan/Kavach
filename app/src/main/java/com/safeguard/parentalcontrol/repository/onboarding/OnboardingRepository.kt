@@ -33,6 +33,12 @@ interface OnboardingRepository {
         deviceName: String
     ): Result<DeviceDto>
 
+    /**
+     * Set (or rotate) the parental unlock PIN. Always stores the local
+     * salted digest; the server hash is updated best-effort.
+     */
+    suspend fun setParentPin(pin: String): Result<Unit>
+
     /** Clear the local session and onboarding state. */
     fun logout()
 }

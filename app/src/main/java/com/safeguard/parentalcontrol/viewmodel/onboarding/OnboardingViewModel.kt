@@ -18,6 +18,7 @@ sealed class OnboardingStep {
     data object Login : OnboardingStep()
     data object Child : OnboardingStep()
     data object Device : OnboardingStep()
+    data object Pin : OnboardingStep()
     data object Permissions : OnboardingStep()
     data object Done : OnboardingStep()
 }
@@ -106,7 +107,7 @@ class OnboardingViewModel @Inject constructor(
             _error.value = null
             repository.registerDevice(child, deviceName)
                 .onSuccess {
-                    _step.value = OnboardingStep.Permissions
+                    _step.value = OnboardingStep.Pin
                 }
                 .onFailure { e ->
                     _error.value = e.message ?: "Failed to register device"
@@ -115,7 +116,23 @@ class OnboardingViewModel @Inject constructor(
         }
     }
 
-    /** Step 4 — every permission granted; onboarding complete. */
+    /** Step 4 — set the parental unlock PIN (local digest + server hash). */
+    fun savePin(pin: String) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            _error.value = null
+            repository.setParentPin(pin)
+                .onSuccess {
+                    _step.value = OnboardingStep.Permissions
+                }
+                .onFailure { e ->
+                    _error.value = e.message ?: "Failed to set PIN"
+                }
+            _isLoading.value = false
+        }
+    }
+
+    /** Step 5 — every permission granted; onboarding complete. */
     fun finishOnboarding() {
         _step.value = OnboardingStep.Done
     }

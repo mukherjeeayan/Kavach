@@ -55,3 +55,80 @@ export interface LoginPayload {
   user: AuthUser;
   child: ChildProfile | null;
 }
+
+// ── Phase 1: screen time, locks, location, contacts ──────────────
+
+export interface ScheduledLock {
+  id: string;
+  child_id: string;
+  device_id: string | null;
+  day_of_week: number | null;
+  start_time: string;
+  end_time: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface LockInput {
+  device_id?: string;
+  day_of_week?: number | null;
+  start_time: string;
+  end_time: string;
+  is_active?: boolean;
+}
+
+export interface ContactRule {
+  id: string;
+  child_id: string;
+  device_id: string | null;
+  phone_number: string;
+  contact_name: string | null;
+  rule_type: 'ALLOW' | 'BLOCK';
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ContactInput {
+  phone_number: string;
+  contact_name?: string;
+  rule_type?: 'ALLOW' | 'BLOCK';
+  device_id?: string;
+}
+
+export interface ScreenTimeRow {
+  device_id: string;
+  app_package: string;
+  app_category: string | null;
+  total_seconds: number;
+}
+
+export interface DailyTotal {
+  date_recorded: string;
+  total_seconds: number;
+}
+
+export interface AppTotal {
+  app_package: string;
+  app_category: string;
+  total_seconds: number;
+}
+
+export interface ScreenTimeSummary {
+  range: 'day' | 'week' | 'month';
+  total_seconds: number;
+  daily: DailyTotal[];
+  by_app: AppTotal[];
+}
+
+export interface LocationPoint {
+  id: string;
+  child_id: string;
+  device_id: string;
+  latitude: number;
+  longitude: number;
+  accuracy_m: number | null;
+  speed_kmh: number | null;
+  recorded_at: string;
+}

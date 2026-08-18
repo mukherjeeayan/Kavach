@@ -15,6 +15,7 @@
     <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" tools:ignore="ProtectedPermissions" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- Required by ActivityManager.appTasks in AppBlockingService -->
     <uses-permission android:name="android.permission.GET_TASKS" />
@@ -76,6 +77,22 @@
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Parental control app-blocking enforcement" />
+        </service>
+
+        <!-- Periodic GPS pinger feeding the location dashboard -->
+        <service
+            android:name=".service.location.LocationService"
+            android:exported="false"
+            android:foregroundServiceType="location" />
+
+        <!-- Rejects calls matching parent-defined BLOCK rules -->
+        <service
+            android:name=".service.contacts.CallScreeningService"
+            android:exported="true"
+            android:permission="android.permission.BIND_SCREENING_SERVICE">
+            <intent-filter>
+                <action android:name="android.telecom.CallScreeningService" />
+            </intent-filter>
         </service>
 
         <!-- Restart enforcement after a reboot -->

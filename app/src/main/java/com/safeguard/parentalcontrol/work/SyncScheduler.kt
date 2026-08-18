@@ -7,10 +7,11 @@ import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import com.safeguard.parentalcontrol.service.appblock.AppBlockingService
+import com.safeguard.parentalcontrol.service.location.LocationService
 import java.util.concurrent.TimeUnit
 
 /**
- * Central entry points for starting the enforcement service and the
+ * Central entry points for starting the enforcement services and the
  * periodic rules sync. Called on app launch and on BOOT_COMPLETED.
  */
 object SyncScheduler {
@@ -23,6 +24,11 @@ object SyncScheduler {
 
     fun startEnforcementService(context: Context) {
         val intent = Intent(context, AppBlockingService::class.java)
+        ContextCompat.startForegroundService(context, intent)
+    }
+
+    fun startLocationService(context: Context) {
+        val intent = Intent(context, LocationService::class.java)
         ContextCompat.startForegroundService(context, intent)
     }
 

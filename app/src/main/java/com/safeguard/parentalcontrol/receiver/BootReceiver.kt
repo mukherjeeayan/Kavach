@@ -18,6 +18,7 @@ class BootReceiver : BroadcastReceiver() {
             OnboardingStore.hasCompleted(context)
         ) {
             SyncScheduler.startEnforcementService(context)
+            SyncScheduler.startLocationService(context)
             SyncScheduler.schedule(context)
         }
     }

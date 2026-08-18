@@ -29,9 +29,10 @@ class SafeGuardApplication : Application(), Configuration.Provider {
         if (!onboardingStore.isOnboarded()) {
             return
         }
-        // Start the foreground enforcement service and the periodic
-        // rules sync on every app launch (boot is handled by BootReceiver).
+        // Start the foreground enforcement/location services and the
+        // periodic sync on every app launch (boot is handled by BootReceiver).
         SyncScheduler.startEnforcementService(this)
+        SyncScheduler.startLocationService(this)
         SyncScheduler.schedule(this)
     }
 

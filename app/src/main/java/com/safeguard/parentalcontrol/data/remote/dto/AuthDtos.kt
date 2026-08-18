@@ -72,3 +72,20 @@ data class DeviceDto(
 data class RegisterDeviceResponse(
     val device: DeviceDto
 )
+
+/**
+ * Request body for PUT /auth/pin — sets (or rotates) the parent PIN
+ * used to unlock the parental controls.
+ */
+data class SetPinRequest(
+    val pin: String
+)
+
+/**
+ * Request body for POST /auth/pin/verify — used by the web dashboard
+ * to unlock parental control sections with the PIN.
+ */
+data class VerifyPinRequest(
+    val email: String,
+    val pin: String
+)
