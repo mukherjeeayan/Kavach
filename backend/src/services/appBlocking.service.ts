@@ -7,51 +7,27 @@ import { query } from '../config/database';
 import { AppBlockRule } from '../models/AppBlockRule.model';
 import logger from '../utils/logger';
 
+import { NotFoundError, ForbiddenError, ConflictError } from '../utils/errors';
+
 // ── Typed Errors ──────────────────────────────────────────────────
+// Defined centrally in utils/errors.ts; re-exported here so existing
+// callers (tests included) keep importing them from this module.
 
-export class NotFoundError extends Error {
-  statusCode = 404;
-  constructor(message: string) {
-    super(message);
-    this.name = 'NotFoundError';
-  }
-}
-
-export class ForbiddenError extends Error {
-  statusCode = 403;
-  constructor(message: string) {
-    super(message);
-    this.name = 'ForbiddenError';
-  }
-}
-
-export class ConflictError extends Error {
-  statusCode = 409;
-  constructor(message: string) {
-    super(message);
-    this.name = 'ConflictError';
-  }
-}
+export {
+  NotFoundError,
+  ForbiddenError,
+  ConflictError,
+};
 
 // ── Ownership Verification ────────────────────────────────────────
 // Security requirement: every operation must first prove that the
-// child_id belongs to the authenticated parent_id.  This runs a
-// single parameterized query rather than trusting the request body.
+// child_id belongs to the authenticated parent_id. Shared with the
+// children/device services — re-exported here so callers (tests
+// included) keep importing it from this module.
 
-export const verifyChildBelongsToParent = async (
-  childId: string,
-  parentId: string
-): Promise<void> => {
-  const result = await query(
-    `SELECT id FROM children WHERE id = $1 AND parent_id = $2`,
-    [childId, parentId]
-  );
-  if (result.rows.length === 0) {
-    throw new ForbiddenError(
-      'Child does not belong to the authenticated parent'
-    );
-  }
-};
+import { verifyChildBelongsToParent } from './children.service';
+
+export { verifyChildBelongsToParent };
 
 // ── Service Methods ───────────────────────────────────────────────
 

@@ -30,15 +30,37 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
 };
 
 /**
+ * POST /api/v1/auth/register
+ * Body: { name, email, password, child_name?, birth_date? }
+ * Returns: 201 with { token, refresh_token, user, child }
+ */
+export const register = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { name, email, password, child_name, birth_date } = req.body;
+    const session = await authService.register({
+      name,
+      email,
+      password,
+      child_name,
+      birth_date,
+    });
+    respond(res, 201, session, req);
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
  * POST /api/v1/auth/refresh-token
  * Body: { refresh_token }
- * Returns: 200 with { token }
+ * Rotates the refresh token and returns a fresh access token + new
+ * refresh token.
  */
 export const refreshToken = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { refresh_token } = req.body;
-    const token = authService.refreshAccessToken(refresh_token);
-    respond(res, 200, { token }, req);
+    const session = await authService.refreshAccessToken(refresh_token);
+    respond(res, 200, session, req);
   } catch (err) {
     next(err);
   }

@@ -66,9 +66,13 @@ app.get('/health', async (req, res) => {
 import authRoutes from './routes/auth.routes';
 import appBlockingRoutes from './routes/appBlocking.routes';
 import deviceAlertRoutes from './routes/deviceAlert.routes';
+import childrenRoutes from './routes/children.routes';
+import deviceRoutes from './routes/device.routes';
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/children/:childId/apps', appBlockingRoutes);
+app.use('/api/v1/children', childrenRoutes);
 app.use('/api/v1/devices', deviceAlertRoutes);
+app.use('/api/v1/devices', deviceRoutes);
 
 // Global Error Handler (must be last)
 app.use(errorHandler);

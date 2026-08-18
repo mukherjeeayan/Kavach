@@ -6,10 +6,15 @@
 import { Router } from 'express';
 import { authLimiter } from '../middleware/rateLimiter';
 import { validate } from '../middleware/validate';
-import { loginSchema, refreshTokenSchema } from '../dto/auth.dto';
+import { loginSchema, refreshTokenSchema, registerSchema } from '../dto/auth.dto';
 import * as authController from '../controllers/auth.controller';
 
 const router = Router();
+
+// POST /api/v1/auth/register
+// Creates a parent account (and optional first child profile) and
+// returns session tokens so the parent is logged in immediately.
+router.post('/register', authLimiter, validate(registerSchema), authController.register);
 
 // POST /api/v1/auth/login
 router.post('/login', authLimiter, validate(loginSchema), authController.login);
