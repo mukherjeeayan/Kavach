@@ -131,13 +131,19 @@ export const unblockApp = async (
 
 /**
  * Child-initiated unblock request.
- * The child can supply a reason; the parent must approve separately.
+ * The caller must be the authenticated parent of the child — this
+ * closes the IDOR where any authenticated user could request an
+ * unblock on someone else's child.  A future child-role token can
+ * call this by binding child_id to its own subject instead.
  */
 export const requestUnblock = async (
+  parentId: string,
   childId: string,
   ruleId: string,
   reason: string
 ): Promise<AppBlockRule> => {
+  await verifyChildBelongsToParent(childId, parentId);
+
   const existingRule = await appBlockRuleRepo.getRuleByIdAndChildId(ruleId, childId);
   if (!existingRule) {
     throw new NotFoundError('Block rule not found for this child');
@@ -170,6 +176,88 @@ export const getBlockedApps = async (
 ): Promise<AppBlockRule[]> => {
   await verifyChildBelongsToParent(childId, parentId);
   return appBlockRuleRepo.getBlockedAppsByChildId(childId);
+};
+
+/**
+ * Parent approves a pending child-initiated unblock request:
+ * the rule is unblocked and the request fields cleared.
+ */
+export const approveUnblock = async (
+  parentId: string,
+  childId: string,
+  ruleId: string
+): Promise<AppBlockRule> => {
+  await verifyChildBelongsToParent(childId, parentId);
+
+  const existingRule = await appBlockRuleRepo.getRuleByIdAndChildId(ruleId, childId);
+  if (!existingRule) {
+    throw new NotFoundError('Block rule not found for this child');
+  }
+  if (!existingRule.unblock_requested) {
+    throw new ConflictError('No pending unblock request for this rule');
+  }
+
+  const updatedRule = await appBlockRuleRepo.updateBlockStatus(ruleId, false);
+  if (!updatedRule) {
+    throw new NotFoundError('Failed to approve unblock');
+  }
+
+  logger.info(`Unblock approved: rule ${ruleId} for child ${childId} by parent ${parentId}`);
+
+  await query(
+    `INSERT INTO audit_logs (actor_id, target_child_id, action, resource_type, details)
+     VALUES ($1, $2, $3, $4, $5)`,
+    [
+      parentId,
+      childId,
+      'APPROVE_UNBLOCK',
+      'app_block_rules',
+      JSON.stringify({ rule_id: ruleId, package_name: existingRule.package_name }),
+    ]
+  );
+
+  return { ...updatedRule, child_id: childId };
+};
+
+/**
+ * Parent rejects a pending child-initiated unblock request:
+ * the rule stays blocked and the request fields are cleared.
+ */
+export const rejectUnblock = async (
+  parentId: string,
+  childId: string,
+  ruleId: string
+): Promise<AppBlockRule> => {
+  await verifyChildBelongsToParent(childId, parentId);
+
+  const existingRule = await appBlockRuleRepo.getRuleByIdAndChildId(ruleId, childId);
+  if (!existingRule) {
+    throw new NotFoundError('Block rule not found for this child');
+  }
+  if (!existingRule.unblock_requested) {
+    throw new ConflictError('No pending unblock request for this rule');
+  }
+
+  const updatedRule = await appBlockRuleRepo.updateBlockStatus(ruleId, true);
+  if (!updatedRule) {
+    throw new NotFoundError('Failed to reject unblock');
+  }
+
+  logger.info(`Unblock rejected: rule ${ruleId} for child ${childId} by parent ${parentId}`);
+
+  await query(
+    `INSERT INTO audit_logs (actor_id, target_child_id, action, resource_type, details)
+     VALUES ($1, $2, $3, $4, $5)`,
+    [
+      parentId,
+      childId,
+      'REJECT_UNBLOCK',
+      'app_block_rules',
+      JSON.stringify({ rule_id: ruleId, package_name: existingRule.package_name }),
+    ]
+  );
+
+  return { ...updatedRule, child_id: childId };
 };
 
 /**

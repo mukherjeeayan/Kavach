@@ -1,0 +1,2 @@
+# Scheduled / cron-style jobs live here (e.g. nightly usage reports,
+# stale-rules cleanup, geofence expiry). One file per job.

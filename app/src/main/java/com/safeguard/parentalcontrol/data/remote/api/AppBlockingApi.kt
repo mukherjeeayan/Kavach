@@ -4,6 +4,7 @@ import com.safeguard.parentalcontrol.data.remote.dto.AppBlockRuleDto
 import com.safeguard.parentalcontrol.data.remote.dto.ApiResponse
 import com.safeguard.parentalcontrol.data.remote.dto.BlockAppRequest
 import com.safeguard.parentalcontrol.data.remote.dto.RequestUnblockRequest
+import com.safeguard.parentalcontrol.data.remote.dto.TamperAlertRequest
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.DELETE
@@ -48,4 +49,10 @@ interface AppBlockingApi {
     suspend fun getUnblockRequests(
         @Path("childId") childId: String
     ): Response<ApiResponse<List<AppBlockRuleDto>>>
+
+    @POST("api/v1/devices/{deviceId}/tamper-alert")
+    suspend fun reportTamper(
+        @Path("deviceId") deviceId: String,
+        @Body request: TamperAlertRequest
+    ): Response<ApiResponse<Unit>>
 }

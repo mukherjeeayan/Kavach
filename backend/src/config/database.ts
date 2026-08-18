@@ -13,8 +13,9 @@ const pool = new Pool({
 });
 
 pool.on('error', (err) => {
+  // A transient idle-client error must not kill the whole process —
+  // pg can recover and re-establish connections on demand.
   logger.error('Unexpected error on idle client', err);
-  process.exit(-1);
 });
 
 export const query = async (text: string, params?: any[]) => {

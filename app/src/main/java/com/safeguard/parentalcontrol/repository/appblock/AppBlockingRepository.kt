@@ -42,4 +42,11 @@ interface AppBlockingRepository {
 
     /** Submit a child-initiated unblock request. */
     suspend fun requestUnblock(childId: String, ruleId: String, reason: String): Result<AppBlockRuleEntity>
+
+    /**
+     * Notify the server that tampering was detected on this device
+     * (root, debugger, etc.). Best-effort — returns success only when
+     * the server acknowledged the alert.
+     */
+    suspend fun reportTamper(deviceId: String, details: String): Boolean
 }

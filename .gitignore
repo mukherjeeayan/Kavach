@@ -5,6 +5,13 @@ backend/build/
 frontend/build/
 local.properties
 
+# Node
+node_modules/
+dist/
+
+# Environment files (never commit secrets)
+backend/.env
+
 # Not part of Kavach - separate projects
 Dashboard Application/
 Kavach/

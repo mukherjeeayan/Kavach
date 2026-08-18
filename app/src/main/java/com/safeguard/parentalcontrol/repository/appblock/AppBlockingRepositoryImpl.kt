@@ -6,6 +6,8 @@ import com.safeguard.parentalcontrol.data.local.entity.AppBlockRuleEntity
 import com.safeguard.parentalcontrol.data.remote.api.AppBlockingApi
 import com.safeguard.parentalcontrol.data.remote.dto.BlockAppRequest
 import com.safeguard.parentalcontrol.data.remote.dto.RequestUnblockRequest
+import com.safeguard.parentalcontrol.data.remote.dto.TamperAlertRequest
+import com.safeguard.parentalcontrol.security.TamperState
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 
@@ -20,7 +22,8 @@ import javax.inject.Inject
  */
 class AppBlockingRepositoryImpl @Inject constructor(
     private val dao: AppBlockRuleDao,
-    private val api: AppBlockingApi
+    private val api: AppBlockingApi,
+    private val tamperState: TamperState
 ) : AppBlockingRepository {
 
     // ── Reactive reads (always from Room) ─────────────────────────
@@ -66,7 +69,21 @@ class AppBlockingRepositoryImpl @Inject constructor(
 
                 // Atomic replace so the enforcement service never sees
                 // a half-deleted state
-                dao.replaceAllForDevice(deviceId, serverRules)
+                if (tamperState.lockdown) {
+                    // Tamper lockdown: never weaken the policy. Keep
+                    // every currently-cached blocked app as blocked even
+                    // if the server reports it as unblocked, until a
+                    // verified sync succeeds outside the lockdown.
+                    val cached = dao.getBlockedAppsSnapshot(deviceId)
+                    val hardened = serverRules + cached.filter { it.isBlocked }
+                    dao.replaceAllForDevice(
+                        deviceId,
+                        hardened.distinctBy { it.id }
+                    )
+                    Log.w(TAG, "Tamper lockdown active — sync hardened, cache kept restrictive")
+                } else {
+                    dao.replaceAllForDevice(deviceId, serverRules)
+                }
                 Log.i(TAG, "Sync complete: ${serverRules.size} rules for device $deviceId")
                 true
             } else {
@@ -174,6 +191,26 @@ class AppBlockingRepositoryImpl @Inject constructor(
         } catch (e: Exception) {
             Log.e(TAG, "requestUnblock failed", e)
             Result.failure(e)
+        }
+    }
+
+    override suspend fun reportTamper(deviceId: String, details: String): Boolean {
+        return try {
+            val response = api.reportTamper(
+                deviceId,
+                TamperAlertRequest(details = details)
+            )
+            if (response.isSuccessful && response.body()?.success == true) {
+                Log.w(TAG, "Tamper alert acknowledged by server")
+                true
+            } else {
+                Log.w(TAG, "Tamper alert rejected: HTTP ${response.code()}")
+                false
+            }
+        } catch (e: Exception) {
+            // Offline / unreachable — the local lockdown still applies
+            Log.e(TAG, "Tamper alert failed to reach server", e)
+            false
         }
     }
 

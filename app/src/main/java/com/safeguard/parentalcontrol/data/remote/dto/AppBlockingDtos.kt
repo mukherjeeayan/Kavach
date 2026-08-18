@@ -46,3 +46,10 @@ data class RequestUnblockRequest(
     val rule_id: String,
     val reason: String
 )
+
+/**
+ * Request body for POST /devices/:deviceId/tamper-alert.
+ */
+data class TamperAlertRequest(
+    val details: String
+)

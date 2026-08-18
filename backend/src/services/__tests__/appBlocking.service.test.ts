@@ -134,6 +134,8 @@ describe('appBlocking.service', () => {
   describe('requestUnblock', () => {
     it('should set unblock_requested and return the updated rule', async () => {
       const blockedRule = { ...mockRule, is_blocked: true, unblock_requested: false };
+      // Ownership check passes
+      mockedQuery.mockResolvedValueOnce({ rows: [{ id: CHILD_ID }] } as any);
       mockedRepo.getRuleByIdAndChildId.mockResolvedValueOnce(blockedRule);
       mockedRepo.setUnblockRequest.mockResolvedValueOnce({
         ...blockedRule,
@@ -142,7 +144,7 @@ describe('appBlocking.service', () => {
       });
 
       const result = await appBlockingService.requestUnblock(
-        CHILD_ID, RULE_ID, 'Need it for homework'
+        PARENT_ID, CHILD_ID, RULE_ID, 'Need it for homework'
       );
 
       expect(result.unblock_requested).toBe(true);
@@ -150,25 +152,28 @@ describe('appBlocking.service', () => {
     });
 
     it('should throw NotFoundError if rule not found for this child', async () => {
+      mockedQuery.mockResolvedValueOnce({ rows: [{ id: CHILD_ID }] } as any);
       mockedRepo.getRuleByIdAndChildId.mockResolvedValueOnce(null);
 
       await expect(
-        appBlockingService.requestUnblock(CHILD_ID, RULE_ID, 'reason')
+        appBlockingService.requestUnblock(PARENT_ID, CHILD_ID, RULE_ID, 'reason')
       ).rejects.toThrow(appBlockingService.NotFoundError);
     });
 
     it('should throw ConflictError if app is not currently blocked', async () => {
+      mockedQuery.mockResolvedValueOnce({ rows: [{ id: CHILD_ID }] } as any);
       mockedRepo.getRuleByIdAndChildId.mockResolvedValueOnce({
         ...mockRule,
         is_blocked: false,
       });
 
       await expect(
-        appBlockingService.requestUnblock(CHILD_ID, RULE_ID, 'reason')
+        appBlockingService.requestUnblock(PARENT_ID, CHILD_ID, RULE_ID, 'reason')
       ).rejects.toThrow(appBlockingService.ConflictError);
     });
 
     it('should throw ConflictError if an unblock request is already pending', async () => {
+      mockedQuery.mockResolvedValueOnce({ rows: [{ id: CHILD_ID }] } as any);
       mockedRepo.getRuleByIdAndChildId.mockResolvedValueOnce({
         ...mockRule,
         is_blocked: true,
@@ -176,8 +181,100 @@ describe('appBlocking.service', () => {
       });
 
       await expect(
-        appBlockingService.requestUnblock(CHILD_ID, RULE_ID, 'reason')
+        appBlockingService.requestUnblock(PARENT_ID, CHILD_ID, RULE_ID, 'reason')
       ).rejects.toThrow(appBlockingService.ConflictError);
+    });
+  });
+
+  // ── approveUnblock ──────────────────────────────────────────
+
+  describe('approveUnblock', () => {
+    it('should unblock the rule and write an audit log', async () => {
+      const pendingRule = { ...mockRule, unblock_requested: true, unblock_reason: 'homework' };
+      const unblockedRule = { ...pendingRule, is_blocked: false, unblock_requested: false };
+      // Ownership check passes
+      mockedQuery.mockResolvedValueOnce({ rows: [{ id: CHILD_ID }] } as any);
+      mockedRepo.getRuleByIdAndChildId.mockResolvedValueOnce(pendingRule);
+      mockedRepo.updateBlockStatus.mockResolvedValueOnce(unblockedRule);
+      // Audit log insert succeeds
+      mockedQuery.mockResolvedValueOnce({ rows: [] } as any);
+
+      const result = await appBlockingService.approveUnblock(PARENT_ID, CHILD_ID, RULE_ID);
+
+      expect(result.is_blocked).toBe(false);
+      expect(result.unblock_requested).toBe(false);
+      expect(mockedRepo.updateBlockStatus).toHaveBeenCalledWith(RULE_ID, false);
+      // Ownership check + audit log write
+      expect(mockedQuery).toHaveBeenCalledTimes(2);
+    });
+
+    it('should throw NotFoundError if rule does not exist', async () => {
+      mockedQuery.mockResolvedValueOnce({ rows: [{ id: CHILD_ID }] } as any);
+      mockedRepo.getRuleByIdAndChildId.mockResolvedValueOnce(null);
+
+      await expect(
+        appBlockingService.approveUnblock(PARENT_ID, CHILD_ID, RULE_ID)
+      ).rejects.toThrow(appBlockingService.NotFoundError);
+    });
+
+    it('should throw ConflictError if no unblock request is pending', async () => {
+      mockedQuery.mockResolvedValueOnce({ rows: [{ id: CHILD_ID }] } as any);
+      mockedRepo.getRuleByIdAndChildId.mockResolvedValueOnce({
+        ...mockRule,
+        unblock_requested: false,
+      });
+
+      await expect(
+        appBlockingService.approveUnblock(PARENT_ID, CHILD_ID, RULE_ID)
+      ).rejects.toThrow(appBlockingService.ConflictError);
+      expect(mockedRepo.updateBlockStatus).not.toHaveBeenCalled();
+    });
+  });
+
+  // ── rejectUnblock ───────────────────────────────────────────
+
+  describe('rejectUnblock', () => {
+    it('should keep the rule blocked and write an audit log', async () => {
+      const pendingRule = { ...mockRule, unblock_requested: true, unblock_reason: 'homework' };
+      // Ownership check passes
+      mockedQuery.mockResolvedValueOnce({ rows: [{ id: CHILD_ID }] } as any);
+      mockedRepo.getRuleByIdAndChildId.mockResolvedValueOnce(pendingRule);
+      mockedRepo.updateBlockStatus.mockResolvedValueOnce({
+        ...pendingRule,
+        unblock_requested: false,
+      });
+      // Audit log insert succeeds
+      mockedQuery.mockResolvedValueOnce({ rows: [] } as any);
+
+      const result = await appBlockingService.rejectUnblock(PARENT_ID, CHILD_ID, RULE_ID);
+
+      expect(result.is_blocked).toBe(true);
+      expect(result.unblock_requested).toBe(false);
+      expect(mockedRepo.updateBlockStatus).toHaveBeenCalledWith(RULE_ID, true);
+      // Ownership check + audit log write
+      expect(mockedQuery).toHaveBeenCalledTimes(2);
+    });
+
+    it('should throw NotFoundError if rule does not exist', async () => {
+      mockedQuery.mockResolvedValueOnce({ rows: [{ id: CHILD_ID }] } as any);
+      mockedRepo.getRuleByIdAndChildId.mockResolvedValueOnce(null);
+
+      await expect(
+        appBlockingService.rejectUnblock(PARENT_ID, CHILD_ID, RULE_ID)
+      ).rejects.toThrow(appBlockingService.NotFoundError);
+    });
+
+    it('should throw ConflictError if no unblock request is pending', async () => {
+      mockedQuery.mockResolvedValueOnce({ rows: [{ id: CHILD_ID }] } as any);
+      mockedRepo.getRuleByIdAndChildId.mockResolvedValueOnce({
+        ...mockRule,
+        unblock_requested: false,
+      });
+
+      await expect(
+        appBlockingService.rejectUnblock(PARENT_ID, CHILD_ID, RULE_ID)
+      ).rejects.toThrow(appBlockingService.ConflictError);
+      expect(mockedRepo.updateBlockStatus).not.toHaveBeenCalled();
     });
   });
 

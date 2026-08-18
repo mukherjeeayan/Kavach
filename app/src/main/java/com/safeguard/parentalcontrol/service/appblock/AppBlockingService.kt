@@ -15,6 +15,7 @@ import android.util.Log
 import com.safeguard.parentalcontrol.BuildConfig
 import com.safeguard.parentalcontrol.data.local.entity.AppBlockRuleEntity
 import com.safeguard.parentalcontrol.repository.appblock.AppBlockingRepository
+import com.safeguard.parentalcontrol.security.TamperState
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -45,6 +46,9 @@ class AppBlockingService : Service() {
 
     @Inject
     lateinit var repository: AppBlockingRepository
+
+    @Inject
+    lateinit var tamperState: TamperState
 
     private val serviceScope = CoroutineScope(Dispatchers.Default + Job())
     private var monitoringJob: Job? = null
@@ -128,20 +132,27 @@ class AppBlockingService : Service() {
 
     /**
      * Reads UsageEvents for the last 2 seconds to determine which
-     * app is currently in the foreground.  This is the recommended
-     * approach on API 26+ (LOLLIPOP_MR1+).
+     * app is currently in the foreground.
+     * - API 29+: ACTIVITY_RESUMED
+     * - API 26-28: MOVE_TO_FOREGROUND (ACTIVITY_RESUMED does not exist)
      */
     private fun getCurrentForegroundApp(usageStatsManager: UsageStatsManager): String? {
         val endTime = System.currentTimeMillis()
-        val startTime = endTime - 2000
+        val startTime = endTime - MONITORING_WINDOW_MS
 
         val usageEvents = usageStatsManager.queryEvents(startTime, endTime)
         val event = UsageEvents.Event()
         var lastForegroundPackage: String? = null
 
+        val foregroundEventType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            UsageEvents.Event.ACTIVITY_RESUMED
+        } else {
+            UsageEvents.Event.MOVE_TO_FOREGROUND
+        }
+
         while (usageEvents.hasNextEvent()) {
             usageEvents.getNextEvent(event)
-            if (event.eventType == UsageEvents.Event.ACTIVITY_RESUMED) {
+            if (event.eventType == foregroundEventType) {
                 lastForegroundPackage = event.packageName
             }
         }
@@ -187,10 +198,9 @@ class AppBlockingService : Service() {
                 try {
                     val isRooted = checkForRoot()
                     val isDebuggerAttached = checkForDebugger()
-                    val isDeveloperOptionsEnabled = checkDeveloperOptions()
 
-                    if (isRooted || isDebuggerAttached || isDeveloperOptionsEnabled) {
-                        handleTamperDetected(isRooted, isDebuggerAttached, isDeveloperOptionsEnabled)
+                    if (isRooted || isDebuggerAttached) {
+                        handleTamperDetected(isRooted, isDebuggerAttached)
                     }
                 } catch (e: Exception) {
                     Log.e(TAG, "Tamper detection error", e)
@@ -252,22 +262,6 @@ class AppBlockingService : Service() {
     }
 
     /**
-     * Detect if Developer Options are enabled — the child might use
-     * ADB to disable the service.
-     */
-    private fun checkDeveloperOptions(): Boolean {
-        return try {
-            android.provider.Settings.Secure.getInt(
-                contentResolver,
-                android.provider.Settings.Global.DEVELOPMENT_SETTINGS_ENABLED,
-                0
-            ) != 0
-        } catch (e: Exception) {
-            false
-        }
-    }
-
-    /**
      * On tamper detection (per the security skill, in order):
      * (a) Log locally
      * (b) Attempt immediate server notification
@@ -279,30 +273,32 @@ class AppBlockingService : Service() {
      */
     private suspend fun handleTamperDetected(
         isRooted: Boolean,
-        isDebuggerAttached: Boolean,
-        isDeveloperOptions: Boolean
+        isDebuggerAttached: Boolean
     ) {
         // (a) Log locally — details are logged for debugging but
         //     never shown to the child in any UI string.
-        Log.w(TAG, "Tamper detected — root:$isRooted debug:$isDebuggerAttached devOpts:$isDeveloperOptions")
+        Log.w(TAG, "Tamper detected — root:$isRooted debug:$isDebuggerAttached")
 
-        // (b) Attempt server notification
-        try {
-            // TODO: Call a dedicated tamper-alert endpoint on the backend
-            //       e.g. api.reportTamper(deviceId, TamperReport(...))
+        // (b) Engage the most-restrictive lockdown: from now on the
+        //     repository refuses to weaken the enforced ruleset on
+        //     sync (fail-closed hardening). Persisted immediately so
+        //     any in-flight sync cannot lift blocks.
+        tamperState.lockdown = true
+
+        // (c) Attempt server notification — best effort. Even if this
+        //     fails (offline), the local lockdown above still applies.
+        val details = buildString {
+            append("root=").append(isRooted)
+            append(" debugger=").append(isDebuggerAttached)
+        }
+        val acknowledged = repository.reportTamper(getDeviceIdentifier(), details)
+        if (acknowledged) {
             Log.i(TAG, "Tamper alert sent to server")
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to notify server of tamper — proceeding with local lockdown", e)
+        } else {
+            Log.e(TAG, "Failed to notify server of tamper — local lockdown remains active")
         }
 
-        // (c) Apply most-restrictive local lockdown.
-        //     In the context of app blocking this means: keep ALL
-        //     currently cached rules enforced and refuse to weaken
-        //     the policy until a verified server sync succeeds.
-        //     The repository's syncFromServer already implements
-        //     fail-closed, so we simply skip any sync attempts while
-        //     tamper is detected.
-        Log.w(TAG, "Local lockdown active — enforcement at maximum restriction")
+        Log.w(TAG, "Tamper lockdown active — enforcement at maximum restriction")
     }
 
     // ── Notification (required for Foreground Service) ────────────
@@ -344,6 +340,7 @@ class AppBlockingService : Service() {
         private const val CHANNEL_ID = "safeguard_protection"
         private const val NOTIFICATION_ID = 1001
         private const val MONITORING_INTERVAL_MS = 1000L           // 1 second
+        private const val MONITORING_WINDOW_MS = 2000L             // 2 seconds
         private const val TAMPER_CHECK_INTERVAL_MS = 30_000L       // 30 seconds
     }
 }

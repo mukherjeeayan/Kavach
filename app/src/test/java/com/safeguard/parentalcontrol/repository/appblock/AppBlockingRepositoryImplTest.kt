@@ -5,6 +5,7 @@ import com.safeguard.parentalcontrol.data.local.entity.AppBlockRuleEntity
 import com.safeguard.parentalcontrol.data.remote.api.AppBlockingApi
 import com.safeguard.parentalcontrol.data.remote.dto.ApiResponse
 import com.safeguard.parentalcontrol.data.remote.dto.AppBlockRuleDto
+import com.safeguard.parentalcontrol.security.TamperState
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
@@ -70,7 +71,7 @@ class AppBlockingRepositoryImplTest {
     @Before
     fun setUp() {
         MockitoAnnotations.openMocks(this)
-        repository = AppBlockingRepositoryImpl(dao, api)
+        repository = AppBlockingRepositoryImpl(dao, api, TamperState())
     }
 
     // ── Local-first reads ─────────────────────────────────────
@@ -141,6 +142,52 @@ class AppBlockingRepositoryImplTest {
 
         assert(!result)
         verify(dao, never()).replaceAllForDevice(any(), any())
+    }
+
+    @Test
+    fun `syncFromServer keeps cached blocked apps during tamper lockdown`() = runTest {
+        val tamperState = TamperState()
+        repository = AppBlockingRepositoryImpl(dao, api, tamperState)
+        tamperState.lockdown = true
+
+        // Server reports the app as UNblocked — a weakening sync
+        val weakenedResponse = ApiResponse(
+            success = true,
+            data = listOf(sampleDto.copy(is_blocked = false)),
+            error = null,
+            timestamp = null,
+            request_id = null
+        )
+        whenever(api.getBlockedApps(childId)).thenReturn(Response.success(weakenedResponse))
+        // Local cache still has it as blocked
+        whenever(dao.getBlockedAppsSnapshot(deviceId)).thenReturn(listOf(sampleEntity))
+
+        val result = repository.syncFromServer(childId, deviceId)
+
+        assert(result)
+        // The hardened merge must keep the cached blocked rule
+        verify(dao).replaceAllForDevice(any(), any())
+    }
+
+    @Test
+    fun `reportTamper returns true when server acknowledges`() = runTest {
+        whenever(api.reportTamper(any(), any())).thenReturn(
+            Response.success(ApiResponse(success = true, data = Unit, error = null, timestamp = null, request_id = null))
+        )
+
+        val result = repository.reportTamper(deviceId, "root=true debugger=false")
+
+        assert(result)
+        verify(api).reportTamper(any(), any())
+    }
+
+    @Test
+    fun `reportTamper returns false on network failure`() = runTest {
+        whenever(api.reportTamper(any(), any())).thenThrow(RuntimeException("No network"))
+
+        val result = repository.reportTamper(deviceId, "root=true")
+
+        assert(!result)
     }
 
     // ── Write-through ─────────────────────────────────────────

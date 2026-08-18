@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
@@ -22,6 +23,8 @@ import com.safeguard.parentalcontrol.data.local.entity.AppBlockRuleEntity
 import com.safeguard.parentalcontrol.viewmodel.appblock.AppBlockingUiEvent
 import com.safeguard.parentalcontrol.viewmodel.appblock.AppBlockingUiState
 import com.safeguard.parentalcontrol.viewmodel.appblock.AppBlockingViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 data class InstalledApp(
     val packageName: String,
@@ -49,20 +52,25 @@ fun AppBlockingScreen(
         }
     }
 
-    // Fetch launchable apps using PackageManager
-    val packageManager = context.packageManager
-    val launchableApps = remember(packageManager) {
-        val intent = Intent(Intent.ACTION_MAIN, null).apply {
-            addCategory(Intent.CATEGORY_LAUNCHER)
+    // Fetch launchable apps using PackageManager — computed off the
+    // main thread so the first composition stays smooth.
+    val launchableApps by produceState<List<InstalledApp>>(
+        initialValue = emptyList(),
+        packageManager
+    ) {
+        value = withContext(Dispatchers.IO) {
+            val intent = Intent(Intent.ACTION_MAIN, null).apply {
+                addCategory(Intent.CATEGORY_LAUNCHER)
+            }
+            packageManager.queryIntentActivities(intent, 0).map { resolveInfo ->
+                val appInfo = resolveInfo.activityInfo.applicationInfo
+                InstalledApp(
+                    packageName = appInfo.packageName,
+                    appName = appInfo.loadLabel(packageManager).toString(),
+                    icon = appInfo.loadIcon(packageManager)
+                )
+            }.distinctBy { it.packageName }.sortedBy { it.appName.lowercase() }
         }
-        packageManager.queryIntentActivities(intent, 0).map { resolveInfo ->
-            val appInfo = resolveInfo.activityInfo.applicationInfo
-            InstalledApp(
-                packageName = appInfo.packageName,
-                appName = appInfo.loadLabel(packageManager).toString(),
-                icon = appInfo.loadIcon(packageManager)
-            )
-        }.distinctBy { it.packageName }.sortedBy { it.appName.lowercase() }
     }
 
     Scaffold(

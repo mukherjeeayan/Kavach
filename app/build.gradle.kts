@@ -33,8 +33,14 @@ android {
     }
 
     buildTypes {
+        debug {
+            // Local backend as seen from the Android emulator
+            buildConfigField("String", "API_BASE_URL", "\"http://10.0.2.2:3000/\"")
+        }
         release {
             isMinifyEnabled = true
+            // TODO: Replace with the real production API host before release
+            buildConfigField("String", "API_BASE_URL", "\"https://api.kavach.example.com/\"")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

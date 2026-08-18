@@ -1,7 +1,8 @@
+import { type ReactElement } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Provider } from 'react-redux';
-import { store } from './store/store';
+import { Provider, useSelector } from 'react-redux';
+import { store, RootState } from './store/store';
 import LoginPage from './pages/LoginPage';
 // import DashboardPage from './pages/DashboardPage';
 
@@ -14,12 +15,11 @@ const queryClient = new QueryClient({
   },
 });
 
-// Simple Protected Route wrapper
-const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
-  // In a real app, verify auth state from context/store or token
-  const isAuthenticated = true; // Replace with actual auth check
-  
-  if (!isAuthenticated) {
+// Protected Route wrapper — real auth check against the session token.
+const ProtectedRoute = ({ children }: { children: ReactElement }) => {
+  const token = useSelector((state: RootState) => state.auth.token);
+
+  if (!token) {
     return <Navigate to="/login" replace />;
   }
   return children;
@@ -32,16 +32,16 @@ function App() {
         <BrowserRouter>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
-            <Route 
-              path="/dashboard" 
+            <Route
+              path="/dashboard"
               element={
                 <ProtectedRoute>
                   {/* <DashboardPage /> */}
                   <div>Dashboard Placeholder</div>
                 </ProtectedRoute>
-              } 
+              }
             />
-            {/* Redirect any unknown route to dashboard */}
+            {/* Redirect any unknown route to dashboard (guard redirects to /login if unauthenticated) */}
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>
         </BrowserRouter>

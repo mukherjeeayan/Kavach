@@ -11,8 +11,9 @@ import { AppBlockRule, CreateAppBlockRuleInput } from '../models/AppBlockRule.mo
 export const getBlockedAppsByChildId = async (childId: string): Promise<AppBlockRule[]> => {
   const result = await query(
     `SELECT abr.id, abr.device_id, abr.package_name, abr.app_name,
-            abr.is_blocked, abr.created_at, abr.updated_at,
-            abr.unblock_requested, abr.unblock_reason
+            abr.is_blocked, abr.block_reason,
+            abr.unblock_requested, abr.unblock_reason,
+            abr.created_at, abr.updated_at
      FROM app_block_rules abr
      INNER JOIN devices d ON abr.device_id = d.id
      WHERE d.child_id = $1
@@ -30,13 +31,17 @@ export const getBlockedAppsByChildId = async (childId: string): Promise<AppBlock
  */
 export const createBlockRule = async (rule: CreateAppBlockRuleInput): Promise<AppBlockRule> => {
   const result = await query(
-    `INSERT INTO app_block_rules (device_id, package_name, app_name, is_blocked)
-     VALUES ($1, $2, $3, true)
+    `INSERT INTO app_block_rules (device_id, package_name, app_name, is_blocked, block_reason)
+     VALUES ($1, $2, $3, true, $4)
      ON CONFLICT (device_id, package_name)
-     DO UPDATE SET is_blocked = true, updated_at = now()
+     DO UPDATE SET is_blocked = true,
+                   app_name = EXCLUDED.app_name,
+                   block_reason = EXCLUDED.block_reason,
+                   updated_at = now()
      RETURNING id, device_id, package_name, app_name, is_blocked,
+               block_reason, unblock_requested, unblock_reason,
                created_at, updated_at`,
-    [rule.device_id, rule.package_name, rule.app_name || null]
+    [rule.device_id, rule.package_name, rule.app_name || null, rule.block_reason || null]
   );
   return { ...result.rows[0], child_id: rule.child_id };
 };
@@ -54,7 +59,7 @@ export const updateBlockStatus = async (
          updated_at = now()
      WHERE id = $2
      RETURNING id, device_id, package_name, app_name, is_blocked,
-               unblock_requested, unblock_reason, created_at, updated_at`,
+               block_reason, unblock_requested, unblock_reason, created_at, updated_at`,
     [isBlocked, ruleId]
   );
   return result.rows[0] || null;
@@ -78,7 +83,8 @@ export const deleteBlockRule = async (ruleId: string): Promise<boolean> => {
 export const getUnblockRequests = async (childId: string): Promise<AppBlockRule[]> => {
   const result = await query(
     `SELECT abr.id, abr.device_id, abr.package_name, abr.app_name,
-            abr.is_blocked, abr.unblock_requested, abr.unblock_reason,
+            abr.is_blocked, abr.block_reason,
+            abr.unblock_requested, abr.unblock_reason,
             abr.created_at, abr.updated_at
      FROM app_block_rules abr
      INNER JOIN devices d ON abr.device_id = d.id
@@ -101,7 +107,7 @@ export const setUnblockRequest = async (
      SET unblock_requested = true, unblock_reason = $1, updated_at = now()
      WHERE id = $2
      RETURNING id, device_id, package_name, app_name, is_blocked,
-               unblock_requested, unblock_reason, created_at, updated_at`,
+               block_reason, unblock_requested, unblock_reason, created_at, updated_at`,
     [reason, ruleId]
   );
   return result.rows[0] || null;
@@ -116,7 +122,8 @@ export const getRuleByIdAndChildId = async (
 ): Promise<AppBlockRule | null> => {
   const result = await query(
     `SELECT abr.id, abr.device_id, abr.package_name, abr.app_name,
-            abr.is_blocked, abr.unblock_requested, abr.unblock_reason,
+            abr.is_blocked, abr.block_reason,
+            abr.unblock_requested, abr.unblock_reason,
             abr.created_at, abr.updated_at
      FROM app_block_rules abr
      INNER JOIN devices d ON abr.device_id = d.id

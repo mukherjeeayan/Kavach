@@ -1,3 +1,4 @@
+import 'dotenv/config'; // Must load before reading env vars below
 import rateLimit from 'express-rate-limit';
 import { Request, Response } from 'express';
 

@@ -3,6 +3,7 @@ package com.safeguard.parentalcontrol
 import android.app.Application
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
+import com.safeguard.parentalcontrol.work.SyncScheduler
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
 
@@ -15,6 +16,14 @@ class SafeGuardApplication : Application(), Configuration.Provider {
     override fun onCreate() {
         super.onCreate()
         // Initialize Timber, Analytics, and Crashlytics here if applicable (excluding debug environments)
+        startEnforcement()
+    }
+
+    private fun startEnforcement() {
+        // Start the foreground enforcement service and the periodic
+        // rules sync on every app launch (boot is handled by BootReceiver).
+        SyncScheduler.startEnforcementService(this)
+        SyncScheduler.schedule(this)
     }
 
     override val workManagerConfiguration: Configuration

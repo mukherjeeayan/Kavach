@@ -149,8 +149,12 @@ class AppBlockingViewModel @Inject constructor(
         viewModelScope.launch {
             val result = repository.requestUnblock(childId, ruleId, reason)
             result.onFailure { e ->
-                _uiState.value = AppBlockingUiState.Error(
-                    e.message ?: "Failed to submit unblock request"
+                // Surface the error as a toast — never replace the whole
+                // list UI with an error state for a single failed action.
+                _uiEvents.emit(
+                    AppBlockingUiEvent.ShowToast(
+                        e.message ?: "Failed to submit unblock request"
+                    )
                 )
             }
         }
