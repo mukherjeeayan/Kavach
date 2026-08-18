@@ -63,11 +63,11 @@ app.get('/health', async (req, res) => {
 });
 
 // ── Feature Routes ────────────────────────────────────────────────
-import authRoutes from './routes/auth.routes';
-import appBlockingRoutes from './routes/appBlocking.routes';
-import deviceAlertRoutes from './routes/deviceAlert.routes';
-import childrenRoutes from './routes/children.routes';
-import deviceRoutes from './routes/device.routes';
+import authRoutes from './modules/auth/auth.routes';
+import appBlockingRoutes from './modules/appblocking/appBlocking.routes';
+import deviceAlertRoutes from './modules/devices/deviceAlert.routes';
+import childrenRoutes from './modules/children/children.routes';
+import deviceRoutes from './modules/devices/device.routes';
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/children/:childId/apps', appBlockingRoutes);
 app.use('/api/v1/children', childrenRoutes);

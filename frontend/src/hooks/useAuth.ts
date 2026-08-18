@@ -1,0 +1,147 @@
+import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { useNavigate } from 'react-router-dom';
+import { useDispatch } from 'react-redux';
+import * as yup from 'yup';
+import { login as loginApi, register as registerApi } from '../services/api';
+import { clearSession, setSession } from '../store/authSlice';
+import { getErrorMessage } from '../utils/apiError';
+
+// ── Login ─────────────────────────────────────────────────────────
+
+const loginSchema = yup.object({
+  email: yup.string().email('Invalid email').required('Email is required'),
+  password: yup.string().required('Password is required'),
+});
+
+type LoginFormData = { email: string; password: string };
+
+export const useLogin = () => {
+  const [isLoading, setIsLoading] = useState(false);
+  const [serverError, setServerError] = useState<string | null>(null);
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
+
+  const {
+    register,
+    handleSubmit,
+    setError,
+    formState: { errors },
+  } = useForm<LoginFormData>();
+
+  const onSubmit = handleSubmit(async (data) => {
+    setServerError(null);
+
+    // Validate locally first (yup is a dependency; the yupResolver
+    // package is not installed, so validation runs here).
+    try {
+      await loginSchema.validate(data, { abortEarly: false });
+    } catch (err) {
+      if (err instanceof yup.ValidationError) {
+        err.inner.forEach((e) => {
+          if (e.path) setError(e.path as keyof LoginFormData, { message: e.message });
+        });
+      }
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const { token, user } = await loginApi(data);
+      dispatch(setSession({ token, user }));
+      navigate('/dashboard', { replace: true });
+    } catch (error) {
+      setServerError(getErrorMessage(error, 'Invalid email or password. Please try again.'));
+    } finally {
+      setIsLoading(false);
+    }
+  });
+
+  return { register, errors, onSubmit, isLoading, serverError };
+};
+
+// ── Register ──────────────────────────────────────────────────────
+
+const registerSchema = yup.object({
+  name: yup.string().required('Name is required'),
+  email: yup.string().email('Invalid email').required('Email is required'),
+  password: yup
+    .string()
+    .min(8, 'Password must be at least 8 characters')
+    .required('Password is required'),
+  child_name: yup.string().optional(),
+  birth_date: yup
+    .string()
+    .matches(/^\d{4}-\d{2}-\d{2}$/, 'Birth date must be YYYY-MM-DD')
+    .optional(),
+});
+
+type RegisterFormData = {
+  name: string;
+  email: string;
+  password: string;
+  child_name?: string;
+  birth_date?: string;
+};
+
+export const useRegister = () => {
+  const [isLoading, setIsLoading] = useState(false);
+  const [serverError, setServerError] = useState<string | null>(null);
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
+
+  const {
+    register,
+    handleSubmit,
+    setError,
+    formState: { errors },
+  } = useForm<RegisterFormData>();
+
+  const onSubmit = handleSubmit(async (data) => {
+    setServerError(null);
+
+    try {
+      await registerSchema.validate(data, { abortEarly: false });
+    } catch (err) {
+      if (err instanceof yup.ValidationError) {
+        err.inner.forEach((e) => {
+          if (e.path) setError(e.path as keyof RegisterFormData, { message: e.message });
+        });
+      }
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const { token, user } = await registerApi({
+        name: data.name,
+        email: data.email,
+        password: data.password,
+        child_name: data.child_name || undefined,
+        birth_date: data.birth_date || undefined,
+      });
+      dispatch(setSession({ token, user }));
+      navigate('/dashboard', { replace: true });
+    } catch (error) {
+      setServerError(getErrorMessage(error, 'Registration failed. Please try again.'));
+    } finally {
+      setIsLoading(false);
+    }
+  });
+
+  return { register, errors, onSubmit, isLoading, serverError };
+};
+
+// ── Logout ────────────────────────────────────────────────────────
+
+export const useLogout = () => {
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    dispatch(clearSession());
+    navigate('/login', { replace: true });
+  };
+
+  return { handleLogout };
+};

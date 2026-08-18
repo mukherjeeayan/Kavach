@@ -16,6 +16,7 @@ import com.safeguard.parentalcontrol.BuildConfig
 import com.safeguard.parentalcontrol.data.local.OnboardingStore
 import com.safeguard.parentalcontrol.data.local.entity.AppBlockRuleEntity
 import com.safeguard.parentalcontrol.repository.appblock.AppBlockingRepository
+import com.safeguard.parentalcontrol.security.TamperDetector
 import com.safeguard.parentalcontrol.security.TamperState
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
@@ -24,7 +25,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import java.io.File
 import javax.inject.Inject
 
 /**
@@ -200,8 +200,8 @@ class AppBlockingService : Service() {
         tamperCheckJob = serviceScope.launch {
             while (isActive) {
                 try {
-                    val isRooted = checkForRoot()
-                    val isDebuggerAttached = checkForDebugger()
+                    val isRooted = TamperDetector.isRooted(this@AppBlockingService)
+                    val isDebuggerAttached = TamperDetector.isDebuggerAttached()
 
                     if (isRooted || isDebuggerAttached) {
                         handleTamperDetected(isRooted, isDebuggerAttached)
@@ -213,56 +213,6 @@ class AppBlockingService : Service() {
                 delay(TAMPER_CHECK_INTERVAL_MS)
             }
         }
-    }
-
-    /**
-     * Multi-signal root detection:
-     * 1. Check for known su binary paths
-     * 2. Check Build.TAGS for "test-keys"
-     * 3. Check for common root management apps
-     */
-    private fun checkForRoot(): Boolean {
-        // Signal 1: su binary in known locations
-        val suPaths = listOf(
-            "/system/xbin/su",
-            "/system/bin/su",
-            "/sbin/su",
-            "/system/su",
-            "/system/bin/.ext/.su",
-            "/system/usr/we-need-root/su-backup",
-            "/system/app/Superuser.apk"
-        )
-        val suFound = suPaths.any { File(it).exists() }
-
-        // Signal 2: Build tags indicate a test build (often rooted)
-        val testKeys = Build.TAGS?.contains("test-keys") == true
-
-        // Signal 3: Known root management packages installed
-        val rootPackages = listOf(
-            "com.topjohnwu.magisk",
-            "eu.chainfire.supersu",
-            "com.koushikdutta.superuser",
-            "com.noshufou.android.su"
-        )
-        val rootAppInstalled = rootPackages.any { pkg ->
-            try {
-                packageManager.getPackageInfo(pkg, 0)
-                true
-            } catch (e: Exception) {
-                false
-            }
-        }
-
-        return suFound || testKeys || rootAppInstalled
-    }
-
-    /**
-     * Detect if a debugger is attached — a sign the child may be
-     * trying to step through enforcement logic.
-     */
-    private fun checkForDebugger(): Boolean {
-        return android.os.Debug.isDebuggerConnected() ||
-                android.os.Debug.waitingForDebugger()
     }
 
     /**
