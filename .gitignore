@@ -4,3 +4,7 @@ app/build/
 backend/build/
 frontend/build/
 local.properties
+
+# Not part of Kavach - separate projects
+Dashboard Application/
+Kavach/
