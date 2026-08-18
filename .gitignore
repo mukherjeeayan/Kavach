@@ -1,5 +1,6 @@
 .gradle/
 .idea/
+build/
 app/build/
 backend/build/
 frontend/build/
