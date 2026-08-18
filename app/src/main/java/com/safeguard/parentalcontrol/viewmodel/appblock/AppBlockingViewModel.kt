@@ -2,6 +2,7 @@ package com.safeguard.parentalcontrol.viewmodel.appblock
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.safeguard.parentalcontrol.data.local.OnboardingStore
 import com.safeguard.parentalcontrol.data.local.entity.AppBlockRuleEntity
 import com.safeguard.parentalcontrol.repository.appblock.AppBlockingRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -44,7 +45,8 @@ sealed class AppBlockingUiEvent {
  */
 @HiltViewModel
 class AppBlockingViewModel @Inject constructor(
-    private val repository: AppBlockingRepository
+    private val repository: AppBlockingRepository,
+    onboardingStore: OnboardingStore
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<AppBlockingUiState>(AppBlockingUiState.Loading)
@@ -57,9 +59,10 @@ class AppBlockingViewModel @Inject constructor(
     private val _optimisticBlocks = MutableStateFlow<Map<String, Boolean>>(emptyMap())
     val optimisticBlocks: StateFlow<Map<String, Boolean>> = _optimisticBlocks.asStateFlow()
 
-    // TODO: Replace with actual device/child IDs from session manager
-    private val deviceId: String = "placeholder-device-id"
-    private val childId: String = "placeholder-child-id"
+    // Real identifiers from onboarding; the enforcement service and
+    // the sync worker read the same store.
+    private val deviceId: String = onboardingStore.deviceId ?: ""
+    private val childId: String = onboardingStore.childId ?: ""
 
     init {
         loadBlockedApps()

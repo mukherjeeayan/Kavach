@@ -33,11 +33,29 @@ class TokenStore @Inject constructor(context: Context) {
             prefs.edit().putString(KEY_TOKEN, value).apply()
         }
 
+    var refreshToken: String?
+        get() = prefs.getString(KEY_REFRESH_TOKEN, null)
+        set(value) {
+            prefs.edit().putString(KEY_REFRESH_TOKEN, value).apply()
+        }
+
+    var parentName: String?
+        get() = prefs.getString(KEY_PARENT_NAME, null)
+        set(value) {
+            prefs.edit().putString(KEY_PARENT_NAME, value).apply()
+        }
+
     fun clear() {
-        prefs.edit().remove(KEY_TOKEN).apply()
+        prefs.edit()
+            .remove(KEY_TOKEN)
+            .remove(KEY_REFRESH_TOKEN)
+            .remove(KEY_PARENT_NAME)
+            .apply()
     }
 
     companion object {
         private const val KEY_TOKEN = "jwt_token"
+        private const val KEY_REFRESH_TOKEN = "jwt_refresh_token"
+        private const val KEY_PARENT_NAME = "parent_name"
     }
 }

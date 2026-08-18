@@ -4,6 +4,7 @@ import com.safeguard.parentalcontrol.data.local.dao.AppBlockRuleDao
 import com.safeguard.parentalcontrol.data.remote.api.AppBlockingApi
 import com.safeguard.parentalcontrol.repository.appblock.AppBlockingRepository
 import com.safeguard.parentalcontrol.repository.appblock.AppBlockingRepositoryImpl
+import com.safeguard.parentalcontrol.security.TamperState
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -30,8 +31,9 @@ object AppBlockingModule {
     @Singleton
     fun provideAppBlockingRepository(
         dao: AppBlockRuleDao,
-        api: AppBlockingApi
+        api: AppBlockingApi,
+        tamperState: TamperState
     ): AppBlockingRepository {
-        return AppBlockingRepositoryImpl(dao, api)
+        return AppBlockingRepositoryImpl(dao, api, tamperState)
     }
 }

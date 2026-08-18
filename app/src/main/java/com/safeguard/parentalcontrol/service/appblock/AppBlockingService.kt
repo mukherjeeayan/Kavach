@@ -13,6 +13,7 @@ import android.os.Build
 import android.os.IBinder
 import android.util.Log
 import com.safeguard.parentalcontrol.BuildConfig
+import com.safeguard.parentalcontrol.data.local.OnboardingStore
 import com.safeguard.parentalcontrol.data.local.entity.AppBlockRuleEntity
 import com.safeguard.parentalcontrol.repository.appblock.AppBlockingRepository
 import com.safeguard.parentalcontrol.security.TamperState
@@ -49,6 +50,9 @@ class AppBlockingService : Service() {
 
     @Inject
     lateinit var tamperState: TamperState
+
+    @Inject
+    lateinit var onboardingStore: OnboardingStore
 
     private val serviceScope = CoroutineScope(Dispatchers.Default + Job())
     private var monitoringJob: Job? = null
@@ -327,12 +331,12 @@ class AppBlockingService : Service() {
     // ── Helpers ───────────────────────────────────────────────────
 
     /**
-     * Retrieves the stored device ID.
-     * TODO: Replace with actual device registration ID from
-     *       EncryptedSharedPreferences after onboarding is built.
+     * The device registration ID returned by the backend during
+     * onboarding. Empty only before onboarding completes — the
+     * foreground service does not run before then.
      */
     private fun getDeviceIdentifier(): String {
-        return "placeholder-device-id"
+        return onboardingStore.deviceId ?: ""
     }
 
     companion object {

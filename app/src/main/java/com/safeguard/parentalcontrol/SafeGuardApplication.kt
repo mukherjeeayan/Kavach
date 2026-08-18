@@ -3,6 +3,7 @@ package com.safeguard.parentalcontrol
 import android.app.Application
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
+import com.safeguard.parentalcontrol.data.local.OnboardingStore
 import com.safeguard.parentalcontrol.work.SyncScheduler
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
@@ -13,6 +14,9 @@ class SafeGuardApplication : Application(), Configuration.Provider {
     @Inject
     lateinit var workerFactory: HiltWorkerFactory
 
+    @Inject
+    lateinit var onboardingStore: OnboardingStore
+
     override fun onCreate() {
         super.onCreate()
         // Initialize Timber, Analytics, and Crashlytics here if applicable (excluding debug environments)
@@ -20,6 +24,11 @@ class SafeGuardApplication : Application(), Configuration.Provider {
     }
 
     private fun startEnforcement() {
+        // Enforcement and sync only make sense after the parent
+        // completed onboarding (real device + child IDs exist).
+        if (!onboardingStore.isOnboarded()) {
+            return
+        }
         // Start the foreground enforcement service and the periodic
         // rules sync on every app launch (boot is handled by BootReceiver).
         SyncScheduler.startEnforcementService(this)

@@ -1,6 +1,8 @@
 package com.safeguard.parentalcontrol
 
+import com.safeguard.parentalcontrol.data.local.OnboardingStore
 import com.safeguard.parentalcontrol.ui.screens.appblock.AppBlockingScreen
+import com.safeguard.parentalcontrol.ui.screens.onboarding.OnboardingScreen
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -13,36 +15,50 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
+    @Inject
+    lateinit var onboardingStore: OnboardingStore
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        
-        // Example: Initial Root Detection check would be invoked from here or Splash
-        
+
         setContent {
-            // Theme setup would be here, but omitting for now until theme files are created
             Surface(
                 modifier = Modifier.fillMaxSize(),
                 color = MaterialTheme.colorScheme.background
             ) {
-                SafeGuardNavigation()
+                SafeGuardNavigation(
+                    startDestination = if (onboardingStore.isOnboarded()) {
+                        "dashboard"
+                    } else {
+                        "onboarding"
+                    }
+                )
             }
         }
     }
 }
 
-
 @Composable
-fun SafeGuardNavigation() {
+fun SafeGuardNavigation(startDestination: String) {
     val navController = rememberNavController()
-    
-    // Basic Navigation Setup
-    NavHost(navController = navController, startDestination = "dashboard") {
+
+    NavHost(navController = navController, startDestination = startDestination) {
+        composable("onboarding") {
+            OnboardingScreen(
+                onComplete = {
+                    navController.navigate("dashboard") {
+                        popUpTo("onboarding") { inclusive = true }
+                    }
+                }
+            )
+        }
         composable("dashboard") {
             AppBlockingScreen()
         }
-        // Additional routes setup...
     }
 }
