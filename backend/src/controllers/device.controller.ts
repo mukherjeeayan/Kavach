@@ -48,3 +48,19 @@ export const heartbeat = async (req: Request, res: Response, next: NextFunction)
     next(err);
   }
 };
+
+/**
+ * GET /api/v1/children/:childId/devices
+ * Lists the registered devices of the parent's child.
+ */
+export const listDevicesForChild = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const devices = await deviceService.listDevicesForChild(
+      req.user!.userId,
+      req.params.childId
+    );
+    respond(res, 200, { devices }, req);
+  } catch (err) {
+    next(err);
+  }
+};

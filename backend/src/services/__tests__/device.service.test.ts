@@ -153,4 +153,30 @@ describe('device.service', () => {
       ).rejects.toThrow(NotFoundError);
     });
   });
+
+  describe('listDevicesForChild', () => {
+    it('should verify ownership and return the child\'s devices', async () => {
+      // verifyChildBelongsToParent
+      mockedQuery.mockResolvedValueOnce({ rows: [{ id: CHILD_ID }] } as any);
+      // SELECT devices
+      mockedQuery.mockResolvedValueOnce({ rows: [deviceRow] } as any);
+
+      const result = await deviceService.listDevicesForChild(PARENT_ID, CHILD_ID);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].device_id).toBe(DEVICE_ID);
+      expect(mockedQuery).toHaveBeenLastCalledWith(
+        expect.stringContaining('FROM devices'),
+        [CHILD_ID]
+      );
+    });
+
+    it('should throw ForbiddenError when the child does not belong to the parent', async () => {
+      mockedQuery.mockResolvedValueOnce({ rows: [] } as any);
+
+      await expect(
+        deviceService.listDevicesForChild(PARENT_ID, CHILD_ID)
+      ).rejects.toThrow(ForbiddenError);
+    });
+  });
 });

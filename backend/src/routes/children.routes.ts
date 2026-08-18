@@ -7,6 +7,7 @@ import { authenticateJWT, requireRole } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { createChildSchema } from '../dto/child.dto';
 import * as childrenController from '../controllers/children.controller';
+import * as deviceController from '../controllers/device.controller';
 
 const router = Router();
 
@@ -18,5 +19,8 @@ router.get('/', childrenController.listChildren);
 
 // POST /api/v1/children — create a child profile
 router.post('/', validate(createChildSchema), childrenController.createChild);
+
+// GET /api/v1/children/:childId/devices — list a child's registered devices
+router.get('/:childId/devices', deviceController.listDevicesForChild);
 
 export default router;

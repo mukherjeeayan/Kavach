@@ -4,7 +4,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Provider, useSelector } from 'react-redux';
 import { store, RootState } from './store/store';
 import LoginPage from './pages/LoginPage';
-// import DashboardPage from './pages/DashboardPage';
+import RegisterPage from './pages/RegisterPage';
+import DashboardPage from './pages/DashboardPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -32,12 +33,12 @@ function App() {
         <BrowserRouter>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
             <Route
               path="/dashboard"
               element={
                 <ProtectedRoute>
-                  {/* <DashboardPage /> */}
-                  <div>Dashboard Placeholder</div>
+                  <DashboardPage />
                 </ProtectedRoute>
               }
             />

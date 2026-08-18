@@ -110,6 +110,13 @@ export default function LoginPage() {
             {isLoading ? 'Signing In...' : 'Sign In'}
           </button>
         </form>
+
+        <p className="mt-4 text-center text-sm text-gray-600">
+          New to SafeGuard?{' '}
+          <a href="/register" className="text-primary hover:underline">
+            Create an account
+          </a>
+        </p>
       </div>
     </div>
   );

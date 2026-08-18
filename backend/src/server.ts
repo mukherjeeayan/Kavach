@@ -3,6 +3,7 @@ import http from 'http';
 import app from './app';
 import logger from './utils/logger';
 import { Server } from 'socket.io';
+import { ruleEvents } from './utils/socketHub';
 // Ensure DB and Redis are connected/initialized
 import pool from './config/database';
 import redisClient from './config/redis';
@@ -33,10 +34,25 @@ const io = new Server(server, {
 
 io.on('connection', (socket) => {
   logger.info(`New client connected: ${socket.id}`);
-  
+
+  // The dashboard subscribes to a child's room to receive rule changes
+  // in real time (no polling).
+  socket.on('subscribe:child', (childId: string) => {
+    if (typeof childId === 'string' && childId.length > 0) {
+      socket.join(`child:${childId}`);
+      logger.info(`Client ${socket.id} subscribed to child ${childId}`);
+    }
+  });
+
   socket.on('disconnect', () => {
     logger.info(`Client disconnected: ${socket.id}`);
   });
+});
+
+// Broadcast rule changes (block/unblock/request/approve/reject) to the
+// subscribed dashboard clients of the affected child.
+ruleEvents.on('rule:changed', (childId: string) => {
+  io.to(`child:${childId}`).emit('rule:changed', { childId });
 });
 
 // Graceful shutdown

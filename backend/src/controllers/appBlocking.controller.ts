@@ -4,6 +4,7 @@
 
 import { Request, Response, NextFunction } from 'express';
 import * as appBlockingService from '../services/appBlocking.service';
+import { emitRuleChange } from '../utils/socketHub';
 
 /**
  * GET /api/v1/children/:childId/apps/blocked
@@ -56,6 +57,8 @@ export const blockApp = async (
       block_reason
     );
 
+    emitRuleChange(childId);
+
     res.status(201).json({
       success: true,
       data: rule,
@@ -82,6 +85,8 @@ export const unblockApp = async (
     const { childId, ruleId } = req.params;
 
     await appBlockingService.unblockApp(parentId, childId, ruleId);
+
+    emitRuleChange(childId);
 
     res.status(200).json({
       success: true,
@@ -117,6 +122,8 @@ export const requestUnblock = async (
       reason
     );
 
+    emitRuleChange(childId);
+
     res.status(201).json({
       success: true,
       data: updatedRule,
@@ -144,6 +151,8 @@ export const approveUnblock = async (
 
     const rule = await appBlockingService.approveUnblock(parentId, childId, ruleId);
 
+    emitRuleChange(childId);
+
     res.status(200).json({
       success: true,
       data: rule,
@@ -170,6 +179,8 @@ export const rejectUnblock = async (
     const { childId, ruleId } = req.params;
 
     const rule = await appBlockingService.rejectUnblock(parentId, childId, ruleId);
+
+    emitRuleChange(childId);
 
     res.status(200).json({
       success: true,

@@ -99,3 +99,23 @@ export const touchDevice = async (
     throw new NotFoundError('Device not found for this parent');
   }
 };
+
+/**
+ * List the registered devices of a child the parent owns
+ * (needed by the dashboard to target rules at the right device).
+ */
+export const listDevicesForChild = async (
+  parentId: string,
+  childId: string
+): Promise<RegisteredDevice[]> => {
+  await verifyChildBelongsToParent(childId, parentId);
+  const result = await query(
+    `SELECT id AS device_id, child_id, device_name, device_type,
+            os_version, fcm_token, last_active
+     FROM devices
+     WHERE child_id = $1
+     ORDER BY created_at ASC`,
+    [childId]
+  );
+  return result.rows;
+};
