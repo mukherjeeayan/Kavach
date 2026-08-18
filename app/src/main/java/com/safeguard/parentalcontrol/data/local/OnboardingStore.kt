@@ -2,6 +2,7 @@ package com.safeguard.parentalcontrol.data.local
 
 import android.content.Context
 import android.content.SharedPreferences
+import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -14,7 +15,7 @@ import javax.inject.Singleton
  * that are sent to the backend with every request anyway.
  */
 @Singleton
-class OnboardingStore @Inject constructor(context: Context) {
+class OnboardingStore @Inject constructor(@ApplicationContext context: Context) {
 
     private val prefs: SharedPreferences =
         context.getSharedPreferences("safeguard_onboarding", Context.MODE_PRIVATE)

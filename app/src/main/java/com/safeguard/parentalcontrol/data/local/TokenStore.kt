@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
+import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -12,7 +13,7 @@ import javax.inject.Singleton
  * (the security-crypto library already declared in build.gradle.kts).
  */
 @Singleton
-class TokenStore @Inject constructor(context: Context) {
+class TokenStore @Inject constructor(@ApplicationContext context: Context) {
 
     private val prefs: SharedPreferences by lazy {
         val masterKey = MasterKey.Builder(context)

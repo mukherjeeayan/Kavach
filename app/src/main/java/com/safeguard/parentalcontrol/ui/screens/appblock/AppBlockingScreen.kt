@@ -56,18 +56,18 @@ fun AppBlockingScreen(
     // main thread so the first composition stays smooth.
     val launchableApps by produceState<List<InstalledApp>>(
         initialValue = emptyList(),
-        packageManager
+        context.packageManager
     ) {
         value = withContext(Dispatchers.IO) {
             val intent = Intent(Intent.ACTION_MAIN, null).apply {
                 addCategory(Intent.CATEGORY_LAUNCHER)
             }
-            packageManager.queryIntentActivities(intent, 0).map { resolveInfo ->
+            context.packageManager.queryIntentActivities(intent, 0).map { resolveInfo ->
                 val appInfo = resolveInfo.activityInfo.applicationInfo
                 InstalledApp(
                     packageName = appInfo.packageName,
-                    appName = appInfo.loadLabel(packageManager).toString(),
-                    icon = appInfo.loadIcon(packageManager)
+                    appName = appInfo.loadLabel(context.packageManager).toString(),
+                    icon = appInfo.loadIcon(context.packageManager)
                 )
             }.distinctBy { it.packageName }.sortedBy { it.appName.lowercase() }
         }

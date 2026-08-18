@@ -5,6 +5,7 @@ import android.util.Log
 import com.safeguard.parentalcontrol.data.local.OnboardingStore
 import com.safeguard.parentalcontrol.data.local.TokenStore
 import com.safeguard.parentalcontrol.data.remote.api.AuthApi
+import com.safeguard.parentalcontrol.data.remote.dto.ApiResponse
 import com.safeguard.parentalcontrol.data.remote.dto.ChildDto
 import com.safeguard.parentalcontrol.data.remote.dto.CreateChildRequest
 import com.safeguard.parentalcontrol.data.remote.dto.DeviceDto
@@ -103,7 +104,7 @@ class OnboardingRepositoryImpl @Inject constructor(
         Log.i(TAG, "Session cleared")
     }
 
-    private fun <T> errorMessage(response: retrofit2.Response<T>): String {
+    private fun <T> errorMessage(response: retrofit2.Response<ApiResponse<T>>): String {
         val body = response.body()
         return if (body != null && body.error != null) {
             "Request failed: ${body.error}"

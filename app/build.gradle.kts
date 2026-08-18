@@ -72,7 +72,7 @@ android {
 dependencies {
     val composeBomVersion = "2024.02.00"
     val lifecycleVersion = "2.7.0"
-    val roomVersion = "2.6.1"
+    val roomVersion = "2.7.2"
     val retrofitVersion = "2.9.0"
     val okhttpVersion = "4.12.0"
     val hiltVersion = "2.60.1"
