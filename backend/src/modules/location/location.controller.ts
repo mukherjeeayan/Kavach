@@ -33,13 +33,12 @@ export const getCurrent = async (req: Request, res: Response, next: NextFunction
 
 export const getHistory = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const limit = Math.min(Number(req.query.limit) || 100, 500);
     const data = await locationService.getLocationHistory(
       req.user!.userId,
       req.params.childId,
       req.query.from as string | undefined,
       req.query.to as string | undefined,
-      limit
+      Number(req.query.limit) || 100
     );
     res.status(200).json({
       success: true,

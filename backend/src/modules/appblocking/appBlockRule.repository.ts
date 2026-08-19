@@ -3,12 +3,38 @@
 
 import { query } from '../../config/database';
 import { AppBlockRule, CreateAppBlockRuleInput } from './AppBlockRule.model';
+import { toOffset } from '../../utils/pagination';
 
 /**
- * Fetch all blocked apps for a given child across all their devices.
- * Joins through the devices table to scope by child_id.
+ * Verify a device belongs to a child before a rule is attached to it.
  */
-export const getBlockedAppsByChildId = async (childId: string): Promise<AppBlockRule[]> => {
+export const verifyDeviceBelongsToChild = async (
+  deviceId: string,
+  childId: string
+): Promise<boolean> => {
+  const result = await query(`SELECT id FROM devices WHERE id = $1 AND child_id = $2`, [
+    deviceId,
+    childId,
+  ]);
+  return result.rows.length > 0;
+};
+
+/**
+ * Fetch all blocked apps for a given child across all their devices
+ * (paginated). Joins through the devices table to scope by child_id.
+ */
+export const getBlockedAppsByChildId = async (
+  childId: string,
+  page = 1,
+  limit = 20
+): Promise<{ items: AppBlockRule[]; total: number }> => {
+  const count = await query(
+    `SELECT COUNT(*)::int AS total
+     FROM app_block_rules abr
+     INNER JOIN devices d ON abr.device_id = d.id
+     WHERE d.child_id = $1`,
+    [childId]
+  );
   const result = await query(
     `SELECT abr.id, abr.device_id, abr.package_name, abr.app_name,
             abr.is_blocked, abr.block_reason,
@@ -17,11 +43,15 @@ export const getBlockedAppsByChildId = async (childId: string): Promise<AppBlock
      FROM app_block_rules abr
      INNER JOIN devices d ON abr.device_id = d.id
      WHERE d.child_id = $1
-     ORDER BY abr.created_at DESC`,
-    [childId]
+     ORDER BY abr.created_at DESC
+     LIMIT $2 OFFSET $3`,
+    [childId, limit, toOffset(page, limit)]
   );
   // Attach child_id to each row for consistency with the interface
-  return result.rows.map((row: any) => ({ ...row, child_id: childId }));
+  return {
+    items: result.rows.map((row: any) => ({ ...row, child_id: childId })),
+    total: count.rows[0].total,
+  };
 };
 
 /**
@@ -78,9 +108,20 @@ export const deleteBlockRule = async (ruleId: string): Promise<boolean> => {
 };
 
 /**
- * Fetch all rules where the child has requested an unblock.
+ * Fetch all rules where the child has requested an unblock (paginated).
  */
-export const getUnblockRequests = async (childId: string): Promise<AppBlockRule[]> => {
+export const getUnblockRequests = async (
+  childId: string,
+  page = 1,
+  limit = 20
+): Promise<{ items: AppBlockRule[]; total: number }> => {
+  const count = await query(
+    `SELECT COUNT(*)::int AS total
+     FROM app_block_rules abr
+     INNER JOIN devices d ON abr.device_id = d.id
+     WHERE d.child_id = $1 AND abr.unblock_requested = true`,
+    [childId]
+  );
   const result = await query(
     `SELECT abr.id, abr.device_id, abr.package_name, abr.app_name,
             abr.is_blocked, abr.block_reason,
@@ -89,10 +130,14 @@ export const getUnblockRequests = async (childId: string): Promise<AppBlockRule[
      FROM app_block_rules abr
      INNER JOIN devices d ON abr.device_id = d.id
      WHERE d.child_id = $1 AND abr.unblock_requested = true
-     ORDER BY abr.updated_at DESC`,
-    [childId]
+     ORDER BY abr.updated_at DESC
+     LIMIT $2 OFFSET $3`,
+    [childId, limit, toOffset(page, limit)]
   );
-  return result.rows.map((row: any) => ({ ...row, child_id: childId }));
+  return {
+    items: result.rows.map((row: any) => ({ ...row, child_id: childId })),
+    total: count.rows[0].total,
+  };
 };
 
 /**

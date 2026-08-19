@@ -25,7 +25,7 @@ rate-limited, validated, audited API endpoints.
 ## Repository layout
 
 ```
-backend/   Express + TypeScript API (Postgres + Redis, socket.io)
+backend/   Express + TypeScript API (Postgres, socket.io)
 frontend/  React + Vite dashboard (react-query, redux)
 app/       Android app (Jetpack Compose, Hilt, Room, WorkManager)
 doc/       Design plan, task list, and per-stack skill guides
@@ -33,14 +33,14 @@ doc/       Design plan, task list, and per-stack skill guides
 
 ## Getting started
 
-### 1. Services (Postgres + Redis)
+### 1. Services (Postgres)
 
 ```bash
 docker compose up -d
 ```
 
 The first boot applies `backend/db/migrations/*.sql` in order
-(seq 1-4). Redis is used for rate limiting.
+(seq 1-4). Rate limiting is in-memory (per-instance).
 
 ### 2. Backend
 

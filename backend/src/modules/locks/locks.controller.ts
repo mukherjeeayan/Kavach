@@ -1,12 +1,20 @@
 import { Request, Response, NextFunction } from 'express';
 import * as locksService from './locks.service';
+import { buildPaginationMeta } from '../../utils/pagination';
 
 export const listLocks = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const data = await locksService.listLocks(req.user!.userId, req.params.childId);
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 20;
+    const { items, total } = await locksService.listLocks(
+      req.user!.userId,
+      req.params.childId,
+      page,
+      limit
+    );
     res.status(200).json({
       success: true,
-      data: { locks: data },
+      data: { locks: items, pagination: buildPaginationMeta(page, limit, total) },
       error: null,
       timestamp: new Date().toISOString(),
       request_id: req.headers['x-request-id'],

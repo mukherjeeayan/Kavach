@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import com.safeguard.parentalcontrol.data.local.OnboardingStore
+import com.safeguard.parentalcontrol.data.remote.RealtimeRulesClient
 import com.safeguard.parentalcontrol.work.SyncScheduler
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
@@ -17,6 +18,9 @@ class SafeGuardApplication : Application(), Configuration.Provider {
     @Inject
     lateinit var onboardingStore: OnboardingStore
 
+    @Inject
+    lateinit var realtimeRulesClient: RealtimeRulesClient
+
     override fun onCreate() {
         super.onCreate()
         // Initialize Timber, Analytics, and Crashlytics here if applicable (excluding debug environments)
@@ -29,11 +33,13 @@ class SafeGuardApplication : Application(), Configuration.Provider {
         if (!onboardingStore.isOnboarded()) {
             return
         }
-        // Start the foreground enforcement/location services and the
-        // periodic sync on every app launch (boot is handled by BootReceiver).
+        // Start the foreground enforcement/location services, the
+        // periodic sync, and the realtime rule push on every app
+        // launch (boot is handled by BootReceiver).
         SyncScheduler.startEnforcementService(this)
         SyncScheduler.startLocationService(this)
         SyncScheduler.schedule(this)
+        realtimeRulesClient.start()
     }
 
     override val workManagerConfiguration: Configuration

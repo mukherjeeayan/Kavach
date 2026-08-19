@@ -48,9 +48,22 @@ export const register = async (payload: RegisterPayload): Promise<LoginPayload> 
   return response.data.data!;
 };
 
+/** Revokes the refresh token server-side. Idempotent; call on sign-out. */
+export const logout = async (refreshToken: string): Promise<void> => {
+  await apiClient.post('/auth/logout', { refresh_token: refreshToken });
+};
+
 export const fetchChildren = async (): Promise<ChildProfile[]> => {
   const response = await apiClient.get<ApiResponse<{ children: ChildProfile[] }>>('/children');
   return response.data.data?.children ?? [];
+};
+
+export const createChild = async (name: string, birthDate?: string): Promise<ChildProfile> => {
+  const response = await apiClient.post<ApiResponse<ChildProfile>>('/children', {
+    name,
+    birth_date: birthDate || undefined,
+  });
+  return response.data.data!;
 };
 
 export const fetchChildDevices = async (childId: string): Promise<DeviceProfile[]> => {

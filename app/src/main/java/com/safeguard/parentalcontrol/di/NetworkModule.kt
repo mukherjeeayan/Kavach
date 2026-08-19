@@ -39,6 +39,12 @@ object NetworkModule {
         return OkHttpClient.Builder()
             .addInterceptor(authInterceptor)
             .addInterceptor(loggingInterceptor)
+            // Explicit timeouts: mobile networks are slow and flaky, and
+            // the default 10s connect / 10s read is too tight for
+            // multi-day offline buffers uploading in one burst.
+            .connectTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
+            .readTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+            .writeTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
             .build()
     }
 

@@ -24,13 +24,36 @@ export default function LocksSection({ childId, onError }: LocksSectionProps) {
   useActionsError([actions.create, actions.update, actions.remove], onError);
 
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [dayOfWeek, setDayOfWeek] = useState<number | null>(null);
   const [startTime, setStartTime] = useState('21:00');
   const [endTime, setEndTime] = useState('06:00');
 
+  const openCreate = () => {
+    setEditingId(null);
+    setDayOfWeek(null);
+    setStartTime('21:00');
+    setEndTime('06:00');
+    setShowForm(true);
+  };
+
+  const openEdit = (lock: { id: string; day_of_week: number | null; start_time: string; end_time: string }) => {
+    setEditingId(lock.id);
+    setDayOfWeek(lock.day_of_week);
+    setStartTime(lock.start_time);
+    setEndTime(lock.end_time);
+    setShowForm(true);
+  };
+
   const handleSave = () => {
-    actions.create.mutate({ day_of_week: dayOfWeek, start_time: startTime, end_time: endTime });
+    const input = { day_of_week: dayOfWeek, start_time: startTime, end_time: endTime };
+    if (editingId) {
+      actions.update.mutate({ lockId: editingId, input });
+    } else {
+      actions.create.mutate(input);
+    }
     setShowForm(false);
+    setEditingId(null);
   };
 
   return (
@@ -38,7 +61,7 @@ export default function LocksSection({ childId, onError }: LocksSectionProps) {
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-lg font-semibold">Scheduled Locks</h2>
         <button
-          onClick={() => setShowForm((v) => !v)}
+          onClick={openCreate}
           className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors"
         >
           {showForm ? 'Cancel' : '+ Add lock'}
@@ -47,6 +70,9 @@ export default function LocksSection({ childId, onError }: LocksSectionProps) {
 
       {showForm && (
         <div className="bg-white rounded-lg p-4 border mb-4 space-y-3">
+          <h3 className="text-sm font-semibold text-gray-700">
+            {editingId ? 'Edit lock window' : 'New lock window'}
+          </h3>
           <label className="block">
             <span className="text-sm text-gray-600">Day</span>
             <select
@@ -85,10 +111,10 @@ export default function LocksSection({ childId, onError }: LocksSectionProps) {
           </div>
           <button
             onClick={handleSave}
-            disabled={actions.create.isPending}
+            disabled={actions.create.isPending || actions.update.isPending}
             className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 disabled:opacity-50"
           >
-            Save lock
+            {editingId ? 'Update lock' : 'Save lock'}
           </button>
         </div>
       )}
@@ -109,6 +135,13 @@ export default function LocksSection({ childId, onError }: LocksSectionProps) {
                 <p className="text-sm text-gray-500">{lock.is_active ? 'Active' : 'Disabled'}</p>
               </div>
               <div className="flex gap-2 shrink-0">
+                <button
+                  onClick={() => openEdit(lock)}
+                  disabled={actions.update.isPending}
+                  className="px-3 py-2 border rounded-md text-sm font-medium hover:bg-gray-50 disabled:opacity-50"
+                >
+                  Edit
+                </button>
                 <button
                   onClick={() =>
                     actions.update.mutate({

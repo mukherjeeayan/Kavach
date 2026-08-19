@@ -27,6 +27,10 @@ interface ScreenTimeDao {
     @Query("SELECT * FROM screen_time_daily WHERE date = :date ORDER BY seconds DESC")
     suspend fun getByDate(date: String): List<ScreenTimeDailyEntity>
 
+    /** All buffered rows across every date, oldest first — the upload delta. */
+    @Query("SELECT * FROM screen_time_daily ORDER BY date ASC, seconds DESC")
+    suspend fun getAll(): List<ScreenTimeDailyEntity>
+
     @Query("DELETE FROM screen_time_daily WHERE date = :date")
     suspend fun deleteByDate(date: String)
 

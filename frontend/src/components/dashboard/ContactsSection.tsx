@@ -1,21 +1,54 @@
 import { useState } from 'react';
-import { useContactActions, useContacts } from '../../hooks/usePhase1Data';
+import { useActionsError, useContactActions, useContacts } from '../../hooks/usePhase1Data';
 
 interface ContactsSectionProps {
   childId: string | null;
+  onError: (message: string | null) => void;
 }
 
-export default function ContactsSection({ childId }: ContactsSectionProps) {
+export default function ContactsSection({ childId, onError }: ContactsSectionProps) {
   const contacts = useContacts(childId);
   const actions = useContactActions(childId);
+  useActionsError([actions.create, actions.update, actions.remove], onError);
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [number, setNumber] = useState('');
   const [ruleType, setRuleType] = useState<'ALLOW' | 'BLOCK'>('BLOCK');
 
+  const openCreate = () => {
+    setEditingId(null);
+    setName('');
+    setNumber('');
+    setRuleType('BLOCK');
+    setShowForm(true);
+  };
+
+  const openEdit = (contact: {
+    id: string;
+    contact_name: string | null;
+    phone_number: string;
+    rule_type: 'ALLOW' | 'BLOCK';
+  }) => {
+    setEditingId(contact.id);
+    setName(contact.contact_name ?? '');
+    setNumber(contact.phone_number);
+    setRuleType(contact.rule_type);
+    setShowForm(true);
+  };
+
   const handleSave = () => {
-    actions.create.mutate({ contact_name: name, phone_number: number, rule_type: ruleType });
+    if (editingId) {
+      // The backend keeps phone_number immutable; name and rule update.
+      actions.update.mutate({
+        contactId: editingId,
+        input: { contact_name: name, rule_type: ruleType },
+      });
+    } else {
+      actions.create.mutate({ contact_name: name, phone_number: number, rule_type: ruleType });
+    }
     setShowForm(false);
+    setEditingId(null);
     setName('');
     setNumber('');
   };
@@ -25,7 +58,7 @@ export default function ContactsSection({ childId }: ContactsSectionProps) {
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-lg font-semibold">Contacts</h2>
         <button
-          onClick={() => setShowForm((v) => !v)}
+          onClick={openCreate}
           className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors"
         >
           {showForm ? 'Cancel' : '+ Add contact'}
@@ -34,6 +67,9 @@ export default function ContactsSection({ childId }: ContactsSectionProps) {
 
       {showForm && (
         <div className="bg-white rounded-lg p-4 border mb-4 space-y-3">
+          <h3 className="text-sm font-semibold text-gray-700">
+            {editingId ? 'Edit contact' : 'New contact rule'}
+          </h3>
           <div className="grid grid-cols-2 gap-3">
             <label className="block">
               <span className="text-sm text-gray-600">Name</span>
@@ -67,10 +103,10 @@ export default function ContactsSection({ childId }: ContactsSectionProps) {
           </label>
           <button
             onClick={handleSave}
-            disabled={actions.create.isPending || number === ''}
+            disabled={actions.create.isPending || actions.update.isPending || number === ''}
             className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 disabled:opacity-50"
           >
-            Save contact
+            {editingId ? 'Update contact' : 'Save contact'}
           </button>
         </div>
       )}
@@ -95,6 +131,13 @@ export default function ContactsSection({ childId }: ContactsSectionProps) {
               >
                 {contact.rule_type}
               </span>
+              <button
+                onClick={() => openEdit(contact)}
+                disabled={actions.update.isPending}
+                className="px-3 py-2 border rounded-md text-sm font-medium hover:bg-gray-50 disabled:opacity-50"
+              >
+                Edit
+              </button>
               <button
                 onClick={() =>
                   actions.update.mutate({

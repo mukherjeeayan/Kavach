@@ -119,12 +119,16 @@ fun AppBlockingScreen(
                         AppList(
                             apps = launchableApps,
                             blockedApps = state.blockedApps,
+                            unblockRequests = state.unblockRequests,
                             optimisticBlocks = optimisticBlocks,
                             onBlockApp = { packageName, appName, reason ->
                                 viewModel.blockApp(packageName, appName, reason)
                             },
                             onUnblockApp = { ruleId, packageName ->
                                 viewModel.unblockApp(ruleId, packageName)
+                            },
+                            onRequestUnblock = { ruleId, reason ->
+                                viewModel.requestUnblock(ruleId, reason)
                             }
                         )
                     }
@@ -138,11 +142,14 @@ fun AppBlockingScreen(
 fun AppList(
     apps: List<InstalledApp>,
     blockedApps: List<AppBlockRuleEntity>,
+    unblockRequests: List<AppBlockRuleEntity>,
     optimisticBlocks: Map<String, Boolean>,
     onBlockApp: (String, String, String?) -> Unit,
-    onUnblockApp: (String, String) -> Unit
+    onUnblockApp: (String, String) -> Unit,
+    onRequestUnblock: (String, String) -> Unit
 ) {
     var appToBlock by remember { mutableStateOf<InstalledApp?>(null) }
+    var appToRequestUnblock by remember { mutableStateOf<AppBlockRuleEntity?>(null) }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -150,6 +157,7 @@ fun AppList(
     ) {
         items(apps, key = { it.packageName }) { app ->
             val blockedRule = blockedApps.find { it.packageName == app.packageName && it.isBlocked }
+            val pendingRequest = unblockRequests.find { it.packageName == app.packageName }
             
             // Check optimistic state first, fallback to source of truth
             val isOptimisticallyBlocked = optimisticBlocks[app.packageName]
@@ -159,6 +167,7 @@ fun AppList(
                 app = app,
                 isBlocked = isCurrentlyBlocked,
                 blockReason = blockedRule?.blockReason,
+                unblockRequested = pendingRequest?.unblockRequested == true,
                 onCheckedChange = { checked ->
                     if (checked) {
                         appToBlock = app // Show confirmation dialog
@@ -167,6 +176,9 @@ fun AppList(
                             onUnblockApp(rule.id, app.packageName)
                         }
                     }
+                },
+                onRequestUnblock = {
+                    pendingRequest?.let { appToRequestUnblock = it }
                 }
             )
             Divider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 0.5.dp)
@@ -196,6 +208,59 @@ fun AppList(
             }
         )
     }
+
+    // Unblock-request dialog: the child asks the parent for permission.
+    appToRequestUnblock?.let { rule ->
+        RequestUnblockDialog(
+            rule = rule,
+            onDismiss = { appToRequestUnblock = null },
+            onConfirm = { reason ->
+                onRequestUnblock(rule.id, reason)
+                appToRequestUnblock = null
+            }
+        )
+    }
+}
+
+@Composable
+fun RequestUnblockDialog(
+    rule: AppBlockRuleEntity,
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit
+) {
+    var reason by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Request unblock") },
+        text = {
+            Column {
+                Text(
+                    text = "Ask your parent to unblock ${rule.appName ?: rule.packageName}. They will review your request.",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = reason,
+                    onValueChange = { reason = it },
+                    label = { Text("Reason (optional)") },
+                    singleLine = false,
+                    maxLines = 3,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(reason.trim()) }) {
+                Text("Send request")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }
 
 @Composable
@@ -203,7 +268,9 @@ fun AppListItem(
     app: InstalledApp,
     isBlocked: Boolean,
     blockReason: String?,
-    onCheckedChange: (Boolean) -> Unit
+    unblockRequested: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    onRequestUnblock: () -> Unit
 ) {
     Row(
         modifier = Modifier
@@ -221,7 +288,7 @@ fun AppListItem(
 
         Spacer(modifier = Modifier.width(16.dp))
 
-        // App Name and Reason
+        // App Name, Reason and Unblock-request state
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = app.appName,
@@ -240,6 +307,29 @@ fun AppListItem(
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onErrorContainer
                     )
+                }
+            }
+            if (isBlocked && unblockRequested) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Surface(
+                    shape = MaterialTheme.shapes.small,
+                    color = MaterialTheme.colorScheme.secondaryContainer
+                ) {
+                    Text(
+                        text = "Unblock requested — waiting for parent",
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                }
+            }
+            if (isBlocked && !unblockRequested) {
+                Spacer(modifier = Modifier.height(4.dp))
+                TextButton(
+                    onClick = onRequestUnblock,
+                    contentPadding = PaddingValues(horizontal = 0.dp, vertical = 0.dp)
+                ) {
+                    Text("Request unblock", style = MaterialTheme.typography.labelMedium)
                 }
             }
         }

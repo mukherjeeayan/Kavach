@@ -67,6 +67,22 @@ export const refreshToken = async (req: Request, res: Response, next: NextFuncti
 };
 
 /**
+ * POST /api/v1/auth/logout
+ * Body: { refresh_token }
+ * Revokes the refresh token server-side so it can no longer be rotated.
+ * Idempotent — always 200.
+ */
+export const logout = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { refresh_token } = req.body;
+    const result = await authService.logout(refresh_token);
+    respond(res, 200, result, req);
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
  * PUT /api/v1/auth/pin
  * Body: { pin } — authenticated (parent JWT).
  * Sets or rotates the parent's device-unlock PIN.
@@ -83,13 +99,14 @@ export const setPin = async (req: Request, res: Response, next: NextFunction) =>
 /**
  * POST /api/v1/auth/pin/verify
  * Body: { email, pin }
- * Returns a short-lived scoped token when the PIN is correct.
+ * Returns 200 with { valid: true, token, user } when the PIN matches
+ * (token is a short-lived scoped token); 401 otherwise.
  */
 export const verifyPin = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { email, pin } = req.body;
     const session = await authService.verifyPin(email, pin);
-    respond(res, 200, session, req);
+    respond(res, 200, { valid: true, ...session }, req);
   } catch (err) {
     next(err);
   }

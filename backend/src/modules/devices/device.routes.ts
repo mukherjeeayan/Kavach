@@ -4,7 +4,8 @@
 
 import { Router } from 'express';
 import { authenticateJWT, requireRole } from '../../middleware/auth';
-import { validate } from '../../middleware/validate';
+import { validate, validateParams } from '../../middleware/validate';
+import { uuidParams } from '../../middleware/params';
 import { registerDeviceSchema } from './device.dto';
 import * as deviceController from './device.controller';
 
@@ -17,6 +18,6 @@ router.use(requireRole('parent'));
 router.post('/register', validate(registerDeviceSchema), deviceController.registerDevice);
 
 // POST /api/v1/devices/:deviceId/heartbeat — update last_active
-router.post('/:deviceId/heartbeat', deviceController.heartbeat);
+router.post('/:deviceId/heartbeat', validateParams(uuidParams('deviceId')), deviceController.heartbeat);
 
 export default router;

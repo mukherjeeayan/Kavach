@@ -77,6 +77,8 @@ describe('appBlocking.service', () => {
     it('should create a block rule and write an audit log', async () => {
       // Ownership check passes
       mockedQuery.mockResolvedValueOnce({ rows: [{ id: CHILD_ID }] } as any);
+      // Device ownership check passes
+      mockedRepo.verifyDeviceBelongsToChild.mockResolvedValueOnce(true);
       // createBlockRule returns the rule
       mockedRepo.createBlockRule.mockResolvedValueOnce(mockRule);
       // Audit log insert succeeds
@@ -88,6 +90,7 @@ describe('appBlocking.service', () => {
 
       expect(result).toEqual(mockRule);
       expect(mockedRepo.createBlockRule).toHaveBeenCalledTimes(1);
+      expect(mockedRepo.verifyDeviceBelongsToChild).toHaveBeenCalledWith(DEVICE_ID, CHILD_ID);
       // Verify audit log was written (the second query call)
       expect(mockedQuery).toHaveBeenCalledTimes(2);
     });
@@ -100,6 +103,16 @@ describe('appBlocking.service', () => {
           PARENT_ID, CHILD_ID, DEVICE_ID, 'com.example.app'
         )
       ).rejects.toThrow(appBlockingService.ForbiddenError);
+    });
+
+    it('should throw NotFoundError if the device does not belong to the child', async () => {
+      mockedQuery.mockResolvedValueOnce({ rows: [{ id: CHILD_ID }] } as any);
+      mockedRepo.verifyDeviceBelongsToChild.mockResolvedValueOnce(false);
+
+      await expect(
+        appBlockingService.blockApp(PARENT_ID, CHILD_ID, DEVICE_ID, 'com.example.app')
+      ).rejects.toThrow(appBlockingService.NotFoundError);
+      expect(mockedRepo.createBlockRule).not.toHaveBeenCalled();
     });
   });
 
@@ -132,7 +145,7 @@ describe('appBlocking.service', () => {
   // ── requestUnblock ──────────────────────────────────────────
 
   describe('requestUnblock', () => {
-    it('should set unblock_requested and return the updated rule', async () => {
+    it('should set unblock_requested, audit and return the updated rule', async () => {
       const blockedRule = { ...mockRule, is_blocked: true, unblock_requested: false };
       // Ownership check passes
       mockedQuery.mockResolvedValueOnce({ rows: [{ id: CHILD_ID }] } as any);
@@ -142,6 +155,8 @@ describe('appBlocking.service', () => {
         unblock_requested: true,
         unblock_reason: 'Need it for homework',
       });
+      // Audit log insert succeeds
+      mockedQuery.mockResolvedValueOnce({ rows: [] } as any);
 
       const result = await appBlockingService.requestUnblock(
         PARENT_ID, CHILD_ID, RULE_ID, 'Need it for homework'
@@ -149,6 +164,8 @@ describe('appBlocking.service', () => {
 
       expect(result.unblock_requested).toBe(true);
       expect(result.unblock_reason).toBe('Need it for homework');
+      // Ownership check + audit log write
+      expect(mockedQuery).toHaveBeenCalledTimes(2);
     });
 
     it('should throw NotFoundError if rule not found for this child', async () => {
@@ -283,12 +300,16 @@ describe('appBlocking.service', () => {
   describe('getBlockedApps', () => {
     it('should return blocked apps after verifying ownership', async () => {
       mockedQuery.mockResolvedValueOnce({ rows: [{ id: CHILD_ID }] } as any);
-      mockedRepo.getBlockedAppsByChildId.mockResolvedValueOnce([mockRule]);
+      mockedRepo.getBlockedAppsByChildId.mockResolvedValueOnce({
+        items: [mockRule],
+        total: 1,
+      });
 
       const result = await appBlockingService.getBlockedApps(PARENT_ID, CHILD_ID);
 
-      expect(result).toHaveLength(1);
-      expect(result[0].package_name).toBe('com.example.app');
+      expect(result.items).toHaveLength(1);
+      expect(result.total).toBe(1);
+      expect(result.items[0].package_name).toBe('com.example.app');
     });
   });
 
@@ -297,14 +318,15 @@ describe('appBlocking.service', () => {
   describe('getUnblockRequests', () => {
     it('should return pending unblock requests after verifying ownership', async () => {
       mockedQuery.mockResolvedValueOnce({ rows: [{ id: CHILD_ID }] } as any);
-      mockedRepo.getUnblockRequests.mockResolvedValueOnce([
-        { ...mockRule, unblock_requested: true, unblock_reason: 'homework' },
-      ]);
+      mockedRepo.getUnblockRequests.mockResolvedValueOnce({
+        items: [{ ...mockRule, unblock_requested: true, unblock_reason: 'homework' }],
+        total: 1,
+      });
 
       const result = await appBlockingService.getUnblockRequests(PARENT_ID, CHILD_ID);
 
-      expect(result).toHaveLength(1);
-      expect(result[0].unblock_requested).toBe(true);
+      expect(result.items).toHaveLength(1);
+      expect(result.items[0].unblock_requested).toBe(true);
     });
   });
 });

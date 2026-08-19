@@ -1,6 +1,11 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-
-const TOKEN_KEY = 'kavach_token';
+import {
+  clearStoredSession,
+  getStoredToken,
+  getStoredUser,
+  persistSession,
+  PersistedSession,
+} from '../services/session';
 
 export interface AuthUser {
   id: string;
@@ -14,23 +19,23 @@ interface AuthState {
 }
 
 const initialState: AuthState = {
-  token: localStorage.getItem(TOKEN_KEY),
-  user: null,
+  token: getStoredToken(),
+  user: getStoredUser(),
 };
 
 const authSlice = createSlice({
   name: 'auth',
   initialState,
   reducers: {
-    setSession(state, action: PayloadAction<{ token: string; user: AuthUser }>) {
+    setSession(state, action: PayloadAction<PersistedSession>) {
       state.token = action.payload.token;
       state.user = action.payload.user;
-      localStorage.setItem(TOKEN_KEY, action.payload.token);
+      persistSession(action.payload);
     },
     clearSession(state) {
       state.token = null;
       state.user = null;
-      localStorage.removeItem(TOKEN_KEY);
+      clearStoredSession();
     },
   },
 });

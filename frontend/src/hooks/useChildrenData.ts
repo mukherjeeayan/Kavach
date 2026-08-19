@@ -1,5 +1,6 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
+  createChild,
   fetchBlockedApps,
   fetchChildDevices,
   fetchChildren,
@@ -12,6 +13,17 @@ export const useChildren = () =>
     queryFn: fetchChildren,
   });
 
+export const useCreateChild = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ name, birthDate }: { name: string; birthDate?: string }) =>
+      createChild(name, birthDate),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['children'] });
+    },
+  });
+};
+
 export const useDevices = (childId: string | null) =>
   useQuery({
     queryKey: ['devices', childId],
@@ -19,18 +31,23 @@ export const useDevices = (childId: string | null) =>
     enabled: !!childId,
   });
 
-export const useBlockedApps = (childId: string | null) =>
+export const useBlockedApps = (childId: string | null, refetchInterval?: number | false) =>
   useQuery({
     queryKey: ['blocked', childId],
     queryFn: () => fetchBlockedApps(childId as string),
     enabled: !!childId,
+    refetchInterval,
   });
 
-export const useUnblockRequests = (childId: string | null) =>
+export const useUnblockRequests = (
+  childId: string | null,
+  refetchInterval?: number | false
+) =>
   useQuery({
     queryKey: ['unblockRequests', childId],
     queryFn: () => fetchUnblockRequests(childId as string),
     enabled: !!childId,
+    refetchInterval,
   });
 
 /** Returns a callback that refreshes the two child-scoped queries. */

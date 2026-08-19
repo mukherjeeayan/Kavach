@@ -3,7 +3,10 @@ package com.safeguard.parentalcontrol.work
 import android.content.Context
 import android.content.Intent
 import androidx.core.content.ContextCompat
+import androidx.work.BackoffPolicy
+import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import com.safeguard.parentalcontrol.service.appblock.AppBlockingService
@@ -12,7 +15,8 @@ import java.util.concurrent.TimeUnit
 
 /**
  * Central entry points for starting the enforcement services and the
- * periodic rules sync. Called on app launch and on BOOT_COMPLETED.
+ * periodic rules sync. Called on app launch, right after onboarding
+ * completes, and on BOOT_COMPLETED.
  */
 object SyncScheduler {
 
@@ -33,7 +37,15 @@ object SyncScheduler {
     }
 
     fun schedule(context: Context) {
+        // Only run when there is a network: an offline sync wastes
+        // battery and would just retry anyway. Exponential backoff
+        // prevents hammering a flaky backend.
+        val constraints = Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .build()
         val request = PeriodicWorkRequestBuilder<SyncRulesWorker>(SYNC_INTERVAL_MINUTES, TimeUnit.MINUTES)
+            .setConstraints(constraints)
+            .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
             .build()
         WorkManager.getInstance(context).enqueueUniquePeriodicWork(
             SYNC_WORK_NAME,

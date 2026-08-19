@@ -40,11 +40,13 @@ beforeEach(() => {
 
 describe('device.service', () => {
   describe('registerDevice', () => {
-    it('should verify ownership before creating a new device', async () => {
+    it('should verify ownership, insert and audit a new device', async () => {
       // verifyChildBelongsToParent query
       mockedQuery.mockResolvedValueOnce({ rows: [{ id: CHILD_ID }] } as any);
       // INSERT devices
       mockedQuery.mockResolvedValueOnce({ rows: [deviceRow] } as any);
+      // INSERT audit_logs
+      mockedQuery.mockResolvedValueOnce({ rows: [] } as any);
 
       const result = await deviceService.registerDevice(PARENT_ID, {
         child_id: CHILD_ID,
@@ -55,7 +57,8 @@ describe('device.service', () => {
       });
 
       expect(result.device_id).toBe(DEVICE_ID);
-      expect(mockedQuery).toHaveBeenLastCalledWith(
+      expect(mockedQuery).toHaveBeenNthCalledWith(
+        2,
         expect.stringContaining('INSERT INTO devices'),
         expect.arrayContaining([CHILD_ID, 'Kid\'s Phone', 'android'])
       );
@@ -89,7 +92,8 @@ describe('device.service', () => {
       });
 
       expect(result.device_id).toBe(DEVICE_ID);
-      expect(mockedQuery).toHaveBeenLastCalledWith(
+      expect(mockedQuery).toHaveBeenNthCalledWith(
+        3,
         expect.stringContaining('UPDATE devices'),
         expect.arrayContaining([DEVICE_ID])
       );
@@ -120,6 +124,8 @@ describe('device.service', () => {
       mockedQuery.mockResolvedValueOnce({ rows: [] } as any);
       // INSERT devices
       mockedQuery.mockResolvedValueOnce({ rows: [deviceRow] } as any);
+      // INSERT audit_logs
+      mockedQuery.mockResolvedValueOnce({ rows: [] } as any);
 
       const result = await deviceService.registerDevice(PARENT_ID, {
         child_id: CHILD_ID,
@@ -129,7 +135,8 @@ describe('device.service', () => {
       });
 
       expect(result.device_id).toBe(DEVICE_ID);
-      expect(mockedQuery).toHaveBeenLastCalledWith(
+      expect(mockedQuery).toHaveBeenNthCalledWith(
+        3,
         expect.stringContaining('INSERT INTO devices'),
         expect.anything()
       );
@@ -158,16 +165,19 @@ describe('device.service', () => {
     it('should verify ownership and return the child\'s devices', async () => {
       // verifyChildBelongsToParent
       mockedQuery.mockResolvedValueOnce({ rows: [{ id: CHILD_ID }] } as any);
+      // COUNT devices
+      mockedQuery.mockResolvedValueOnce({ rows: [{ total: 1 }] } as any);
       // SELECT devices
       mockedQuery.mockResolvedValueOnce({ rows: [deviceRow] } as any);
 
-      const result = await deviceService.listDevicesForChild(PARENT_ID, CHILD_ID);
+      const result = await deviceService.listDevicesForChild(PARENT_ID, CHILD_ID, 1, 20);
 
-      expect(result).toHaveLength(1);
-      expect(result[0].device_id).toBe(DEVICE_ID);
+      expect(result.items).toHaveLength(1);
+      expect(result.total).toBe(1);
+      expect(result.items[0].device_id).toBe(DEVICE_ID);
       expect(mockedQuery).toHaveBeenLastCalledWith(
         expect.stringContaining('FROM devices'),
-        [CHILD_ID]
+        expect.arrayContaining([CHILD_ID])
       );
     });
 

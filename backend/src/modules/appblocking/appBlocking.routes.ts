@@ -6,7 +6,8 @@
 
 import { Router } from 'express';
 import { authenticateJWT, requireRole } from '../../middleware/auth';
-import { validate } from '../../middleware/validate';
+import { validate, validateParams, validateQuery } from '../../middleware/validate';
+import { uuidParams, childAndUuidParams, paginationQuery } from '../../middleware/params';
 import { blockAppSchema, requestUnblockSchema } from './appBlocking.dto';
 import * as appBlockingController from './appBlocking.controller';
 
@@ -16,10 +17,12 @@ const router = Router({ mergeParams: true }); // mergeParams to access :childId
 router.use(authenticateJWT);
 
 // GET  /api/v1/children/:childId/apps/blocked
-// Returns all blocked apps for a child
+// Returns all blocked apps for a child (paginated)
 router.get(
   '/blocked',
   requireRole('parent'),
+  validateParams(uuidParams('childId')),
+  validateQuery(paginationQuery),
   appBlockingController.getBlockedApps
 );
 
@@ -29,6 +32,7 @@ router.get(
 router.post(
   '/block',
   requireRole('parent'),
+  validateParams(uuidParams('childId')),
   validate(blockAppSchema),
   appBlockingController.blockApp
 );
@@ -38,6 +42,7 @@ router.post(
 router.delete(
   '/block/:ruleId',
   requireRole('parent'),
+  validateParams(childAndUuidParams('ruleId')),
   appBlockingController.unblockApp
 );
 
@@ -46,6 +51,7 @@ router.delete(
 router.post(
   '/block/:ruleId/approve-unblock',
   requireRole('parent'),
+  validateParams(childAndUuidParams('ruleId')),
   appBlockingController.approveUnblock
 );
 
@@ -54,6 +60,7 @@ router.post(
 router.post(
   '/block/:ruleId/reject-unblock',
   requireRole('parent'),
+  validateParams(childAndUuidParams('ruleId')),
   appBlockingController.rejectUnblock
 );
 
@@ -64,15 +71,18 @@ router.post(
 // (ownership is verified in the service layer).
 router.post(
   '/unblock-request',
+  validateParams(uuidParams('childId')),
   validate(requestUnblockSchema),
   appBlockingController.requestUnblock
 );
 
 // GET  /api/v1/children/:childId/apps/unblock-requests
-// Returns all pending unblock requests for a child
+// Returns all pending unblock requests for a child (paginated)
 router.get(
   '/unblock-requests',
   requireRole('parent'),
+  validateParams(uuidParams('childId')),
+  validateQuery(paginationQuery),
   appBlockingController.getUnblockRequests
 );
 

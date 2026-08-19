@@ -6,6 +6,8 @@
 import { query } from '../../config/database';
 import { ForbiddenError, NotFoundError } from '../../utils/errors';
 import { verifyChildBelongsToParent } from '../children/children.service';
+import { writeAuditLog } from '../shared/audit.service';
+import { toOffset } from '../../utils/pagination';
 
 export interface RegisteredDevice {
   device_id: string;
@@ -62,7 +64,15 @@ export const registerDevice = async (
           input.device_id,
         ]
       );
-      return updated.rows[0];
+      const device = updated.rows[0];
+      await writeAuditLog({
+        actorId: parentId,
+        targetChildId: input.child_id,
+        action: 'REFRESH_DEVICE',
+        resourceType: 'devices',
+        details: { device_id: device.device_id, device_name: device.device_name },
+      });
+      return device;
     }
   }
 
@@ -79,7 +89,15 @@ export const registerDevice = async (
       input.fcm_token || null,
     ]
   );
-  return created.rows[0];
+  const device = created.rows[0];
+  await writeAuditLog({
+    actorId: parentId,
+    targetChildId: input.child_id,
+    action: 'REGISTER_DEVICE',
+    resourceType: 'devices',
+    details: { device_id: device.device_id, device_name: device.device_name },
+  });
+  return device;
 };
 
 /**
@@ -106,16 +124,22 @@ export const touchDevice = async (
  */
 export const listDevicesForChild = async (
   parentId: string,
-  childId: string
-): Promise<RegisteredDevice[]> => {
+  childId: string,
+  page = 1,
+  limit = 20
+): Promise<{ items: RegisteredDevice[]; total: number }> => {
   await verifyChildBelongsToParent(childId, parentId);
+  const count = await query(`SELECT COUNT(*)::int AS total FROM devices WHERE child_id = $1`, [
+    childId,
+  ]);
   const result = await query(
     `SELECT id AS device_id, child_id, device_name, device_type,
             os_version, fcm_token, last_active
      FROM devices
      WHERE child_id = $1
-     ORDER BY created_at ASC`,
-    [childId]
+     ORDER BY created_at ASC
+     LIMIT $2 OFFSET $3`,
+    [childId, limit, toOffset(page, limit)]
   );
-  return result.rows;
+  return { items: result.rows, total: count.rows[0].total };
 };

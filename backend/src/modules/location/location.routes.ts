@@ -4,6 +4,8 @@
 
 import { Router } from 'express';
 import { authenticateJWT, requireRole } from '../../middleware/auth';
+import { validateParams, validateQuery } from '../../middleware/validate';
+import { uuidParams, locationHistoryQuery } from '../../middleware/params';
 import * as locationController from './location.controller';
 
 const router = Router({ mergeParams: true });
@@ -12,9 +14,18 @@ router.use(authenticateJWT);
 router.use(requireRole('parent'));
 
 // GET /api/v1/children/:childId/locations/current
-router.get('/:childId/locations/current', locationController.getCurrent);
+router.get(
+  '/:childId/locations/current',
+  validateParams(uuidParams('childId')),
+  locationController.getCurrent
+);
 
 // GET /api/v1/children/:childId/locations/history?from&to&limit
-router.get('/:childId/locations/history', locationController.getHistory);
+router.get(
+  '/:childId/locations/history',
+  validateParams(uuidParams('childId')),
+  validateQuery(locationHistoryQuery),
+  locationController.getHistory
+);
 
 export default router;

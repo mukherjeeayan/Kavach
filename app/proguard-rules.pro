@@ -1,0 +1,50 @@
+# SafeGuard (Kavach) release ProGuard/R8 rules.
+# Release builds run with isMinifyEnabled = true (see build.gradle.kts).
+
+# --- Kotlin coroutines ---
+-dontwarn kotlinx.coroutines.**
+-keepclassmembers class kotlinx.coroutines.** { volatile <fields>; }
+
+# --- Gson ---
+-keepattributes Signature
+-keepattributes *Annotation*
+-keep class com.google.gson.reflect.TypeToken { *; }
+-keep class * extends com.google.gson.reflect.TypeToken
+
+# DTOs are serialized/deserialized by Gson (no-arg reflection + field names).
+-keep class com.safeguard.parentalcontrol.data.remote.dto.** { *; }
+-keep class com.safeguard.parentalcontrol.data.remote.api.** { *; }
+
+# --- Retrofit ---
+-dontwarn retrofit2.**
+-keepattributes Exceptions, InnerClasses, EnclosingMethod
+-keepclasseswithmembers class * {
+    @retrofit2.http.* <methods>;
+}
+
+# --- OkHttp / Okio ---
+-dontwarn okhttp3.**
+-dontwarn okio.**
+-dontwarn org.conscrypt.**
+-dontwarn org.bouncycastle.**
+
+# --- Room ---
+-keep class * extends androidx.room.RoomDatabase
+-keep @androidx.room.Entity class *
+-keep @androidx.room.Dao class *
+
+# --- Hilt / Dagger ---
+-dontwarn dagger.hilt.**
+-keep class dagger.hilt.** { *; }
+-keep class javax.inject.** { *; }
+
+# --- Socket.IO (engine.io handshake + events ride on JSONObject/JSONArray) ---
+-dontwarn io.socket.**
+-keep class io.socket.** { *; }
+
+# --- AndroidX WorkManager ---
+-dontwarn androidx.work.**
+-keep class * extends androidx.work.Worker
+
+# SafeGuardApplication entry points must not be renamed.
+-keep class com.safeguard.parentalcontrol.SafeGuardApplication { *; }

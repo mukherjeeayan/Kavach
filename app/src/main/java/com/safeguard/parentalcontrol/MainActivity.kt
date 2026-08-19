@@ -2,9 +2,11 @@ package com.safeguard.parentalcontrol
 
 import com.safeguard.parentalcontrol.data.local.OnboardingStore
 import com.safeguard.parentalcontrol.data.local.ParentPinStore
+import com.safeguard.parentalcontrol.data.remote.RealtimeRulesClient
 import com.safeguard.parentalcontrol.ui.screens.appblock.AppBlockingScreen
 import com.safeguard.parentalcontrol.ui.screens.onboarding.OnboardingScreen
 import com.safeguard.parentalcontrol.ui.screens.parentlock.ParentLockScreen
+import com.safeguard.parentalcontrol.work.SyncScheduler
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -28,6 +30,9 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var parentPinStore: ParentPinStore
 
+    @Inject
+    lateinit var realtimeRulesClient: RealtimeRulesClient
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -38,6 +43,15 @@ class MainActivity : ComponentActivity() {
             ) {
                 SafeGuardNavigation(
                     parentPinStore = parentPinStore,
+                    onOnboardingComplete = {
+                        // Enforcement must start immediately after the
+                        // parent finishes setup — waiting for the next
+                        // app launch would leave the child unguarded.
+                        SyncScheduler.startEnforcementService(this)
+                        SyncScheduler.startLocationService(this)
+                        SyncScheduler.schedule(this)
+                        realtimeRulesClient.start()
+                    },
                     startDestination = when {
                         !onboardingStore.isOnboarded() -> "onboarding"
                         parentPinStore.hasPin() -> "gate"
@@ -52,6 +66,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun SafeGuardNavigation(
     parentPinStore: ParentPinStore,
+    onOnboardingComplete: () -> Unit,
     startDestination: String
 ) {
     val navController = rememberNavController()
@@ -60,6 +75,7 @@ fun SafeGuardNavigation(
         composable("onboarding") {
             OnboardingScreen(
                 onComplete = {
+                    onOnboardingComplete()
                     navController.navigate("dashboard") {
                         popUpTo("onboarding") { inclusive = true }
                     }

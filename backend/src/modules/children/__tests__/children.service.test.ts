@@ -56,22 +56,27 @@ describe('children.service', () => {
   });
 
   describe('listChildren', () => {
-    it('should return the parent\'s children', async () => {
-      mockedQuery.mockResolvedValueOnce({ rows: [childRow] } as any);
+    it('should return the parent\'s children with pagination', async () => {
+      mockedQuery
+        .mockResolvedValueOnce({ rows: [{ total: 1 }] } as any) // COUNT
+        .mockResolvedValueOnce({ rows: [childRow] } as any); // SELECT page
 
-      const result = await childrenService.listChildren(PARENT_ID);
+      const result = await childrenService.listChildren(PARENT_ID, 1, 20);
 
-      expect(result).toHaveLength(1);
+      expect(result.items).toHaveLength(1);
+      expect(result.total).toBe(1);
       expect(mockedQuery).toHaveBeenCalledWith(
         expect.stringContaining('WHERE parent_id = $1'),
-        [PARENT_ID]
+        expect.arrayContaining([PARENT_ID])
       );
     });
   });
 
   describe('createChild', () => {
-    it('should insert and return the new child profile', async () => {
-      mockedQuery.mockResolvedValueOnce({ rows: [childRow] } as any);
+    it('should insert, audit and return the new child profile', async () => {
+      mockedQuery
+        .mockResolvedValueOnce({ rows: [childRow] } as any) // INSERT children
+        .mockResolvedValueOnce({ rows: [] } as any); // INSERT audit_logs
 
       const result = await childrenService.createChild(PARENT_ID, 'Kid', '2015-01-01');
 
@@ -80,10 +85,16 @@ describe('children.service', () => {
         expect.stringContaining('INSERT INTO children'),
         [PARENT_ID, 'Kid', '2015-01-01']
       );
+      expect(mockedQuery).toHaveBeenCalledWith(
+        expect.stringContaining('INSERT INTO audit_logs'),
+        expect.anything()
+      );
     });
 
     it('should insert with a null birth_date when omitted', async () => {
-      mockedQuery.mockResolvedValueOnce({ rows: [{ ...childRow, birth_date: null }] } as any);
+      mockedQuery
+        .mockResolvedValueOnce({ rows: [{ ...childRow, birth_date: null }] } as any)
+        .mockResolvedValueOnce({ rows: [] } as any);
 
       const result = await childrenService.createChild(PARENT_ID, 'Kid');
 
@@ -92,6 +103,23 @@ describe('children.service', () => {
         expect.stringContaining('INSERT INTO children'),
         [PARENT_ID, 'Kid', null]
       );
+    });
+  });
+
+  describe('ensureDeviceBelongsToChild', () => {
+    it('should resolve when the device belongs to the child', async () => {
+      mockedQuery.mockResolvedValueOnce({ rows: [{ id: 'device-id' }] } as any);
+
+      await expect(
+        childrenService.ensureDeviceBelongsToChild(CHILD_ID, 'device-id')
+      ).resolves.toBeUndefined();
+    });
+
+    it('should skip the check when no device_id is given', async () => {
+      await expect(
+        childrenService.ensureDeviceBelongsToChild(CHILD_ID, undefined)
+      ).resolves.toBeUndefined();
+      expect(mockedQuery).not.toHaveBeenCalled();
     });
   });
 });

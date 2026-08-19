@@ -44,6 +44,12 @@ export const blockApp = async (
 ): Promise<AppBlockRule> => {
   await verifyChildBelongsToParent(childId, parentId);
 
+  // Never attach a rule to a device that does not belong to this child.
+  const deviceOwned = await appBlockRuleRepo.verifyDeviceBelongsToChild(deviceId, childId);
+  if (!deviceOwned) {
+    throw new NotFoundError('Device not found for this child');
+  }
+
   const rule = await appBlockRuleRepo.createBlockRule({
     child_id: childId,
     device_id: deviceId,
@@ -129,18 +135,28 @@ export const requestUnblock = async (
 
   logger.info(`Unblock requested: rule ${ruleId} by child ${childId}`);
 
+  await writeAuditLog({
+    actorId: parentId,
+    targetChildId: childId,
+    action: 'REQUEST_UNBLOCK',
+    resourceType: 'app_block_rules',
+    details: { rule_id: ruleId, package_name: existingRule.package_name, reason },
+  });
+
   return { ...updatedRule, child_id: childId };
 };
 
 /**
- * Get all blocked apps for a child.
+ * Get all blocked apps for a child (paginated).
  */
 export const getBlockedApps = async (
   parentId: string,
-  childId: string
-): Promise<AppBlockRule[]> => {
+  childId: string,
+  page = 1,
+  limit = 20
+): Promise<{ items: AppBlockRule[]; total: number }> => {
   await verifyChildBelongsToParent(childId, parentId);
-  return appBlockRuleRepo.getBlockedAppsByChildId(childId);
+  return appBlockRuleRepo.getBlockedAppsByChildId(childId, page, limit);
 };
 
 /**
@@ -218,12 +234,14 @@ export const rejectUnblock = async (
 };
 
 /**
- * Get all pending unblock requests for a child.
+ * Get all pending unblock requests for a child (paginated).
  */
 export const getUnblockRequests = async (
   parentId: string,
-  childId: string
-): Promise<AppBlockRule[]> => {
+  childId: string,
+  page = 1,
+  limit = 20
+): Promise<{ items: AppBlockRule[]; total: number }> => {
   await verifyChildBelongsToParent(childId, parentId);
-  return appBlockRuleRepo.getUnblockRequests(childId);
+  return appBlockRuleRepo.getUnblockRequests(childId, page, limit);
 };

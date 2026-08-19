@@ -4,7 +4,8 @@
 
 import { Router } from 'express';
 import { authenticateJWT, requireRole } from '../../middleware/auth';
-import { validate } from '../../middleware/validate';
+import { validate, validateParams, validateQuery } from '../../middleware/validate';
+import { uuidParams, childAndUuidParams, paginationQuery } from '../../middleware/params';
 import { createLockSchema, updateLockSchema } from './locks.dto';
 import * as locksController from './locks.controller';
 
@@ -14,15 +15,34 @@ router.use(authenticateJWT);
 router.use(requireRole('parent'));
 
 // GET    /api/v1/children/:childId/locks
-router.get('/:childId/locks', locksController.listLocks);
+router.get(
+  '/:childId/locks',
+  validateParams(uuidParams('childId')),
+  validateQuery(paginationQuery),
+  locksController.listLocks
+);
 
 // POST   /api/v1/children/:childId/locks
-router.post('/:childId/locks', validate(createLockSchema), locksController.createLock);
+router.post(
+  '/:childId/locks',
+  validateParams(uuidParams('childId')),
+  validate(createLockSchema),
+  locksController.createLock
+);
 
 // PUT    /api/v1/children/:childId/locks/:lockId
-router.put('/:childId/locks/:lockId', validate(updateLockSchema), locksController.updateLock);
+router.put(
+  '/:childId/locks/:lockId',
+  validateParams(childAndUuidParams('lockId')),
+  validate(updateLockSchema),
+  locksController.updateLock
+);
 
 // DELETE /api/v1/children/:childId/locks/:lockId
-router.delete('/:childId/locks/:lockId', locksController.deleteLock);
+router.delete(
+  '/:childId/locks/:lockId',
+  validateParams(childAndUuidParams('lockId')),
+  locksController.deleteLock
+);
 
 export default router;

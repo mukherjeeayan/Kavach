@@ -3,12 +3,13 @@ import { useSelector } from 'react-redux';
 import {
   useBlockedApps,
   useChildren,
+  useCreateChild,
   useDevices,
   useInvalidateChildData,
   useUnblockRequests,
 } from '../hooks/useChildrenData';
 import { useBlockAppAction, useRespondToUnblockRequest } from '../hooks/useDashboardActions';
-import { useVerifyParentPin } from '../hooks/usePhase1Data';
+import { useSetParentPin, useVerifyParentPin } from '../hooks/usePhase1Data';
 import { useLogout } from '../hooks/useAuth';
 import { useRealtimeRules } from '../hooks/useRealtimeRules';
 import Header from '../components/dashboard/Header';
@@ -32,22 +33,31 @@ export default function DashboardPage() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [pinGateOpen, setPinGateOpen] = useState(true);
   const [pinUnlocked, setPinUnlocked] = useState(false);
+  const [pinSetupOpen, setPinSetupOpen] = useState(false);
+  const [pinSetupHint, setPinSetupHint] = useState<string | null>(null);
 
   const childrenQuery = useChildren();
+  const createChild = useCreateChild();
   const childId = selectedChildId ?? childrenQuery.data?.[0]?.id ?? null;
+  const invalidateChildData = useInvalidateChildData(childId);
+
+  // Real-time rule updates: the backend broadcasts rule:changed to the
+  // socket room of the affected child. When the socket is unavailable
+  // (offline backend, blocked websockets) we fall back to polling.
+  const { isConnected } = useRealtimeRules(childId, invalidateChildData);
+  const pollInterval = isConnected ? false : 60_000;
 
   const devicesQuery = useDevices(childId);
-  const blockedQuery = useBlockedApps(childId);
-  const requestsQuery = useUnblockRequests(childId);
-  const invalidateChildData = useInvalidateChildData(childId);
+  const blockedQuery = useBlockedApps(childId, pollInterval);
+  const requestsQuery = useUnblockRequests(childId, pollInterval);
   const verifyPin = useVerifyParentPin();
+  const setPin = useSetParentPin();
 
   const respondToRequest = useRespondToUnblockRequest(childId, invalidateChildData, setActionError);
   const blockApp = useBlockAppAction(childId, invalidateChildData, setActionError);
 
-  // Real-time rule updates: the backend broadcasts rule:changed to the
-  // socket room of the affected child — no polling needed.
-  useRealtimeRules(childId, invalidateChildData);
+  const handleAddChild = (name: string, birthDate: string) =>
+    createChild.mutateAsync({ name, birthDate: birthDate || undefined });
 
   const handleBlock = (packageName: string, reason: string) =>
     blockApp.mutateAsync({
@@ -69,6 +79,20 @@ export default function DashboardPage() {
     );
   };
 
+  const handlePinSetup = (pin: string, confirm: string) => {
+    if (pin !== confirm || !/^\d{4,6}$/.test(pin)) {
+      setPinSetupHint('PIN must be 4-6 digits and match in both fields.');
+      return;
+    }
+    setPin.mutate(pin, {
+      onSuccess: () => {
+        setPinSetupOpen(false);
+        setPinSetupHint('PIN saved. Enter it below to unlock.');
+      },
+      onError: () => setPinSetupHint('Failed to save PIN. Please try again.'),
+    });
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Header user={user} onLogout={handleLogout} />
@@ -80,12 +104,32 @@ export default function DashboardPage() {
           isLoading={childrenQuery.isLoading}
           isError={childrenQuery.isError}
           onSelect={setSelectedChildId}
+          onAddChild={handleAddChild}
+          isAddingChild={createChild.isPending}
+          addChildError={createChild.isError ? 'Failed to add child' : null}
         />
 
         {childId && (
           <>
             <ScreenTimeSection childId={childId} />
             <LocationsSection childId={childId} />
+
+            {devicesQuery.isLoading && (
+              <p className="text-sm text-gray-500">Loading devices...</p>
+            )}
+            {devicesQuery.isError && (
+              <p className="text-sm text-red-500" role="alert">
+                Failed to load devices.
+              </p>
+            )}
+            {blockedQuery.isLoading && (
+              <p className="text-sm text-gray-500">Loading blocked apps...</p>
+            )}
+            {blockedQuery.isError && (
+              <p className="text-sm text-red-500" role="alert">
+                Failed to load blocked apps.
+              </p>
+            )}
 
             {pinGateOpen && (
               <section className="bg-white rounded-lg p-6 border flex flex-col items-center gap-3">
@@ -123,13 +167,60 @@ export default function DashboardPage() {
                     Incorrect PIN
                   </p>
                 )}
+                {pinSetupHint && <p className="text-sm text-green-600">{pinSetupHint}</p>}
+                {pinSetupOpen ? (
+                  <form
+                    className="flex flex-col items-center gap-2"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      const form = e.currentTarget;
+                      const pin = (form.elements.namedItem('newPin') as HTMLInputElement).value;
+                      const confirm = (form.elements.namedItem('confirmPin') as HTMLInputElement).value;
+                      handlePinSetup(pin, confirm);
+                    }}
+                  >
+                    <input
+                      name="newPin"
+                      type="password"
+                      inputMode="numeric"
+                      placeholder="New PIN (4-6 digits)"
+                      maxLength={6}
+                      className="border rounded-md px-3 py-2 text-sm w-48 text-center"
+                    />
+                    <input
+                      name="confirmPin"
+                      type="password"
+                      inputMode="numeric"
+                      placeholder="Confirm PIN"
+                      maxLength={6}
+                      className="border rounded-md px-3 py-2 text-sm w-48 text-center"
+                    />
+                    <button
+                      type="submit"
+                      disabled={setPin.isPending}
+                      className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 disabled:opacity-50"
+                    >
+                      {setPin.isPending ? 'Saving…' : 'Save PIN'}
+                    </button>
+                  </form>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setPinSetupOpen(true);
+                      setPinSetupHint(null);
+                    }}
+                    className="text-sm text-blue-600 hover:underline"
+                  >
+                    Never set a PIN? Set one now
+                  </button>
+                )}
               </section>
             )}
 
             {pinUnlocked && (
               <>
                 <LocksSection childId={childId} onError={setActionError} />
-                <ContactsSection childId={childId} />
+                <ContactsSection childId={childId} onError={setActionError} />
               </>
             )}
 

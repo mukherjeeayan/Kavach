@@ -1,6 +1,6 @@
 version: "3.9"
 
-# Local development stack for SafeGuard. Brings up the two services the
+# Local development stack for SafeGuard. Brings up the database the
 # backend depends on; run backend + frontend with their npm scripts so
 # edits hot-reload (ts-node-dev / vite).
 
@@ -19,17 +19,6 @@ services:
       - ./backend/db/migrations:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d safeguard"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
-
-  redis:
-    image: redis:7-alpine
-    container_name: safeguard-redis
-    ports:
-      - "6379:6379"
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 3s
       retries: 10

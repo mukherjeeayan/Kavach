@@ -62,6 +62,7 @@ describe('auth.service', () => {
         .mockResolvedValueOnce({
           rows: [{ id: 'child-id', name: 'Kid', birth_date: '2015-01-01' }],
         }) // INSERT children
+        .mockResolvedValueOnce({ rows: [] }) // INSERT audit_logs (CREATE_CHILD)
         .mockResolvedValueOnce({ rows: [] }); // COMMIT
 
       const result = await authService.register({
@@ -82,8 +83,8 @@ describe('auth.service', () => {
         expect.stringContaining('INSERT INTO children'),
         [PARENT_ID, 'Kid', '2015-01-01']
       );
-      // BEGIN, INSERT parents, INSERT children, COMMIT
-      expect(client.query).toHaveBeenCalledTimes(4);
+      // BEGIN, INSERT parents, INSERT children, INSERT audit_logs, COMMIT
+      expect(client.query).toHaveBeenCalledTimes(5);
       expect(client.release).toHaveBeenCalledTimes(1);
 
       expect(result.token).toBe('signed-token');
@@ -148,10 +149,15 @@ describe('auth.service', () => {
   });
 
   describe('login', () => {
-    it('should return tokens and user for valid credentials', async () => {
-      mockedQuery.mockResolvedValueOnce({
-        rows: [{ ...mockParentRow, password_hash: 'hashed-password' }],
-      } as any);
+    it('should return tokens, user and child for valid credentials', async () => {
+      mockedQuery
+        .mockResolvedValueOnce({
+          rows: [{ ...mockParentRow, password_hash: 'hashed-password' }],
+        } as any) // SELECT parents
+        .mockResolvedValueOnce({
+          rows: [{ id: 'child-id', name: 'Kid', birth_date: '2015-01-01' }],
+        } as any); // SELECT children (first child)
+
       const bcrypt = jest.requireMock('bcrypt');
       bcrypt.compare.mockResolvedValueOnce(true);
 
@@ -159,11 +165,27 @@ describe('auth.service', () => {
 
       expect(result.user.id).toBe(PARENT_ID);
       expect(result.token).toBe('signed-token');
+      expect(result.child).toEqual({ id: 'child-id', name: 'Kid', birth_date: '2015-01-01' });
       // Email is normalized before lookup
       expect(mockedQuery).toHaveBeenCalledWith(
         expect.stringContaining('FROM parents WHERE email = $1'),
         ['parent@example.com']
       );
+    });
+
+    it('should return a null child when the parent has no children', async () => {
+      mockedQuery
+        .mockResolvedValueOnce({
+          rows: [{ ...mockParentRow, password_hash: 'hashed-password' }],
+        } as any) // SELECT parents
+        .mockResolvedValueOnce({ rows: [] } as any); // SELECT children (empty)
+
+      const bcrypt = jest.requireMock('bcrypt');
+      bcrypt.compare.mockResolvedValueOnce(true);
+
+      const result = await authService.login('parent@example.com', 'password123');
+
+      expect(result.child).toBeNull();
     });
 
     it('should throw UnauthorizedError for a wrong password', async () => {

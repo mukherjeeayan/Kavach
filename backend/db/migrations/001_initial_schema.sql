@@ -104,18 +104,21 @@ CREATE TRIGGER update_app_block_rules_modtime
     FOR EACH ROW EXECUTE FUNCTION update_modified_column();
 
 -- 7. Create `screen_time_logs` table
+-- Per-app usage recorded in SECONDS (the Android app uploads seconds,
+-- not minutes) and keyed by device + app + date for idempotent upserts.
 CREATE TABLE screen_time_logs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     device_id UUID NOT NULL REFERENCES devices(id) ON DELETE CASCADE,
-    package_name VARCHAR(255) NOT NULL,
-    duration_minutes INTEGER NOT NULL,
-    log_date DATE NOT NULL,
+    app_package VARCHAR(255) NOT NULL,
+    app_category VARCHAR(50),
+    seconds INTEGER NOT NULL DEFAULT 0,
+    date_recorded DATE NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
-    UNIQUE (device_id, package_name, log_date)
+    UNIQUE (device_id, app_package, date_recorded)
 );
 
-CREATE INDEX idx_screen_time_logs_device_date ON screen_time_logs(device_id, log_date);
+CREATE INDEX idx_screen_time_logs_device_date ON screen_time_logs(device_id, date_recorded);
 
 CREATE TRIGGER update_screen_time_logs_modtime
     BEFORE UPDATE ON screen_time_logs
@@ -125,10 +128,11 @@ CREATE TRIGGER update_screen_time_logs_modtime
 CREATE TABLE location_logs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     device_id UUID NOT NULL REFERENCES devices(id) ON DELETE CASCADE,
-    latitude DECIMAL(10, 8) NOT NULL,
-    longitude DECIMAL(11, 8) NOT NULL,
-    accuracy_meters DECIMAL(8, 2),
-    recorded_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    latitude NUMERIC(10, 8) NOT NULL,
+    longitude NUMERIC(11, 8) NOT NULL,
+    accuracy_m DOUBLE PRECISION,
+    speed_kmh DOUBLE PRECISION,
+    recorded_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
@@ -161,36 +165,44 @@ CREATE TRIGGER update_geofences_modtime
     FOR EACH ROW EXECUTE FUNCTION update_modified_column();
 
 -- 10. Create `scheduled_locks` table
+-- Lock windows are child-scoped (device_id optional); day_of_week NULL
+-- means "every day".
 CREATE TABLE scheduled_locks (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    device_id UUID NOT NULL REFERENCES devices(id) ON DELETE CASCADE,
-    name VARCHAR(255) NOT NULL,
+    child_id UUID NOT NULL REFERENCES children(id) ON DELETE CASCADE,
+    device_id UUID REFERENCES devices(id) ON DELETE CASCADE,
+    day_of_week SMALLINT CHECK (day_of_week BETWEEN 0 AND 6),
     start_time TIME NOT NULL,
     end_time TIME NOT NULL,
-    days_of_week VARCHAR(21) NOT NULL, -- e.g., '1,2,3,4,5'
     is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
 
 CREATE INDEX idx_scheduled_locks_device_id ON scheduled_locks(device_id);
+CREATE INDEX idx_scheduled_locks_child_id ON scheduled_locks(child_id);
 
 CREATE TRIGGER update_scheduled_locks_modtime
     BEFORE UPDATE ON scheduled_locks
     FOR EACH ROW EXECUTE FUNCTION update_modified_column();
 
 -- 11. Create `contact_rules` table
+-- Allow/block rules per phone number, child-scoped (device_id optional).
 CREATE TABLE contact_rules (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    device_id UUID NOT NULL REFERENCES devices(id) ON DELETE CASCADE,
-    phone_number VARCHAR(50) NOT NULL,
+    child_id UUID NOT NULL REFERENCES children(id) ON DELETE CASCADE,
+    device_id UUID REFERENCES devices(id) ON DELETE CASCADE,
+    phone_number VARCHAR(32) NOT NULL,
     contact_name VARCHAR(255),
-    is_blocked BOOLEAN DEFAULT false,
+    rule_type TEXT NOT NULL DEFAULT 'BLOCK' CHECK (rule_type IN ('ALLOW', 'BLOCK')),
+    is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+    UNIQUE (child_id, phone_number)
 );
 
 CREATE INDEX idx_contact_rules_device_id ON contact_rules(device_id);
+CREATE INDEX idx_contact_rules_child_id ON contact_rules(child_id);
 
 CREATE TRIGGER update_contact_rules_modtime
     BEFORE UPDATE ON contact_rules

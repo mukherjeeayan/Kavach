@@ -4,7 +4,8 @@
 
 import { Router } from 'express';
 import { authenticateJWT, requireRole } from '../../middleware/auth';
-import { validate } from '../../middleware/validate';
+import { validate, validateParams, validateQuery } from '../../middleware/validate';
+import { uuidParams, dateQuery, screenTimeSummaryQuery } from '../../middleware/params';
 import { screenTimeUploadSchema } from './screentime.dto';
 import * as screentimeController from './screentime.controller';
 
@@ -14,10 +15,20 @@ router.use(authenticateJWT);
 router.use(requireRole('parent'));
 
 // GET /api/v1/children/:childId/screen-time?date=YYYY-MM-DD
-router.get('/:childId/screen-time', screentimeController.getDaily);
+router.get(
+  '/:childId/screen-time',
+  validateParams(uuidParams('childId')),
+  validateQuery(dateQuery),
+  screentimeController.getDaily
+);
 
 // GET /api/v1/children/:childId/screen-time/summary?range=day|week|month
-router.get('/:childId/screen-time/summary', screentimeController.getSummary);
+router.get(
+  '/:childId/screen-time/summary',
+  validateParams(uuidParams('childId')),
+  validateQuery(screenTimeSummaryQuery),
+  screentimeController.getSummary
+);
 
 export default router;
 

@@ -91,7 +91,7 @@ export interface ContactRule {
 }
 
 export interface ContactInput {
-  phone_number: string;
+  phone_number?: string;
   contact_name?: string;
   rule_type?: 'ALLOW' | 'BLOCK';
   device_id?: string;

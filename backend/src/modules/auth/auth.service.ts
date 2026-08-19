@@ -22,7 +22,7 @@ export interface AuthUser {
   name: string;
 }
 
-const bcryptRounds = parseInt(process.env.BCRYPT_SALT_ROUNDS || '10', 10);
+const bcryptRounds = parseInt(process.env.BCRYPT_SALT_ROUNDS || '12', 10);
 
 export interface RegisterInput {
   name: string;
@@ -79,7 +79,13 @@ export const register = async (
          RETURNING id, name, birth_date`,
         [parent.id, input.child_name.trim(), input.birth_date || null]
       );
-      child = childResult.rows[0];
+      const newChild: ChildProfile = childResult.rows[0];
+      child = newChild;
+      await client.query(
+        `INSERT INTO audit_logs (actor_id, target_child_id, action, resource_type, details)
+         VALUES ($1, $2, 'CREATE_CHILD', 'children', $3)`,
+        [parent.id, newChild.id, JSON.stringify({ name: newChild.name })]
+      );
     }
 
     await client.query('COMMIT');
@@ -109,7 +115,10 @@ export const register = async (
  * Throws UnauthorizedError on any failure — no user enumeration
  * (same message whether the email or the password is wrong).
  */
-export const login = async (email: string, password: string): Promise<{ token: string; refresh_token: string; user: AuthUser }> => {
+export const login = async (
+  email: string,
+  password: string
+): Promise<{ token: string; refresh_token: string; user: AuthUser; child: ChildProfile | null }> => {
   const result = await query(
     `SELECT id, email, name, password_hash FROM parents WHERE email = $1`,
     [email.toLowerCase().trim()]
@@ -125,10 +134,21 @@ export const login = async (email: string, password: string): Promise<{ token: s
   const user: AuthUser = { id: row.id, email: row.email, name: row.name };
   logger.info(`Parent logged in: ${user.id}`);
 
+  // Surface the first child profile (mirrors the register response) so
+  // the dashboard can deep-link straight into a child's workspace.
+  const childResult = await query(
+    `SELECT id, name, birth_date FROM children
+     WHERE parent_id = $1
+     ORDER BY created_at ASC
+     LIMIT 1`,
+    [user.id]
+  );
+
   return {
     token: signAccessToken(user.id, 'parent'),
     refresh_token: await issueRefreshToken(user.id),
     user,
+    child: childResult.rows[0] || null,
   };
 };
 
@@ -167,6 +187,20 @@ export const refreshAccessToken = async (
     token: signAccessToken(decoded.userId, 'parent'),
     refresh_token: await issueRefreshToken(decoded.userId),
   };
+};
+
+/**
+ * Revoke a refresh token on logout. Idempotent and never throws for
+ * unknown/already-revoked tokens: the client may call this with a
+ * stale or forged token and the endpoint simply reports no-op.
+ */
+export const logout = async (refreshToken: string): Promise<{ revoked: boolean }> => {
+  const result = await query(
+    `UPDATE refresh_tokens SET revoked_at = now()
+     WHERE token_hash = $1 AND revoked_at IS NULL`,
+    [hashToken(refreshToken)]
+  );
+  return { revoked: (result.rowCount ?? 0) > 0 };
 };
 
 /**

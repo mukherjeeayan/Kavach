@@ -17,7 +17,6 @@ import com.safeguard.parentalcontrol.data.remote.dto.ScreenTimeRowDto
 import com.safeguard.parentalcontrol.data.remote.dto.ScreenTimeSummaryDto
 import com.safeguard.parentalcontrol.data.remote.dto.ScreenTimeUploadEntry
 import java.text.SimpleDateFormat
-import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
@@ -219,11 +218,15 @@ class Phase1RepositoryImpl @Inject constructor(
         }
     }
 
+    /**
+     * Uploads every buffered screen-time row (all dates — a device
+     * that stayed offline for days must not lose the days it missed).
+     * Rows are deleted only after the server acknowledged them, and
+     * only for the dates that were actually uploaded.
+     */
     override suspend fun uploadScreenTimeSinceLastSync(deviceId: String): Boolean {
         return try {
-            val today = todayLocal()
-            val rows = screenTimeDao.getByDate(today)
-            screenTimeDao.deleteOlderThan(today)
+            val rows = screenTimeDao.getAll()
             if (rows.isEmpty()) return true
 
             val ok = api.uploadScreenTime(
@@ -240,9 +243,11 @@ class Phase1RepositoryImpl @Inject constructor(
                 )
             ).isSuccessful
             if (ok) {
-                // Rows are a "since last upload" delta — only safe to
-                // drop once the server acknowledged them (server sums).
-                screenTimeDao.deleteByDate(today)
+                // Server accumulates seconds idempotently, so a dropped
+                // delta is safe only after the server confirmed it.
+                rows.map { it.date }.distinct().forEach { date ->
+                    screenTimeDao.deleteByDate(date)
+                }
             }
             ok
         } catch (_: Exception) {
@@ -277,11 +282,6 @@ class Phase1RepositoryImpl @Inject constructor(
         } catch (_: Exception) {
             false
         }
-    }
-
-    private fun todayLocal(): String {
-        val format = SimpleDateFormat("yyyy-MM-dd", Locale.US)
-        return format.format(Calendar.getInstance().time)
     }
 
     private fun isoUtc(epochMs: Long): String {

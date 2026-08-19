@@ -7,8 +7,9 @@ import * as appBlockingService from './appBlocking.service';
 import { emitRuleChange } from '../../utils/socketHub';
 
 /**
- * GET /api/v1/children/:childId/apps/blocked
- * Returns: 200 with list of blocked apps
+ * GET /api/v1/children/:childId/apps/blocked?page=1&limit=20
+ * Returns: 200 with the page of blocked apps (raw array — consumed by
+ * the Android client's fail-closed cache sync).
  */
 export const getBlockedApps = async (
   req: Request,
@@ -18,12 +19,14 @@ export const getBlockedApps = async (
   try {
     const parentId = req.user!.userId;
     const { childId } = req.params;
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 20;
 
-    const blockedApps = await appBlockingService.getBlockedApps(parentId, childId);
+    const { items } = await appBlockingService.getBlockedApps(parentId, childId, page, limit);
 
     res.status(200).json({
       success: true,
-      data: blockedApps,
+      data: items,
       error: null,
       timestamp: new Date().toISOString(),
       request_id: req.headers['x-request-id'],
@@ -195,8 +198,8 @@ export const rejectUnblock = async (
 };
 
 /**
- * GET /api/v1/children/:childId/apps/unblock-requests
- * Returns: 200 with list of pending unblock requests
+ * GET /api/v1/children/:childId/apps/unblock-requests?page=1&limit=20
+ * Returns: 200 with the page of pending unblock requests.
  */
 export const getUnblockRequests = async (
   req: Request,
@@ -206,12 +209,19 @@ export const getUnblockRequests = async (
   try {
     const parentId = req.user!.userId;
     const { childId } = req.params;
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 20;
 
-    const requests = await appBlockingService.getUnblockRequests(parentId, childId);
+    const { items } = await appBlockingService.getUnblockRequests(
+      parentId,
+      childId,
+      page,
+      limit
+    );
 
     res.status(200).json({
       success: true,
-      data: requests,
+      data: items,
       error: null,
       timestamp: new Date().toISOString(),
       request_id: req.headers['x-request-id'],

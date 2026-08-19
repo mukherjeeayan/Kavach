@@ -11,6 +11,7 @@ import {
   fetchLocks,
   fetchLocationHistory,
   fetchScreenTimeSummary,
+  setParentPin,
   updateContact,
   updateLock,
   verifyParentPin,
@@ -124,4 +125,10 @@ export const useVerifyParentPin = () =>
   useMutation({
     mutationFn: ({ email, pin }: { email: string; pin: string }) =>
       verifyParentPin(email, pin),
+  });
+
+/** Sets or rotates the parent PIN from the dashboard (authenticated). */
+export const useSetParentPin = () =>
+  useMutation({
+    mutationFn: (pin: string) => setParentPin(pin),
   });

@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -69,34 +70,30 @@ class AppBlockingViewModel @Inject constructor(
     }
 
     /**
-     * Collect the blocked-apps Flow from Room.  Because this is a
-     * local-first read, the UI is populated instantly — even offline.
+     * Collect the blocked-apps Flow from Room together with the
+     * pending unblock-request Flow (both from Room). Because these are
+     * local-first reads, the UI is populated instantly — even offline.
      */
     fun loadBlockedApps() {
         viewModelScope.launch {
             _uiState.value = AppBlockingUiState.Loading
 
-            repository.getBlockedAppsFlow(deviceId)
+            combine(
+                repository.getBlockedAppsFlow(deviceId),
+                repository.getUnblockRequestsFlow(deviceId)
+            ) { blockedApps, unblockRequests ->
+                AppBlockingUiState.Success(
+                    blockedApps = blockedApps,
+                    unblockRequests = unblockRequests
+                )
+            }
                 .catch { e ->
                     _uiState.value = AppBlockingUiState.Error(
                         e.message ?: "Failed to load blocked apps"
                     )
                 }
-                .collect { blockedApps ->
-                    // Also load pending unblock requests
-                    val requests = try {
-                        // Snapshot from Flow isn't ideal here but keeps
-                        // it simple; a production version would combine
-                        // both Flows with `combine`.
-                        emptyList<AppBlockRuleEntity>()
-                    } catch (e: Exception) {
-                        emptyList()
-                    }
-
-                    _uiState.value = AppBlockingUiState.Success(
-                        blockedApps = blockedApps,
-                        unblockRequests = requests
-                    )
+                .collect { state ->
+                    _uiState.value = state
                 }
         }
     }

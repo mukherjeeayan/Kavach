@@ -30,6 +30,9 @@ router.post('/login', authLimiter, validate(loginSchema), authController.login);
 // POST /api/v1/auth/refresh-token
 router.post('/refresh-token', authLimiter, validate(refreshTokenSchema), authController.refreshToken);
 
+// POST /api/v1/auth/logout — revokes the refresh token server-side
+router.post('/logout', authLimiter, validate(refreshTokenSchema), authController.logout);
+
 // PUT /api/v1/auth/pin — set/rotate the parent's device-unlock PIN
 router.put('/pin', authenticateJWT, validate(setPinSchema), authController.setPin);
 

@@ -6,6 +6,7 @@
 import { query } from '../../config/database';
 import { NotFoundError } from '../../utils/errors';
 import { verifyChildBelongsToParent } from '../children/children.service';
+import { writeAuditLog } from '../shared/audit.service';
 
 export interface ScreenTimeEntry {
   app_package: string;
@@ -36,7 +37,7 @@ export const recordScreenTime = async (
   entries: ScreenTimeEntry[]
 ): Promise<void> => {
   const device = await query(
-    `SELECT d.id FROM devices d
+    `SELECT d.id, d.child_id FROM devices d
      JOIN children c ON c.id = d.child_id
      WHERE d.id = $1 AND c.parent_id = $2`,
     [deviceId, parentId]
@@ -47,6 +48,14 @@ export const recordScreenTime = async (
   for (const entry of entries) {
     await upsertEntry(deviceId, entry);
   }
+
+  await writeAuditLog({
+    actorId: parentId,
+    targetChildId: device.rows[0].child_id,
+    action: 'UPLOAD_SCREEN_TIME',
+    resourceType: 'screen_time_logs',
+    details: { device_id: deviceId, entries: entries.length },
+  });
 };
 
 /**

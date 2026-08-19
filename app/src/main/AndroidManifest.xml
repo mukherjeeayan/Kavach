@@ -20,17 +20,9 @@
     <!-- Required by ActivityManager.appTasks in AppBlockingService -->
     <uses-permission android:name="android.permission.GET_TASKS" />
     
-    <!-- Communication Monitoring -->
-    <uses-permission android:name="android.permission.READ_SMS" />
-    <uses-permission android:name="android.permission.SEND_SMS" />
-    <uses-permission android:name="android.permission.READ_CALL_LOG" />
-    
     <!-- Boot & Background Consistency -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
-    
-    <!-- Future: Camera for Device Health/Safety -->
-    <uses-permission android:name="android.permission.CAMERA" />
     
     <application
         android:name=".SafeGuardApplication"

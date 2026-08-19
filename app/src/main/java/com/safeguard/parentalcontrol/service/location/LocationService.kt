@@ -22,6 +22,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -93,6 +94,10 @@ class LocationService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
+        // Stop the upload coroutine as well, otherwise the scope keeps
+        // running (and may still hold the last location) after the
+        // service is torn down.
+        serviceScope.cancel()
         if (isTracking) {
             try {
                 fusedClient.removeLocationUpdates(locationCallback)

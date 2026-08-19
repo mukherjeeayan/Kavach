@@ -19,7 +19,7 @@ export const reportTamperAlert = async (
   details: string
 ): Promise<void> => {
   const device = await query(
-    `SELECT d.id FROM devices d
+    `SELECT d.id, d.child_id FROM devices d
      JOIN children c ON c.id = d.child_id
      WHERE d.id = $1 AND c.parent_id = $2`,
     [deviceId, parentId]
@@ -30,7 +30,7 @@ export const reportTamperAlert = async (
 
   await writeAuditLog({
     actorId: parentId,
-    targetChildId: null,
+    targetChildId: device.rows[0].child_id,
     action: 'TAMPER_ALERT',
     resourceType: 'device',
     details: { device_id: deviceId, details },

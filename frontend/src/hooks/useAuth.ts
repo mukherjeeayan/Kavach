@@ -3,8 +3,9 @@ import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import * as yup from 'yup';
-import { login as loginApi, register as registerApi } from '../services/api';
+import { login as loginApi, logout as logoutApi, register as registerApi } from '../services/api';
 import { clearSession, setSession } from '../store/authSlice';
+import { getStoredRefreshToken } from '../services/session';
 import { getErrorMessage } from '../utils/apiError';
 
 // ── Login ─────────────────────────────────────────────────────────
@@ -47,8 +48,8 @@ export const useLogin = () => {
 
     setIsLoading(true);
     try {
-      const { token, user } = await loginApi(data);
-      dispatch(setSession({ token, user }));
+      const session = await loginApi(data);
+      dispatch(setSession(session));
       navigate('/dashboard', { replace: true });
     } catch (error) {
       setServerError(getErrorMessage(error, 'Invalid email or password. Please try again.'));
@@ -113,14 +114,14 @@ export const useRegister = () => {
 
     setIsLoading(true);
     try {
-      const { token, user } = await registerApi({
+      const session = await registerApi({
         name: data.name,
         email: data.email,
         password: data.password,
         child_name: data.child_name || undefined,
         birth_date: data.birth_date || undefined,
       });
-      dispatch(setSession({ token, user }));
+      dispatch(setSession(session));
       navigate('/dashboard', { replace: true });
     } catch (error) {
       setServerError(getErrorMessage(error, 'Registration failed. Please try again.'));
@@ -139,6 +140,14 @@ export const useLogout = () => {
   const navigate = useNavigate();
 
   const handleLogout = () => {
+    // Revoke the refresh token server-side (best-effort, idempotent)
+    // so it can never be replayed after sign-out.
+    const refreshToken = getStoredRefreshToken();
+    if (refreshToken) {
+      logoutApi(refreshToken).catch(() => {
+        // Offline or server error — local session is still cleared.
+      });
+    }
     dispatch(clearSession());
     navigate('/login', { replace: true });
   };

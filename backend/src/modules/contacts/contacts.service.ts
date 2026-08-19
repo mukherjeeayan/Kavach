@@ -4,7 +4,9 @@
 
 import { query } from '../../config/database';
 import { NotFoundError } from '../../utils/errors';
-import { verifyChildBelongsToParent } from '../children/children.service';
+import { verifyChildBelongsToParent, ensureDeviceBelongsToChild } from '../children/children.service';
+import { writeAuditLog } from '../shared/audit.service';
+import { toOffset } from '../../utils/pagination';
 
 export interface ContactInput {
   phone_number: string;
@@ -18,17 +20,23 @@ const CONTACT_COLUMNS = `id, child_id, device_id, phone_number, contact_name, ru
 
 export const listContacts = async (
   parentId: string,
-  childId: string
-): Promise<Array<Record<string, unknown>>> => {
+  childId: string,
+  page = 1,
+  limit = 20
+): Promise<{ items: Array<Record<string, unknown>>; total: number }> => {
   await verifyChildBelongsToParent(childId, parentId);
+  const count = await query(`SELECT COUNT(*)::int AS total FROM contact_rules WHERE child_id = $1`, [
+    childId,
+  ]);
   const result = await query(
     `SELECT ${CONTACT_COLUMNS}
      FROM contact_rules
      WHERE child_id = $1
-     ORDER BY created_at DESC`,
-    [childId]
+     ORDER BY created_at DESC
+     LIMIT $2 OFFSET $3`,
+    [childId, limit, toOffset(page, limit)]
   );
-  return result.rows;
+  return { items: result.rows, total: count.rows[0].total };
 };
 
 export const createContact = async (
@@ -37,6 +45,7 @@ export const createContact = async (
   input: ContactInput
 ): Promise<Record<string, unknown>> => {
   await verifyChildBelongsToParent(childId, parentId);
+  await ensureDeviceBelongsToChild(childId, input.device_id);
 
   const result = await query(
     `INSERT INTO contact_rules (child_id, device_id, phone_number, contact_name, rule_type)
@@ -55,7 +64,17 @@ export const createContact = async (
       input.rule_type ?? 'BLOCK',
     ]
   );
-  return result.rows[0];
+  const contact = result.rows[0];
+
+  await writeAuditLog({
+    actorId: parentId,
+    targetChildId: childId,
+    action: 'CREATE_CONTACT',
+    resourceType: 'contact_rules',
+    details: { contact_id: contact.id, phone_number: contact.phone_number },
+  });
+
+  return contact;
 };
 
 export const updateContact = async (
@@ -65,6 +84,7 @@ export const updateContact = async (
   input: Partial<ContactInput>
 ): Promise<Record<string, unknown>> => {
   await verifyChildBelongsToParent(childId, parentId);
+  await ensureDeviceBelongsToChild(childId, input.device_id);
 
   const result = await query(
     `UPDATE contact_rules
@@ -86,7 +106,17 @@ export const updateContact = async (
   if (result.rows.length === 0) {
     throw new NotFoundError('Contact rule not found for this child');
   }
-  return result.rows[0];
+  const contact = result.rows[0];
+
+  await writeAuditLog({
+    actorId: parentId,
+    targetChildId: childId,
+    action: 'UPDATE_CONTACT',
+    resourceType: 'contact_rules',
+    details: { contact_id: contactId, phone_number: contact.phone_number },
+  });
+
+  return contact;
 };
 
 export const deleteContact = async (
@@ -102,4 +132,12 @@ export const deleteContact = async (
   if ((result.rowCount ?? 0) === 0) {
     throw new NotFoundError('Contact rule not found for this child');
   }
+
+  await writeAuditLog({
+    actorId: parentId,
+    targetChildId: childId,
+    action: 'DELETE_CONTACT',
+    resourceType: 'contact_rules',
+    details: { contact_id: contactId },
+  });
 };

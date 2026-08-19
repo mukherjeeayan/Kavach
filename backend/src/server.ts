@@ -4,14 +4,13 @@ import app from './app';
 import logger from './utils/logger';
 import { Server } from 'socket.io';
 import { ruleEvents } from './utils/socketHub';
-// Ensure DB and Redis are connected/initialized
+// Ensure DB is connected/initialized
 import pool from './config/database';
-import redisClient from './config/redis';
 
-// Fail fast: never boot with an unset JWT secret — every request
-// would 500 or, worse, tokens would be unverifiable.
-if (!process.env.JWT_SECRET) {
-  logger.error('JWT_SECRET is not set. Refusing to start.');
+// Fail fast: never boot with unset JWT secrets — every request would
+// 500 or, worse, tokens would be unverifiable.
+if (!process.env.JWT_SECRET || !process.env.JWT_REFRESH_SECRET) {
+  logger.error('JWT_SECRET / JWT_REFRESH_SECRET are not set. Refusing to start.');
   process.exit(1);
 }
 
@@ -68,7 +67,6 @@ const gracefulShutdown = async () => {
   server.close(async () => {
     logger.info('HTTP server closed.');
     await pool.end();
-    await redisClient.quit();
     process.exit(0);
   });
 };

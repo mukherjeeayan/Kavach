@@ -1,12 +1,20 @@
 import { Request, Response, NextFunction } from 'express';
 import * as contactsService from './contacts.service';
+import { buildPaginationMeta } from '../../utils/pagination';
 
 export const listContacts = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const data = await contactsService.listContacts(req.user!.userId, req.params.childId);
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 20;
+    const { items, total } = await contactsService.listContacts(
+      req.user!.userId,
+      req.params.childId,
+      page,
+      limit
+    );
     res.status(200).json({
       success: true,
-      data: { contacts: data },
+      data: { contacts: items, pagination: buildPaginationMeta(page, limit, total) },
       error: null,
       timestamp: new Date().toISOString(),
       request_id: req.headers['x-request-id'],

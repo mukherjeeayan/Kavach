@@ -5,7 +5,9 @@
 
 import { query } from '../../config/database';
 import { NotFoundError } from '../../utils/errors';
-import { verifyChildBelongsToParent } from '../children/children.service';
+import { verifyChildBelongsToParent, ensureDeviceBelongsToChild } from '../children/children.service';
+import { writeAuditLog } from '../shared/audit.service';
+import { toOffset } from '../../utils/pagination';
 
 export interface LockInput {
   device_id?: string;
@@ -17,34 +19,25 @@ export interface LockInput {
 
 const LOCK_COLUMNS = `id, child_id, device_id, day_of_week, start_time, end_time, is_active, created_at, updated_at`;
 
-/**
- * If a device_id is given, make sure it belongs to the child before
- * creating the rule.
- */
-const ensureDeviceBelongsToChild = async (childId: string, deviceId?: string): Promise<void> => {
-  if (!deviceId) return;
-  const result = await query(`SELECT id FROM devices WHERE id = $1 AND child_id = $2`, [
-    deviceId,
-    childId,
-  ]);
-  if (result.rows.length === 0) {
-    throw new NotFoundError('Device not found for this child');
-  }
-};
-
 export const listLocks = async (
   parentId: string,
-  childId: string
-): Promise<Array<Record<string, unknown>>> => {
+  childId: string,
+  page = 1,
+  limit = 20
+): Promise<{ items: Array<Record<string, unknown>>; total: number }> => {
   await verifyChildBelongsToParent(childId, parentId);
+  const count = await query(`SELECT COUNT(*)::int AS total FROM scheduled_locks WHERE child_id = $1`, [
+    childId,
+  ]);
   const result = await query(
     `SELECT ${LOCK_COLUMNS}
      FROM scheduled_locks
      WHERE child_id = $1
-     ORDER BY day_of_week NULLS LAST, start_time ASC`,
-    [childId]
+     ORDER BY day_of_week NULLS LAST, start_time ASC
+     LIMIT $2 OFFSET $3`,
+    [childId, limit, toOffset(page, limit)]
   );
-  return result.rows;
+  return { items: result.rows, total: count.rows[0].total };
 };
 
 export const createLock = async (
@@ -68,7 +61,17 @@ export const createLock = async (
       input.is_active ?? true,
     ]
   );
-  return result.rows[0];
+  const lock = result.rows[0];
+
+  await writeAuditLog({
+    actorId: parentId,
+    targetChildId: childId,
+    action: 'CREATE_LOCK',
+    resourceType: 'scheduled_locks',
+    details: { lock_id: lock.id, start_time: lock.start_time, end_time: lock.end_time },
+  });
+
+  return lock;
 };
 
 export const updateLock = async (
@@ -103,7 +106,17 @@ export const updateLock = async (
   if (result.rows.length === 0) {
     throw new NotFoundError('Scheduled lock not found for this child');
   }
-  return result.rows[0];
+  const lock = result.rows[0];
+
+  await writeAuditLog({
+    actorId: parentId,
+    targetChildId: childId,
+    action: 'UPDATE_LOCK',
+    resourceType: 'scheduled_locks',
+    details: { lock_id: lock.id },
+  });
+
+  return lock;
 };
 
 export const deleteLock = async (
@@ -119,4 +132,12 @@ export const deleteLock = async (
   if ((result.rowCount ?? 0) === 0) {
     throw new NotFoundError('Scheduled lock not found for this child');
   }
+
+  await writeAuditLog({
+    actorId: parentId,
+    targetChildId: childId,
+    action: 'DELETE_LOCK',
+    resourceType: 'scheduled_locks',
+    details: { lock_id: lockId },
+  });
 };

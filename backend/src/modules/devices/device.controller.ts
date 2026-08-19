@@ -3,6 +3,7 @@
 
 import { Request, Response, NextFunction } from 'express';
 import * as deviceService from './device.service';
+import { buildPaginationMeta } from '../../utils/pagination';
 
 const respond = (res: Response, status: number, data: unknown, req: Request) => {
   res.status(status).json({
@@ -50,16 +51,20 @@ export const heartbeat = async (req: Request, res: Response, next: NextFunction)
 };
 
 /**
- * GET /api/v1/children/:childId/devices
+ * GET /api/v1/children/:childId/devices?page=1&limit=20
  * Lists the registered devices of the parent's child.
  */
 export const listDevicesForChild = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const devices = await deviceService.listDevicesForChild(
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 20;
+    const { items, total } = await deviceService.listDevicesForChild(
       req.user!.userId,
-      req.params.childId
+      req.params.childId,
+      page,
+      limit
     );
-    respond(res, 200, { devices }, req);
+    respond(res, 200, { devices: items, pagination: buildPaginationMeta(page, limit, total) }, req);
   } catch (err) {
     next(err);
   }

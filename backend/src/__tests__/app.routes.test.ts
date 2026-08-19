@@ -33,7 +33,10 @@ const AUTH_PROTECTED_PATHS: Array<[string, string]> = [
   ['get', `/api/v1/children/${CHILD_ID}/devices`],
   ['get', `/api/v1/children/${CHILD_ID}/apps/blocked`],
   ['post', `/api/v1/children/${CHILD_ID}/apps/block`],
+  ['delete', `/api/v1/children/${CHILD_ID}/apps/block/${RULE_ID}`],
   ['get', `/api/v1/children/${CHILD_ID}/apps/unblock-requests`],
+  ['post', `/api/v1/children/${CHILD_ID}/apps/block/${RULE_ID}/approve-unblock`],
+  ['post', `/api/v1/children/${CHILD_ID}/apps/block/${RULE_ID}/reject-unblock`],
   ['get', `/api/v1/children/${CHILD_ID}/locks`],
   ['post', `/api/v1/children/${CHILD_ID}/locks`],
   ['put', `/api/v1/children/${CHILD_ID}/locks/${RULE_ID}`],
@@ -47,9 +50,11 @@ const AUTH_PROTECTED_PATHS: Array<[string, string]> = [
   ['get', `/api/v1/children/${CHILD_ID}/locations/current`],
   ['get', `/api/v1/children/${CHILD_ID}/locations/history`],
   ['post', `/api/v1/devices/register`],
+  ['get', `/api/v1/devices/${DEVICE_ID}/heartbeat`],
   ['post', `/api/v1/devices/${DEVICE_ID}/tamper-alert`],
   ['post', `/api/v1/devices/${DEVICE_ID}/screen-time`],
   ['post', `/api/v1/devices/${DEVICE_ID}/location`],
+  ['put', '/api/v1/auth/pin'],
 ];
 
 describe('API route surface', () => {
@@ -85,6 +90,28 @@ describe('API route surface', () => {
     const response = await request(app)
       .post('/api/v1/auth/login')
       .send({ email: 'not-an-email' });
+    expect(response.status).toBe(422);
+  });
+
+  test('logout is mounted and validates its refresh token (422)', async () => {
+    const response = await request(app)
+      .post('/api/v1/auth/logout')
+      .send({});
+    // 422 from zod validation proves the route is mounted and live.
+    expect(response.status).toBe(422);
+  });
+
+  test('pin verify is public and validates its body (422)', async () => {
+    const response = await request(app)
+      .post('/api/v1/auth/pin/verify')
+      .send({ email: 'parent@example.com' });
+    expect(response.status).toBe(422);
+  });
+
+  test('biometric token is public and validates its body (422)', async () => {
+    const response = await request(app)
+      .post('/api/v1/auth/biometric-token')
+      .send({ email: 'parent@example.com' });
     expect(response.status).toBe(422);
   });
 
