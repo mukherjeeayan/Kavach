@@ -14,4 +14,18 @@ export const createChildSchema = z.object({
     .optional(),
 });
 
+/**
+ * Daily screen-time limit in minutes. `null` clears the limit.
+ * Values are bounded by a sane maximum (24 h).
+ */
+export const screenTimeLimitSchema = z.object({
+  limit_minutes: z
+    .number({ required_error: 'limit_minutes is required' })
+    .int('limit_minutes must be an integer')
+    .min(0, 'limit_minutes cannot be negative')
+    .max(1440, 'limit_minutes cannot exceed 1440 (24 hours)')
+    .nullable(),
+});
+
 export type CreateChildInput = z.infer<typeof createChildSchema>;
+export type ScreenTimeLimitInput = z.infer<typeof screenTimeLimitSchema>;

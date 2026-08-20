@@ -30,6 +30,12 @@ const upsertEntry = async (deviceId: string, entry: ScreenTimeEntry): Promise<vo
 /**
  * Batch-upload usage entries for a device the parent owns.
  * Idempotent by design: repeated uploads accumulate seconds.
+ *
+ * After persisting, the child's daily screen-time limit is evaluated
+ * server-side (the device is never trusted with the limit). When the
+ * day's total crosses the limit for the first time, a
+ * SCREEN_TIME_LIMIT_REACHED alert is written to the audit log — the
+ * parent portal surfaces it under /children/:childId/alerts.
  */
 export const recordScreenTime = async (
   parentId: string,
@@ -55,6 +61,54 @@ export const recordScreenTime = async (
     action: 'UPLOAD_SCREEN_TIME',
     resourceType: 'screen_time_logs',
     details: { device_id: deviceId, entries: entries.length },
+  });
+
+  await evaluateDailyLimit(parentId, device.rows[0].child_id);
+};
+
+/**
+ * One alert per child per day per limit breach — no spam on every
+ * upload after the limit is crossed.
+ */
+const evaluateDailyLimit = async (parentId: string, childId: string): Promise<void> => {
+  const child = await query(
+    `SELECT daily_screen_time_limit_minutes FROM children WHERE id = $1`,
+    [childId]
+  );
+  const limitMinutes = child.rows[0]?.daily_screen_time_limit_minutes;
+  if (limitMinutes == null) return;
+
+  const todayTotal = await query(
+    `SELECT COALESCE(SUM(seconds), 0)::int AS total_seconds
+     FROM screen_time_logs
+     WHERE date_recorded = CURRENT_DATE
+       AND device_id IN (SELECT id FROM devices WHERE child_id = $1)`,
+    [childId]
+  );
+  const totalSeconds = Number(todayTotal.rows[0]?.total_seconds ?? 0);
+  if (totalSeconds <= limitMinutes * 60) return;
+
+  const today = new Date().toISOString().slice(0, 10);
+  const existing = await query(
+    `SELECT 1 FROM audit_logs
+     WHERE target_child_id = $1
+       AND action = 'SCREEN_TIME_LIMIT_REACHED'
+       AND details->>'date' = $2
+     LIMIT 1`,
+    [childId, today]
+  );
+  if (existing.rows.length > 0) return;
+
+  await writeAuditLog({
+    actorId: parentId,
+    targetChildId: childId,
+    action: 'SCREEN_TIME_LIMIT_REACHED',
+    resourceType: 'screen_time_logs',
+    details: {
+      date: today,
+      total_minutes: Math.round(totalSeconds / 60),
+      limit_minutes: limitMinutes,
+    },
   });
 };
 

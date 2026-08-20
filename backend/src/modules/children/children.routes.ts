@@ -6,7 +6,7 @@ import { Router } from 'express';
 import { authenticateJWT, requireRole } from '../../middleware/auth';
 import { validate, validateParams, validateQuery } from '../../middleware/validate';
 import { uuidParams, paginationQuery } from '../../middleware/params';
-import { createChildSchema } from './child.dto';
+import { createChildSchema, screenTimeLimitSchema } from './child.dto';
 import * as childrenController from './children.controller';
 import * as deviceController from '../devices/device.controller';
 
@@ -26,6 +26,22 @@ router.get(
   '/:childId/devices',
   validateParams(uuidParams('childId')),
   deviceController.listDevicesForChild
+);
+
+// PUT /api/v1/children/:childId/screen-time-limit — set/clear daily limit
+router.put(
+  '/:childId/screen-time-limit',
+  validateParams(uuidParams('childId')),
+  validate(screenTimeLimitSchema),
+  childrenController.setScreenTimeLimit
+);
+
+// GET /api/v1/children/:childId/alerts — tamper/limit alerts for the child
+router.get(
+  '/:childId/alerts',
+  validateParams(uuidParams('childId')),
+  validateQuery(paginationQuery),
+  childrenController.listAlerts
 );
 
 export default router;

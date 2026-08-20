@@ -5,6 +5,7 @@ import {
   createLock,
   deleteContact,
   deleteLock,
+  fetchChildAlerts,
   fetchContacts,
   fetchCurrentLocations,
   fetchDailyScreenTime,
@@ -12,6 +13,7 @@ import {
   fetchLocationHistory,
   fetchScreenTimeSummary,
   setParentPin,
+  setScreenTimeLimit,
   updateContact,
   updateLock,
   verifyParentPin,
@@ -45,6 +47,27 @@ export const useDailyScreenTime = (childId: string | null, date: string) =>
     queryFn: () => fetchDailyScreenTime(childId as string, date),
     enabled: !!childId,
   });
+
+export const useChildAlerts = (childId: string | null) =>
+  useQuery({
+    queryKey: ['childAlerts', childId],
+    queryFn: () => fetchChildAlerts(childId as string),
+    enabled: !!childId,
+    refetchInterval: 5 * 60 * 1000,
+  });
+
+/** Sets or clears the daily screen-time limit, then refreshes children. */
+export const useScreenTimeLimitAction = (childId: string | null) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (limitMinutes: number | null) =>
+      setScreenTimeLimit(childId as string, limitMinutes),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['children'] });
+    },
+  });
+};
 
 export const useCurrentLocations = (childId: string | null) =>
   useQuery({

@@ -7,6 +7,7 @@ import apiClient from './apiClient';
 import type {
   ApiResponse,
   AppBlockRule,
+  ChildAlert,
   ChildProfile,
   ContactInput,
   ContactRule,
@@ -56,6 +57,26 @@ export const logout = async (refreshToken: string): Promise<void> => {
 export const fetchChildren = async (): Promise<ChildProfile[]> => {
   const response = await apiClient.get<ApiResponse<{ children: ChildProfile[] }>>('/children');
   return response.data.data?.children ?? [];
+};
+
+/** Recent tamper/screen-time-limit alerts for a child. */
+export const fetchChildAlerts = async (childId: string): Promise<ChildAlert[]> => {
+  const response = await apiClient.get<ApiResponse<{ alerts: ChildAlert[] }>>(
+    `/children/${childId}/alerts`
+  );
+  return response.data.data?.alerts ?? [];
+};
+
+/** Set (or clear, with null) the child's daily screen-time limit in minutes. */
+export const setScreenTimeLimit = async (
+  childId: string,
+  limitMinutes: number | null
+): Promise<ChildProfile> => {
+  const response = await apiClient.put<ApiResponse<{ child: ChildProfile }>>(
+    `/children/${childId}/screen-time-limit`,
+    { limit_minutes: limitMinutes }
+  );
+  return response.data.data!.child;
 };
 
 export const createChild = async (name: string, birthDate?: string): Promise<ChildProfile> => {

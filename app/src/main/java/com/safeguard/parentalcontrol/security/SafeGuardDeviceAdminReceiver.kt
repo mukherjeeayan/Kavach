@@ -1,6 +1,8 @@
 package com.safeguard.parentalcontrol.security
 
 import android.app.admin.DeviceAdminReceiver
+import android.app.admin.DevicePolicyManager
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.util.Log
@@ -27,6 +29,11 @@ class SafeGuardDeviceAdminReceiver : DeviceAdminReceiver() {
     override fun onEnabled(context: Context, intent: Intent) {
         super.onEnabled(context, intent)
         Log.i(TAG, "Device Admin Enabled - App secured against basic uninstalls")
+
+        // Hide SafeGuard from the launcher: with device admin active the
+        // child can no longer see, open, or uninstall the app. The parent
+        // reaches the app through the PIN gate only.
+        hideSelfFromLauncher(context)
         // TODO: Sync state with server indicating Admin is Active
     }
 
@@ -48,6 +55,24 @@ class SafeGuardDeviceAdminReceiver : DeviceAdminReceiver() {
                     Log.w(TAG, "Failed to send tamper alert: ${e.message}")
                 }
             }
+        }
+    }
+
+    /**
+     * Uses the active DevicePolicyManager to hide our own package from
+     * the launcher (not uninstallable while admin is active anyway).
+     * Best-effort: some OEMs restrict hiding the app itself.
+     */
+    private fun hideSelfFromLauncher(context: Context) {
+        try {
+            val dpm = context.getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
+            val admin = ComponentName(context, SafeGuardDeviceAdminReceiver::class.java)
+            if (dpm.isAdminActive(admin) && !dpm.isApplicationHidden(admin, context.packageName)) {
+                dpm.setApplicationHidden(admin, context.packageName, true)
+                Log.i(TAG, "SafeGuard hidden from launcher")
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Could not hide app from launcher: ${e.message}")
         }
     }
 

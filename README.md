@@ -10,12 +10,13 @@ web dashboard. Designed from a
 
 | Feature | Child device (Android) | Parent (web dashboard) |
 |---|---|---|
-| App blocking | Foreground service kills blocked apps in ~1s, offline-capable | Block/unblock apps, approve/reject unblock requests |
-| Screen time | Per-app foreground seconds recorded locally, batched upload | Day/week/month summaries, per-app breakdown |
-| Scheduled locks | Lock-window enforcement (whitelist = launcher/settings) | Create/edit/delete lock windows |
+| App blocking | Foreground service kills blocked apps in ~1s, offline-capable; unblock approvals/rejections push an in-app notification | Block/unblock apps, approve/reject unblock requests |
+| Screen time | Per-app foreground seconds recorded locally, batched upload; on-device today view | Day/week/month summaries, per-app breakdown, daily limit (server-enforced, alert when crossed) |
+| Scheduled locks | Lock-window enforcement (whitelist = launcher/settings); 10-min warning before a window | Create/edit/delete lock windows |
 | Contacts | Incoming-call rejection for blocked numbers (Call Screening role) | Allow/block rules per number |
-| Location | Foreground GPS pinger, buffered upload | latest + recent positions with Google Maps links |
+| Location | Foreground GPS pinger, buffered upload | latest + recent positions with Google Maps links, optional embedded Mapbox map |
 | Parental auth | Biometric + PIN gate before parental settings (PIN stored as salted digest in EncryptedSharedPreferences) | PIN verification before management sections |
+| Alerts | Lock warnings, unblock outcomes, tamper lockdown (screen locked via device admin) | Tamper + screen-time-limit breach feed per child |
 
 Shared security posture: fail-closed caching (rules enforced from a
 local Room cache even when offline), tamper/root detection with local
@@ -39,8 +40,8 @@ doc/       Design plan, task list, and per-stack skill guides
 docker compose up -d
 ```
 
-The first boot applies `backend/db/migrations/*.sql` in order
-(seq 1-4). Rate limiting is in-memory (per-instance).
+The first boot applies `backend/db/migrations/*.sql` in filename
+order (001-005). Rate limiting is in-memory (per-instance).
 
 ### 2. Backend
 
@@ -70,11 +71,14 @@ npm run dev                 # http://localhost:5173 (proxies /api/v1 and /socket
 ## Testing
 
 ```bash
-# backend — typecheck + 71 tests (services + route-surface smoke)
+# backend — typecheck + 113 unit tests (services + route-surface smoke)
 cd backend && npx tsc --noEmit && npx jest --silent
 
-# frontend — build + lint
-cd frontend && npm run build && npm run lint
+# backend — e2e against a real Postgres (docker compose up -d first)
+cd backend && npm run test:e2e
+
+# frontend — build + lint + 8 component/API tests
+cd frontend && npm run build && npm run lint && npm test
 
 # android — assemble + unit tests
 cd <repo root> && ./gradlew :app:assembleDebug :app:testDebugUnitTest

@@ -53,3 +53,40 @@ export const createChild = async (req: Request, res: Response, next: NextFunctio
     next(err);
   }
 };
+
+/**
+ * PUT /api/v1/children/:childId/screen-time-limit
+ * Body: { limit_minutes: number | null }
+ * Sets or clears the child's daily screen-time limit.
+ */
+export const setScreenTimeLimit = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { limit_minutes } = req.body;
+    const child = await childrenService.setScreenTimeLimit(
+      req.user!.userId,
+      req.params.childId,
+      limit_minutes
+    );
+    respond(res, 200, { child }, req);
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * GET /api/v1/children/:childId/alerts
+ * Recent tamper/limit alerts for the child (from the audit log).
+ */
+export const listAlerts = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const limit = Number(req.query.limit) || 20;
+    const alerts = await childrenService.listChildAlerts(
+      req.user!.userId,
+      req.params.childId,
+      limit
+    );
+    respond(res, 200, { alerts }, req);
+  } catch (err) {
+    next(err);
+  }
+};

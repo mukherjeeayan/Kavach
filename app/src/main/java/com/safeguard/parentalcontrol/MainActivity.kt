@@ -4,6 +4,7 @@ import com.safeguard.parentalcontrol.data.local.OnboardingStore
 import com.safeguard.parentalcontrol.data.local.ParentPinStore
 import com.safeguard.parentalcontrol.data.remote.RealtimeRulesClient
 import com.safeguard.parentalcontrol.ui.screens.appblock.AppBlockingScreen
+import com.safeguard.parentalcontrol.ui.screens.deviceui.DeviceDashboardScreen
 import com.safeguard.parentalcontrol.ui.screens.onboarding.OnboardingScreen
 import com.safeguard.parentalcontrol.ui.screens.parentlock.ParentLockScreen
 import com.safeguard.parentalcontrol.work.SyncScheduler
@@ -93,7 +94,7 @@ fun SafeGuardNavigation(
             )
         }
         composable("dashboard") {
-            AppBlockingScreen()
+            DeviceDashboardScreen()
         }
     }
 }

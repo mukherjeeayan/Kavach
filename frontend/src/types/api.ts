@@ -22,6 +22,7 @@ export interface ChildProfile {
   parent_id: string;
   name: string;
   birth_date: string | null;
+  daily_screen_time_limit_minutes: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -131,4 +132,12 @@ export interface LocationPoint {
   accuracy_m: number | null;
   speed_kmh: number | null;
   recorded_at: string;
+}
+
+/** Tamper / screen-time-limit event, read from the child's audit log. */
+export interface ChildAlert {
+  action: 'TAMPER_ALERT' | 'SCREEN_TIME_LIMIT_REACHED';
+  resource_type: string;
+  details: Record<string, unknown>;
+  created_at: string;
 }

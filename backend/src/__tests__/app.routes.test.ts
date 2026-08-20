@@ -31,6 +31,8 @@ const RULE_ID = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
 const AUTH_PROTECTED_PATHS: Array<[string, string]> = [
   ['get', '/api/v1/children'],
   ['get', `/api/v1/children/${CHILD_ID}/devices`],
+  ['get', `/api/v1/children/${CHILD_ID}/alerts`],
+  ['put', `/api/v1/children/${CHILD_ID}/screen-time-limit`],
   ['get', `/api/v1/children/${CHILD_ID}/apps/blocked`],
   ['post', `/api/v1/children/${CHILD_ID}/apps/block`],
   ['delete', `/api/v1/children/${CHILD_ID}/apps/block/${RULE_ID}`],

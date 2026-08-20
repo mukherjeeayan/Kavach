@@ -12,6 +12,7 @@ export interface ChildProfile {
   parent_id: string;
   name: string;
   birth_date: string | null;
+  daily_screen_time_limit_minutes: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -66,7 +67,7 @@ export const listChildren = async (
     parentId,
   ]);
   const result = await query(
-    `SELECT id, parent_id, name, birth_date, created_at, updated_at
+    `SELECT id, parent_id, name, birth_date, daily_screen_time_limit_minutes, created_at, updated_at
      FROM children
      WHERE parent_id = $1
      ORDER BY created_at ASC
@@ -87,7 +88,7 @@ export const createChild = async (
   const result = await query(
     `INSERT INTO children (parent_id, name, birth_date)
      VALUES ($1, $2, $3)
-     RETURNING id, parent_id, name, birth_date, created_at, updated_at`,
+     RETURNING id, parent_id, name, birth_date, daily_screen_time_limit_minutes, created_at, updated_at`,
     [parentId, name.trim(), birthDate || null]
   );
   const child = result.rows[0];
@@ -101,4 +102,66 @@ export const createChild = async (
   });
 
   return child;
+};
+
+/**
+ * Set (or clear, with null) the child's daily screen-time limit in
+ * minutes. The Android device never needs to know the limit — the
+ * backend evaluates it on every screen-time upload and raises an
+ * alert when the day's total crosses it.
+ */
+export const setScreenTimeLimit = async (
+  parentId: string,
+  childId: string,
+  limitMinutes: number | null
+): Promise<ChildProfile> => {
+  await verifyChildBelongsToParent(childId, parentId);
+  const result = await query(
+    `UPDATE children
+     SET daily_screen_time_limit_minutes = $1, updated_at = now()
+     WHERE id = $2
+     RETURNING id, parent_id, name, birth_date, daily_screen_time_limit_minutes, created_at, updated_at`,
+    [limitMinutes, childId]
+  );
+  const child = result.rows[0];
+
+  await writeAuditLog({
+    actorId: parentId,
+    targetChildId: childId,
+    action: 'SET_SCREEN_TIME_LIMIT',
+    resourceType: 'children',
+    details: { limit_minutes: limitMinutes },
+  });
+
+  return child;
+};
+
+export interface ChildAlert {
+  action: string;
+  resource_type: string;
+  details: Record<string, unknown>;
+  created_at: string;
+}
+
+/**
+ * Recent security/limit alerts for a child (tamper reports from the
+ * device, screen-time limit breaches). Reads the audit log, which is
+ * append-only by design — alerts are immutable evidence.
+ */
+export const listChildAlerts = async (
+  parentId: string,
+  childId: string,
+  limit = 20
+): Promise<ChildAlert[]> => {
+  await verifyChildBelongsToParent(childId, parentId);
+  const result = await query(
+    `SELECT action, resource_type, details, created_at
+     FROM audit_logs
+     WHERE target_child_id = $1
+       AND action IN ('TAMPER_ALERT', 'SCREEN_TIME_LIMIT_REACHED')
+     ORDER BY created_at DESC
+     LIMIT $2`,
+    [childId, Math.min(limit, 100)]
+  );
+  return result.rows;
 };

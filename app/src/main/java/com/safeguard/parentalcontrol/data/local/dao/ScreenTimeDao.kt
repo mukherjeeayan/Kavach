@@ -5,6 +5,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.safeguard.parentalcontrol.data.local.entity.ScreenTimeDailyEntity
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ScreenTimeDao {
@@ -26,6 +27,10 @@ interface ScreenTimeDao {
 
     @Query("SELECT * FROM screen_time_daily WHERE date = :date ORDER BY seconds DESC")
     suspend fun getByDate(date: String): List<ScreenTimeDailyEntity>
+
+    /** Reactive view of a single day for the on-device dashboard. */
+    @Query("SELECT * FROM screen_time_daily WHERE date = :date ORDER BY seconds DESC")
+    fun flowByDate(date: String): Flow<List<ScreenTimeDailyEntity>>
 
     /** All buffered rows across every date, oldest first — the upload delta. */
     @Query("SELECT * FROM screen_time_daily ORDER BY date ASC, seconds DESC")

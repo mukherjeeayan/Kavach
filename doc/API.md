@@ -34,8 +34,9 @@ additionally to the bearer token for tamper alerts.
 Every child-data write (`createChild`, `createDevice`, `blockApp`,
 `requestUnblock`, `approveUnblock`, `rejectUnblock`, `createLock`,
 `updateLock`, `deleteLock`, `createContact`, `updateContact`,
-`deleteContact`, `recordScreenTime`, `recordLocation`, tamper alerts)
-is recorded in the parent's audit log.
+`deleteContact`, `recordScreenTime`, `recordLocation`,
+`setScreenTimeLimit`, tamper alerts) is recorded in the parent's
+audit log.
 
 ---
 
@@ -80,6 +81,8 @@ Body: `{ email, password }` → 15-minute scoped token. Rate-limited
 | GET | `/children` | List the parent's children (paginated) |
 | POST | `/children` | Create a child (`{ name, birth_date? }`) |
 | GET | `/children/:childId/devices` | Devices of a child (paginated) |
+| PUT | `/children/:childId/screen-time-limit` | Set or clear the daily screen-time limit (`{ limit_minutes: number \| null }`, 0-1440) |
+| GET | `/children/:childId/alerts` | Recent tamper + screen-time-limit alerts (`?limit=`, max 100) |
 | POST | `/devices/register` | Register/refresh this device (`{ child_id, device_id?, device_name, device_type, os_version?, fcm_token? }`) |
 | GET | `/devices/:deviceId/heartbeat` | Device heartbeat — returns `{ rules_changed, force_logout }` and bumps `last_active` |
 | POST | `/devices/:deviceId/tamper-alert` | Device reports tampering (`{ details }`) — `X-Device-ID` header accepted as fallback |
@@ -103,7 +106,7 @@ Body: `{ email, password }` → 15-minute scoped token. Rate-limited
 
 | Method | Path | Description |
 |---|---|---|
-| POST | `/devices/:deviceId/screen-time` | Batch upload `{ entries: [{ app_package, app_category?, seconds, date? }] }` — accumulates idempotently; 10 req/min per device |
+| POST | `/devices/:deviceId/screen-time` | Batch upload `{ entries: [{ app_package, app_category?, seconds, date? }] }` — accumulates idempotently; 10 req/min per device. When the child's daily limit is crossed, the backend writes one `SCREEN_TIME_LIMIT_REACHED` alert per day to the audit log (visible at `/children/:childId/alerts`) |
 | GET | `/children/:childId/screen-time?date=YYYY-MM-DD` | Per-app usage for one date (defaults to today) |
 | GET | `/children/:childId/screen-time/summary?range=day\|week\|month` | `{ range, total_seconds, daily: [{ date_recorded, total_seconds }], by_app: [{ app_package, app_category, total_seconds }] }` |
 

@@ -7,6 +7,8 @@ import android.app.NotificationManager
 import android.app.Service
 import android.app.usage.UsageEvents
 import android.app.usage.UsageStatsManager
+import android.app.admin.DevicePolicyManager
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.os.Build
@@ -19,6 +21,7 @@ import com.safeguard.parentalcontrol.data.local.dao.ScreenTimeDao
 import com.safeguard.parentalcontrol.data.local.entity.AppBlockRuleEntity
 import com.safeguard.parentalcontrol.data.local.entity.ScheduledLockEntity
 import com.safeguard.parentalcontrol.repository.appblock.AppBlockingRepository
+import com.safeguard.parentalcontrol.security.SafeGuardDeviceAdminReceiver
 import com.safeguard.parentalcontrol.security.TamperDetector
 import com.safeguard.parentalcontrol.security.TamperState
 import dagger.hilt.android.AndroidEntryPoint
@@ -70,6 +73,7 @@ class AppBlockingService : Service() {
     private val serviceScope = CoroutineScope(Dispatchers.Default + Job())
     private var monitoringJob: Job? = null
     private var tamperCheckJob: Job? = null
+    private var lockNotifyJob: Job? = null
 
     // In-memory cache refreshed from Room, used for O(1) lookups
     // during the 1-second polling loop.
@@ -83,6 +87,15 @@ class AppBlockingService : Service() {
     // Foreground-time accumulation between DB flushes (screen time).
     private val usageAccumulator = mutableMapOf<String, Int>()
     private var usageTicks = 0
+
+    // Lock-window warnings already shown today (key = window id + date),
+    // so the child isn't spammed every minute before a window.
+    private val notifiedWindowKeys = mutableSetOf<String>()
+    private var lastNotifiedDay: String? = null
+
+    // Packages that had a pending unblock request on the previous rules
+    // emission; used to detect approvals/rejections arriving from sync.
+    private var previousPendingUnblocks: Set<String> = emptySet()
 
     // ── Lifecycle ─────────────────────────────────────────────────
 
@@ -113,8 +126,36 @@ class AppBlockingService : Service() {
             }
         }
 
+        // Watch for unblock requests that got approved or declined on
+        // the server — the child should hear the outcome immediately.
+        serviceScope.launch {
+            repository.getAllRulesFlow(getDeviceIdentifier()).collect { rules ->
+                val currentPending = rules
+                    .filter { it.unblockRequested }
+                    .map { it.packageName }
+                    .toSet()
+                for (packageName in previousPendingUnblocks - currentPending) {
+                    val rule = rules.find { it.packageName == packageName }
+                    if (rule == null) continue
+                    if (rule.isBlocked) {
+                        postAlertNotification(
+                            "Unblock request declined",
+                            "${rule.appName ?: packageName} stays blocked."
+                        )
+                    } else {
+                        postAlertNotification(
+                            "Unblock approved",
+                            "${rule.appName ?: packageName} is unlocked now."
+                        )
+                    }
+                }
+                previousPendingUnblocks = currentPending
+            }
+        }
+
         startMonitoring()
         startTamperDetection()
+        startLockNotificationWatch()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -129,6 +170,7 @@ class AppBlockingService : Service() {
         // Clean up coroutine scope to avoid leaks
         monitoringJob?.cancel()
         tamperCheckJob?.cancel()
+        lockNotifyJob?.cancel()
         (serviceScope.coroutineContext[Job])?.cancel()
         Log.i(TAG, "AppBlockingService destroyed — scope cancelled")
     }
@@ -319,6 +361,62 @@ class AppBlockingService : Service() {
         }
     }
 
+    // ── Scheduled Lock Window Warning ───────────────────────────────
+
+    private fun startLockNotificationWatch() {
+        lockNotifyJob = serviceScope.launch {
+            while (isActive) {
+                try {
+                    checkUpcomingLockWindows()
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error checking lock windows", e)
+                }
+                delay(LOCK_WATCH_INTERVAL_MS)
+            }
+        }
+    }
+
+    /**
+     * Posts a one-time warning when an active lock window starts
+     * within the next [LOCK_WARN_BEFORE_MINUTES]. One notification per
+     * window per day — never a per-minute spam.
+     */
+    private fun checkUpcomingLockWindows() {
+        val now = Calendar.getInstance()
+        val minutesNow = now.get(Calendar.HOUR_OF_DAY) * 60 + now.get(Calendar.MINUTE)
+        val todayDow = now.get(Calendar.DAY_OF_WEEK) - 1 // 0=Sunday..6=Saturday
+        val todayKey = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
+
+        // New day: forget yesterday's notifications.
+        if (lastNotifiedDay != todayKey) {
+            notifiedWindowKeys.clear()
+            lastNotifiedDay = todayKey
+        }
+
+        for (window in lockWindows) {
+            if (!window.isActive) continue
+            if (window.deviceId != null && window.deviceId != getDeviceIdentifier()) continue
+            if (window.dayOfWeek != null && window.dayOfWeek != todayDow) continue
+
+            val start = parseMinutes(window.startTime) ?: continue
+            // Window already running (or started long ago) — the
+            // monitoring loop handles enforcement; nothing to warn.
+            if (start <= minutesNow) continue
+            val minutesUntilStart = start - minutesNow
+            if (minutesUntilStart > LOCK_WARN_BEFORE_MINUTES) continue
+
+            val key = "${window.id}:$todayKey"
+            if (key in notifiedWindowKeys) continue
+            notifiedWindowKeys.add(key)
+
+            postAlertNotification(
+                "Lock window approaching",
+                "Apps will be locked at ${window.startTime}. Finish up soon."
+            )
+            Log.i(TAG, "Posted lock window warning (start ${window.startTime}, in $minutesUntilStart min)")
+        }
+    }
+
     // ── Tamper / Root / Bypass Detection ──────────────────────────
     // Security skill: combine multiple signals — never rely on one.
 
@@ -365,6 +463,12 @@ class AppBlockingService : Service() {
         //     any in-flight sync cannot lift blocks.
         tamperState.lockdown = true
 
+        // (b2) Immediately lock the screen via the device admin — the
+        //      child is kicked out of whatever they were doing while
+        //      we triage. Best-effort; the device admin may not be
+        //      active on every install.
+        lockDeviceNow()
+
         // (c) Attempt server notification — best effort. Even if this
         //     fails (offline), the local lockdown above still applies.
         val details = buildString {
@@ -381,18 +485,63 @@ class AppBlockingService : Service() {
         Log.w(TAG, "Tamper lockdown active — enforcement at maximum restriction")
     }
 
+    /**
+     * Locks the device screen immediately through the device admin.
+     * A rooted/debugged device should not get to keep using apps while
+     * the parent is being notified. No-op without an active admin.
+     */
+    private fun lockDeviceNow() {
+        try {
+            val dpm = getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
+            val admin = ComponentName(this, SafeGuardDeviceAdminReceiver::class.java)
+            if (dpm.isAdminActive(admin)) {
+                dpm.lockNow()
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "lockNow failed (admin likely inactive): ${e.message}")
+        }
+    }
+
     // ── Notification (required for Foreground Service) ────────────
 
     private fun createNotificationChannel() {
-        val channel = NotificationChannel(
+        val manager = getSystemService(NotificationManager::class.java)
+
+        val protectionChannel = NotificationChannel(
             CHANNEL_ID,
             "SafeGuard Protection",
             NotificationManager.IMPORTANCE_LOW
         ).apply {
             description = "SafeGuard is actively protecting this device"
         }
-        val manager = getSystemService(NotificationManager::class.java)
-        manager.createNotificationChannel(channel)
+        manager.createNotificationChannel(protectionChannel)
+
+        // Alerts (lock warnings, unblock outcomes) are separate and
+        // higher importance so they actually reach the child.
+        val alertsChannel = NotificationChannel(
+            ALERT_CHANNEL_ID,
+            "SafeGuard Alerts",
+            NotificationManager.IMPORTANCE_HIGH
+        ).apply {
+            description = "Warnings and request outcomes"
+        }
+        manager.createNotificationChannel(alertsChannel)
+    }
+
+    /** Posts a transient (auto-dismissing) alert notification. */
+    private fun postAlertNotification(title: String, text: String) {
+        try {
+            val notification = Notification.Builder(this, ALERT_CHANNEL_ID)
+                .setContentTitle(title)
+                .setContentText(text)
+                .setSmallIcon(android.R.drawable.ic_dialog_alert)
+                .setAutoCancel(true)
+                .build()
+            getSystemService(NotificationManager::class.java)
+                .notify(ALERT_NOTIFICATION_ID, notification)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to post alert notification", e)
+        }
     }
 
     private fun buildNotification(): Notification {
@@ -418,10 +567,14 @@ class AppBlockingService : Service() {
     companion object {
         private const val TAG = "AppBlockingService"
         private const val CHANNEL_ID = "safeguard_protection"
+        private const val ALERT_CHANNEL_ID = "safeguard_alerts"
         private const val NOTIFICATION_ID = 1001
+        private const val ALERT_NOTIFICATION_ID = 1002
         private const val MONITORING_INTERVAL_MS = 1000L           // 1 second
         private const val MONITORING_WINDOW_MS = 2000L             // 2 seconds
         private const val TAMPER_CHECK_INTERVAL_MS = 30_000L       // 30 seconds
         private const val SCREEN_TIME_FLUSH_TICKS = 30             // flush every ~30s
+        private const val LOCK_WATCH_INTERVAL_MS = 60_000L         // 1 minute
+        private const val LOCK_WARN_BEFORE_MINUTES = 10            // warn 10 min ahead
     }
 }

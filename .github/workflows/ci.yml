@@ -25,7 +25,7 @@ jobs:
       - run: npm test -- --silent
 
   frontend:
-    name: Frontend (build + lint)
+    name: Frontend (build + lint + tests)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -40,6 +40,7 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npm run lint
+      - run: npm test
 
   android:
     name: Android (assemble + unit tests)

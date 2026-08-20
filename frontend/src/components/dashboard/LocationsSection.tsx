@@ -1,4 +1,5 @@
 import { useCurrentLocations, useLocationHistory } from '../../hooks/usePhase1Data';
+import LocationMap from './LocationMap';
 
 function formatTime(iso: string): string {
   return new Date(iso).toLocaleString();
@@ -21,6 +22,8 @@ export default function LocationsSection({ childId }: LocationsSectionProps) {
   return (
     <section>
       <h2 className="text-lg font-semibold mb-3">Location</h2>
+
+      <LocationMap points={history.data ?? []} />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
         {history.data?.map((point) => (

@@ -60,7 +60,7 @@ describe('screentime.service', () => {
         .mockResolvedValueOnce({ rows: [{ id: DEVICE_ID, child_id: CHILD_ID }] } as any) // ownership
         .mockResolvedValueOnce({ rows: [] } as any) // upsert #1
         .mockResolvedValueOnce({ rows: [] } as any) // upsert #2
-        .mockResolvedValueOnce({ rows: [] } as any); // audit log
+        .mockResolvedValueOnce({ rows: [{ daily_screen_time_limit_minutes: null }] } as any); // limit fetch
 
       await screentimeService.recordScreenTime(PARENT_ID, DEVICE_ID, [
         { app_package: 'com.example.app', seconds: 60 },
@@ -82,6 +82,64 @@ describe('screentime.service', () => {
           details: { device_id: DEVICE_ID, entries: 2 },
         })
       );
+    });
+
+    it('should raise a SCREEN_TIME_LIMIT_REACHED alert when the daily total crosses the limit', async () => {
+      mockedQuery
+        .mockResolvedValueOnce({ rows: [{ id: DEVICE_ID, child_id: CHILD_ID }] } as any) // ownership
+        .mockResolvedValueOnce({ rows: [] } as any) // upsert
+        .mockResolvedValueOnce({ rows: [{ daily_screen_time_limit_minutes: 60 }] } as any) // limit fetch
+        .mockResolvedValueOnce({ rows: [{ total_seconds: 5000 }] } as any) // today's total
+        .mockResolvedValueOnce({ rows: [] } as any); // dedupe check — no alert yet today
+
+      await screentimeService.recordScreenTime(PARENT_ID, DEVICE_ID, [
+        { app_package: 'com.example.app', seconds: 3600 },
+      ]);
+
+      expect(mockedAudit.writeAuditLog).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: 'SCREEN_TIME_LIMIT_REACHED',
+          targetChildId: CHILD_ID,
+          details: expect.objectContaining({
+            limit_minutes: 60,
+            total_minutes: 83, // 5000s
+          }),
+        })
+      );
+    });
+
+    it('should not duplicate the limit alert for the same day', async () => {
+      mockedQuery
+        .mockResolvedValueOnce({ rows: [{ id: DEVICE_ID, child_id: CHILD_ID }] } as any) // ownership
+        .mockResolvedValueOnce({ rows: [] } as any) // upsert
+        .mockResolvedValueOnce({ rows: [{ daily_screen_time_limit_minutes: 30 }] } as any) // limit fetch
+        .mockResolvedValueOnce({ rows: [{ total_seconds: 5000 }] } as any) // today's total
+        .mockResolvedValueOnce({ rows: [{ 1: 1 }] } as any); // dedupe check — alert already exists
+
+      await screentimeService.recordScreenTime(PARENT_ID, DEVICE_ID, [
+        { app_package: 'com.example.app', seconds: 3600 },
+      ]);
+
+      const limitAlertCalls = mockedAudit.writeAuditLog.mock.calls.filter(
+        ([entry]) => entry.action === 'SCREEN_TIME_LIMIT_REACHED'
+      );
+      expect(limitAlertCalls).toHaveLength(0);
+    });
+
+    it('should not raise alerts when no limit is configured', async () => {
+      mockedQuery
+        .mockResolvedValueOnce({ rows: [{ id: DEVICE_ID, child_id: CHILD_ID }] } as any) // ownership
+        .mockResolvedValueOnce({ rows: [] } as any) // upsert
+        .mockResolvedValueOnce({ rows: [{ daily_screen_time_limit_minutes: null }] } as any); // limit fetch
+
+      await screentimeService.recordScreenTime(PARENT_ID, DEVICE_ID, [
+        { app_package: 'com.example.app', seconds: 999999 },
+      ]);
+
+      const limitAlertCalls = mockedAudit.writeAuditLog.mock.calls.filter(
+        ([entry]) => entry.action === 'SCREEN_TIME_LIMIT_REACHED'
+      );
+      expect(limitAlertCalls).toHaveLength(0);
     });
   });
 

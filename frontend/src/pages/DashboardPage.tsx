@@ -19,6 +19,7 @@ import BlockAppForm from '../components/dashboard/BlockAppForm';
 import BlockedAppsTable from '../components/dashboard/BlockedAppsTable';
 import UnblockRequests from '../components/dashboard/UnblockRequests';
 import ScreenTimeSection from '../components/dashboard/ScreenTimeSection';
+import AlertsSection from '../components/dashboard/AlertsSection';
 import LocksSection from '../components/dashboard/LocksSection';
 import ContactsSection from '../components/dashboard/ContactsSection';
 import LocationsSection from '../components/dashboard/LocationsSection';
@@ -111,7 +112,14 @@ export default function DashboardPage() {
 
         {childId && (
           <>
-            <ScreenTimeSection childId={childId} />
+            <ScreenTimeSection
+              childId={childId}
+              limitMinutes={
+                childrenQuery.data?.find((c) => c.id === childId)
+                  ?.daily_screen_time_limit_minutes ?? null
+              }
+            />
+            <AlertsSection childId={childId} />
             <LocationsSection childId={childId} />
 
             {devicesQuery.isLoading && (

@@ -122,4 +122,78 @@ describe('children.service', () => {
       expect(mockedQuery).not.toHaveBeenCalled();
     });
   });
+
+  describe('setScreenTimeLimit', () => {
+    it('should update the limit and audit the change', async () => {
+      mockedQuery
+        .mockResolvedValueOnce({ rows: [{ id: CHILD_ID }] } as any) // ownership
+        .mockResolvedValueOnce({
+          rows: [{ ...childRow, daily_screen_time_limit_minutes: 60 }],
+        } as any) // UPDATE children
+        .mockResolvedValueOnce({ rows: [] } as any); // INSERT audit_logs
+
+      const result = await childrenService.setScreenTimeLimit(PARENT_ID, CHILD_ID, 60);
+
+      expect(result.daily_screen_time_limit_minutes).toBe(60);
+      expect(mockedQuery).toHaveBeenCalledWith(
+        expect.stringContaining('UPDATE children'),
+        [60, CHILD_ID]
+      );
+      expect(mockedQuery).toHaveBeenCalledWith(
+        expect.stringContaining('INSERT INTO audit_logs'),
+        expect.anything()
+      );
+    });
+
+    it('should clear the limit when null is passed', async () => {
+      mockedQuery
+        .mockResolvedValueOnce({ rows: [{ id: CHILD_ID }] } as any) // ownership
+        .mockResolvedValueOnce({
+          rows: [{ ...childRow, daily_screen_time_limit_minutes: null }],
+        } as any)
+        .mockResolvedValueOnce({ rows: [] } as any);
+
+      const result = await childrenService.setScreenTimeLimit(PARENT_ID, CHILD_ID, null);
+
+      expect(result.daily_screen_time_limit_minutes).toBeNull();
+      expect(mockedQuery).toHaveBeenCalledWith(
+        expect.stringContaining('UPDATE children'),
+        [null, CHILD_ID]
+      );
+    });
+  });
+
+  describe('listChildAlerts', () => {
+    it('should verify ownership and return recent alerts', async () => {
+      mockedQuery
+        .mockResolvedValueOnce({ rows: [{ id: CHILD_ID }] } as any) // ownership
+        .mockResolvedValueOnce({
+          rows: [
+            {
+              action: 'TAMPER_ALERT',
+              resource_type: 'device',
+              details: { device_id: 'd1' },
+              created_at: new Date().toISOString(),
+            },
+          ],
+        } as any); // SELECT audit_logs
+
+      const alerts = await childrenService.listChildAlerts(PARENT_ID, CHILD_ID, 10);
+
+      expect(alerts).toHaveLength(1);
+      expect(alerts[0].action).toBe('TAMPER_ALERT');
+      expect(mockedQuery).toHaveBeenCalledWith(
+        expect.stringContaining('WHERE target_child_id = $1'),
+        [CHILD_ID, 10]
+      );
+    });
+
+    it('should throw ForbiddenError when the child is not the parent\'s', async () => {
+      mockedQuery.mockResolvedValueOnce({ rows: [] } as any);
+
+      await expect(childrenService.listChildAlerts(PARENT_ID, CHILD_ID)).rejects.toThrow(
+        ForbiddenError
+      );
+    });
+  });
 });
