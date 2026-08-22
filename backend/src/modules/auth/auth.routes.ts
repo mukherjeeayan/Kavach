@@ -14,6 +14,10 @@ import {
   registerSchema,
   setPinSchema,
   verifyPinSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
+  updateProfileSchema,
+  changePasswordSchema,
 } from './auth.dto';
 import * as authController from './auth.controller';
 
@@ -42,5 +46,23 @@ router.post('/pin/verify', authLimiter, validate(verifyPinSchema), authControlle
 // POST /api/v1/auth/biometric-token — short-lived scoped token after
 // a successful biometric prompt (password is exchanged once).
 router.post('/biometric-token', authLimiter, validate(biometricTokenSchema), authController.biometricToken);
+
+// POST /api/v1/auth/forgot-password — sends a password reset link
+router.post('/forgot-password', authLimiter, validate(forgotPasswordSchema), authController.forgotPassword);
+
+// POST /api/v1/auth/reset-password — resets password with a valid token
+router.post('/reset-password', authLimiter, validate(resetPasswordSchema), authController.resetPassword);
+
+// GET /api/v1/auth/me — authenticated parent profile
+router.get('/me', authenticateJWT, authController.me);
+
+// PUT /api/v1/auth/profile — update parent profile
+router.put('/profile', authenticateJWT, validate(updateProfileSchema), authController.updateProfile);
+
+// PUT /api/v1/auth/password — change password (revokes all sessions)
+router.put('/password', authLimiter, authenticateJWT, validate(changePasswordSchema), authController.changePassword);
+
+// POST /api/v1/auth/logout-all — revoke every active session
+router.post('/logout-all', authenticateJWT, authController.logoutAll);
 
 export default router;

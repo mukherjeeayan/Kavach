@@ -9,6 +9,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -26,7 +27,7 @@ class CallScreeningService : CallScreeningService() {
     @Inject
     lateinit var contactRuleDao: ContactRuleDao
 
-    private val serviceScope = CoroutineScope(Dispatchers.Default + Job())
+    private val serviceScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
     @Volatile
     private var blockedNumbers: Set<String> = emptySet()

@@ -6,7 +6,7 @@ import { Router } from 'express';
 import { authenticateJWT, requireRole } from '../../middleware/auth';
 import { validate, validateParams } from '../../middleware/validate';
 import { uuidParams } from '../../middleware/params';
-import { registerDeviceSchema } from './device.dto';
+import { registerDeviceSchema, adminStatusSchema, fcmTokenSchema } from './device.dto';
 import * as deviceController from './device.controller';
 
 const router = Router();
@@ -19,5 +19,24 @@ router.post('/register', validate(registerDeviceSchema), deviceController.regist
 
 // POST /api/v1/devices/:deviceId/heartbeat — update last_active
 router.post('/:deviceId/heartbeat', validateParams(uuidParams('deviceId')), deviceController.heartbeat);
+
+// PUT /api/v1/devices/:deviceId/admin-status — report device-admin state
+router.put(
+  '/:deviceId/admin-status',
+  validateParams(uuidParams('deviceId')),
+  validate(adminStatusSchema),
+  deviceController.setAdminStatus
+);
+
+// PUT /api/v1/devices/:deviceId/fcm-token — refresh the push token
+router.put(
+  '/:deviceId/fcm-token',
+  validateParams(uuidParams('deviceId')),
+  validate(fcmTokenSchema),
+  deviceController.updateFcmToken
+);
+
+// DELETE /api/v1/devices/:deviceId — unpair (delete) a device
+router.delete('/:deviceId', validateParams(uuidParams('deviceId')), deviceController.unpairDevice);
 
 export default router;

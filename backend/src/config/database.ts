@@ -1,16 +1,24 @@
 import { Pool } from 'pg';
 import dotenv from 'dotenv';
 import logger from '../utils/logger';
+import { getPgMem } from './pgmem';
 
 dotenv.config();
 
-const pool = new Pool({
-  host: process.env.DB_HOST,
-  port: parseInt(process.env.DB_PORT || '5432'),
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
-});
+// DB_DRIVER=pg-mem swaps the real PostgreSQL connection for an
+// in-memory emulation (used by the e2e suite on machines without
+// Docker/Postgres). The same pg-mem pool is returned to the test
+// bootstrap so migrations and queries run against one database.
+const pool: Pool =
+  process.env.DB_DRIVER === 'pg-mem'
+    ? getPgMem().pool
+    : new Pool({
+        host: process.env.DB_HOST,
+        port: parseInt(process.env.DB_PORT || '5432'),
+        user: process.env.DB_USER,
+        password: process.env.DB_PASSWORD,
+        database: process.env.DB_NAME,
+      });
 
 pool.on('error', (err) => {
   // A transient idle-client error must not kill the whole process —

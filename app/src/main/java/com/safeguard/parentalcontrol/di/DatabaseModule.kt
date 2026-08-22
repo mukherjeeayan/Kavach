@@ -77,6 +77,16 @@ object DatabaseModule {
         }
     }
 
+    /**
+     * v2 -> v3: adds the per-app daily usage cap to app block rules
+     * (mirrors the backend `app_block_rules.daily_limit_minutes`).
+     */
+    private val MIGRATION_2_3 = object : Migration(2, 3) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE app_block_rules ADD COLUMN dailyLimitMinutes INTEGER")
+        }
+    }
+
     @Provides
     @Singleton
     fun provideDatabase(@ApplicationContext context: android.content.Context): SafeGuardDatabase {
@@ -84,7 +94,7 @@ object DatabaseModule {
             context,
             SafeGuardDatabase::class.java,
             "safeguard_db"
-        ).addMigrations(MIGRATION_1_2)
+        ).addMigrations(MIGRATION_1_2, MIGRATION_2_3)
             .fallbackToDestructiveMigration(false)
             .build()
     }

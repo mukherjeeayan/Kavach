@@ -7,6 +7,7 @@ import android.app.NotificationManager
 import android.app.Service
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.os.Build
 import android.os.IBinder
 import android.util.Log
 import androidx.core.content.ContextCompat
@@ -78,6 +79,14 @@ class LocationService : Service() {
             != PackageManager.PERMISSION_GRANTED
         ) {
             Log.w(TAG, "Location permission missing — stopping")
+            stopSelf()
+            return START_NOT_STICKY
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
+            ContextCompat.checkSelfPermission(this, "android.permission.ACCESS_BACKGROUND_LOCATION")
+            != PackageManager.PERMISSION_GRANTED
+        ) {
+            Log.w(TAG, "Background location permission missing — stopping")
             stopSelf()
             return START_NOT_STICKY
         }

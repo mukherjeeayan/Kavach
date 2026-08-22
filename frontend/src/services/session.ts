@@ -1,26 +1,32 @@
 /**
- * Session persistence — single source of truth for the storage keys
- * used by the auth store, the API client and the logout flow.
- * The backend issues short-lived access tokens plus a rotating
- * refresh token; both (and the parent profile) survive reloads so the
- * session can be restored and refreshed without re-login.
+ * Session persistence — XSS-hardened session storage.
+ *
+ * The refresh token lives ONLY in an httpOnly cookie set by the
+ * backend (never readable by JS). The short-lived access token is kept
+ * in module memory — never written to localStorage — so an XSS bug can
+ * no longer exfiltrate long-lived credentials. Only the non-sensitive
+ * user profile survives reloads; the access token is silently
+ * re-obtained after reload via the cookie-authenticated refresh call.
  */
 import type { AuthUser } from '../types/api';
 
-const TOKEN_KEY = 'kavach_token';
-const REFRESH_TOKEN_KEY = 'kavach_refresh_token';
 const USER_KEY = 'kavach_user';
 
-export interface PersistedSession {
-  token: string;
-  refresh_token: string;
+// Module-scoped: dies with the page, invisible to storage inspection.
+let accessToken: string | null = null;
+
+export const getAccessToken = (): string | null => accessToken;
+
+/** Store the latest access token (from login or a silent refresh). */
+export const setAccessToken = (token: string | null): void => {
+  accessToken = token;
+};
+
+export interface AuthSession {
+  token?: string | null;
+  refresh_token?: string | null;
   user: AuthUser;
 }
-
-export const getStoredToken = (): string | null => localStorage.getItem(TOKEN_KEY);
-
-export const getStoredRefreshToken = (): string | null =>
-  localStorage.getItem(REFRESH_TOKEN_KEY);
 
 export const getStoredUser = (): AuthUser | null => {
   try {
@@ -31,14 +37,34 @@ export const getStoredUser = (): AuthUser | null => {
   }
 };
 
-export const persistSession = (session: PersistedSession): void => {
-  localStorage.setItem(TOKEN_KEY, session.token);
-  localStorage.setItem(REFRESH_TOKEN_KEY, session.refresh_token);
+/**
+ * Persist the session. Tokens are intentionally NOT stored — the
+ * backend keeps them in httpOnly cookies and the in-memory copy.
+ */
+export const persistSession = (session: AuthSession): void => {
+  if (typeof session.token === 'string') setAccessToken(session.token);
   localStorage.setItem(USER_KEY, JSON.stringify(session.user));
 };
 
+/** Restore the previous profile and obtain a fresh access token via the httpOnly cookie. */
+export const restoreSession = async (): Promise<AuthUser | null> => {
+  const user = getStoredUser();
+  if (!user) return null;
+  try {
+    // Raw axios to avoid the interceptor's redirect-on-failure loop.
+    const { default: axios } = await import('axios');
+    const response = await axios.post('/api/v1/auth/refresh-token', {}, { withCredentials: true });
+    const data = response.data?.data as { token?: string } | undefined;
+    if (!data?.token) return null;
+    setAccessToken(data.token);
+    return user;
+  } catch {
+    clearStoredSession();
+    return null;
+  }
+};
+
 export const clearStoredSession = (): void => {
-  localStorage.removeItem(TOKEN_KEY);
-  localStorage.removeItem(REFRESH_TOKEN_KEY);
+  setAccessToken(null);
   localStorage.removeItem(USER_KEY);
 };

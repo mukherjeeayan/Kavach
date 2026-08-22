@@ -8,7 +8,7 @@ import { Router } from 'express';
 import { authenticateJWT, requireRole } from '../../middleware/auth';
 import { validate, validateParams, validateQuery } from '../../middleware/validate';
 import { uuidParams, childAndUuidParams, paginationQuery } from '../../middleware/params';
-import { blockAppSchema, requestUnblockSchema } from './appBlocking.dto';
+import { blockAppSchema, requestUnblockSchema, dailyLimitSchema } from './appBlocking.dto';
 import * as appBlockingController from './appBlocking.controller';
 
 const router = Router({ mergeParams: true }); // mergeParams to access :childId
@@ -62,6 +62,17 @@ router.post(
   requireRole('parent'),
   validateParams(childAndUuidParams('ruleId')),
   appBlockingController.rejectUnblock
+);
+
+// PUT /api/v1/children/:childId/apps/block/:ruleId/limit
+// Body: { daily_limit_minutes: number | null }
+// Sets or clears the per-app daily usage cap.
+router.put(
+  '/block/:ruleId/limit',
+  requireRole('parent'),
+  validateParams(childAndUuidParams('ruleId')),
+  validate(dailyLimitSchema),
+  appBlockingController.setAppDailyLimit
 );
 
 // POST /api/v1/children/:childId/apps/unblock-request

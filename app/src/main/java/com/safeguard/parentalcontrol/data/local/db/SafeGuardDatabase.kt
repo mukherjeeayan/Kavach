@@ -21,7 +21,7 @@ import com.safeguard.parentalcontrol.data.local.entity.ScreenTimeDailyEntity
         ScreenTimeDailyEntity::class,
         LocationEntryEntity::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 abstract class SafeGuardDatabase : RoomDatabase() {

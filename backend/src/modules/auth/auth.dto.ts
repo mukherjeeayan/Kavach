@@ -14,9 +14,11 @@ export const loginSchema = z.object({
 });
 
 export const refreshTokenSchema = z.object({
+  // Optional: browser clients send the httpOnly cookie instead.
   refresh_token: z
-    .string({ required_error: 'refresh_token is required' })
-    .min(1, 'refresh_token cannot be empty'),
+    .string()
+    .min(1, 'refresh_token cannot be empty')
+    .optional(),
 });
 
 // 4-6 digit numeric PIN used to unlock parent controls on the device.
@@ -65,8 +67,50 @@ export const registerSchema = z.object({
   birth_date: z
     .string({ required_error: 'birth_date must be YYYY-MM-DD' })
     .regex(/^\d{4}-\d{2}-\d{2}$/, 'birth_date must be in YYYY-MM-DD format')
+    .refine((v) => !Number.isNaN(new Date(`${v}T00:00:00Z`).getTime()), {
+      message: 'birth_date must be a valid calendar date',
+    })
+    .refine((v) => new Date(`${v}T00:00:00Z`).getTime() <= Date.now(), {
+      message: 'birth_date cannot be in the future',
+    })
     .optional(),
 });
+
+export const forgotPasswordSchema = z.object({
+  email: z
+    .string({ required_error: 'email is required' })
+    .email('email must be a valid email address'),
+});
+
+export const resetPasswordSchema = z.object({
+  token: z
+    .string({ required_error: 'token is required' })
+    .min(1, 'token cannot be empty'),
+  new_password: z
+    .string({ required_error: 'new_password is required' })
+    .min(8, 'new_password must be at least 8 characters')
+    .max(128, 'new_password cannot exceed 128 characters'),
+});
+
+export const updateProfileSchema = z.object({
+  name: z
+    .string({ required_error: 'name is required' })
+    .min(1, 'name cannot be empty')
+    .max(255, 'name cannot exceed 255 characters'),
+});
+
+export const changePasswordSchema = z.object({
+  current_password: z
+    .string({ required_error: 'current_password is required' })
+    .min(1, 'current_password cannot be empty'),
+  new_password: z
+    .string({ required_error: 'new_password is required' })
+    .min(8, 'new_password must be at least 8 characters')
+    .max(128, 'new_password cannot exceed 128 characters'),
+});
+
+export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
+export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
 
 export type LoginInput = z.infer<typeof loginSchema>;
 export type RefreshTokenInput = z.infer<typeof refreshTokenSchema>;
@@ -74,3 +118,5 @@ export type RegisterInput = z.infer<typeof registerSchema>;
 export type SetPinInput = z.infer<typeof setPinSchema>;
 export type VerifyPinInput = z.infer<typeof verifyPinSchema>;
 export type BiometricTokenInput = z.infer<typeof biometricTokenSchema>;
+export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
+export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;

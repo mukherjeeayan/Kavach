@@ -34,6 +34,7 @@ export interface DeviceProfile {
   device_type: string;
   os_version: string | null;
   fcm_token: string | null;
+  admin_active: boolean;
   last_active: string | null;
 }
 
@@ -46,13 +47,15 @@ export interface AppBlockRule {
   block_reason: string | null;
   unblock_requested: boolean;
   unblock_reason: string | null;
+  daily_limit_minutes: number | null;
   created_at: string;
   updated_at: string;
 }
 
 export interface LoginPayload {
-  token: string;
-  refresh_token: string;
+  /** Optional: the backend also sets httpOnly cookies for browser clients. */
+  token?: string;
+  refresh_token?: string;
   user: AuthUser;
   child: ChildProfile | null;
 }
@@ -136,8 +139,10 @@ export interface LocationPoint {
 
 /** Tamper / screen-time-limit event, read from the child's audit log. */
 export interface ChildAlert {
-  action: 'TAMPER_ALERT' | 'SCREEN_TIME_LIMIT_REACHED';
+  id: string;
+  action: 'TAMPER_ALERT' | 'SCREEN_TIME_LIMIT_REACHED' | 'PER_APP_LIMIT_REACHED' | 'DEVICE_ADMIN_STATUS';
   resource_type: string;
   details: Record<string, unknown>;
   created_at: string;
+  acknowledged_at: string | null;
 }

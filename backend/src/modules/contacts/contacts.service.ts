@@ -91,13 +91,14 @@ export const updateContact = async (
      SET contact_name = COALESCE($4, contact_name),
          rule_type = COALESCE($5, rule_type),
          is_active = COALESCE($6, is_active),
+         device_id = COALESCE($3, device_id),
          updated_at = now()
      WHERE id = $1 AND child_id = $2
      RETURNING ${CONTACT_COLUMNS}`,
     [
       contactId,
       childId,
-      null,
+      input.device_id ?? null,
       input.contact_name ?? null,
       input.rule_type ?? null,
       input.is_active === undefined ? null : input.is_active,

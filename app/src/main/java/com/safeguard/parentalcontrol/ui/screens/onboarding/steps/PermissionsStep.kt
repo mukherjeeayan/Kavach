@@ -7,7 +7,9 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
+import android.os.PowerManager
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -48,7 +50,9 @@ internal fun PermissionsStep(
     var adminActive by remember { mutableStateOf(isAdminActive(context)) }
     var notificationGranted by remember { mutableStateOf(hasNotificationPermission(context)) }
     var locationGranted by remember { mutableStateOf(hasLocationPermission(context)) }
+    var backgroundLocationGranted by remember { mutableStateOf(hasBackgroundLocationPermission(context)) }
     var callScreeningHeld by remember { mutableStateOf(hasCallScreeningRole(context)) }
+    var batteryExempt by remember { mutableStateOf(isIgnoringBatteryOptimizations(context)) }
 
     val usageAccessLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -70,10 +74,20 @@ internal fun PermissionsStep(
     ) {
         locationGranted = hasLocationPermission(context)
     }
+    val backgroundLocationLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) {
+        backgroundLocationGranted = hasBackgroundLocationPermission(context)
+    }
     val callScreeningLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) {
         callScreeningHeld = hasCallScreeningRole(context)
+    }
+    val batteryLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) {
+        batteryExempt = isIgnoringBatteryOptimizations(context)
     }
 
     Column(
@@ -128,6 +142,19 @@ internal fun PermissionsStep(
         )
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             PermissionRow(
+                title = "Background Location",
+                description = "Allows SafeGuard to share location even when the app is closed or in the background.",
+                granted = backgroundLocationGranted,
+                onRequest = {
+                    val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                        data = Uri.fromParts("package", context.packageName, null)
+                    }
+                    backgroundLocationLauncher.launch(intent)
+                }
+            )
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            PermissionRow(
                 title = "Call Screening",
                 description = "Allows SafeGuard to reject calls from numbers you blocked.",
                 granted = callScreeningHeld,
@@ -140,11 +167,24 @@ internal fun PermissionsStep(
             )
         }
 
+        PermissionRow(
+            title = "Battery Optimization",
+            description = "Exempts SafeGuard from Doze so protection keeps running in the background.",
+            granted = batteryExempt,
+            onRequest = {
+                batteryLauncher.launch(
+                    Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                        data = Uri.parse("package:${context.packageName}")
+                    }
+                )
+            }
+        )
+
         Spacer(Modifier.height(8.dp))
         Button(
             onClick = onFinished,
             enabled = usageGranted && adminActive && notificationGranted &&
-                locationGranted && callScreeningHeld,
+                locationGranted && backgroundLocationGranted && callScreeningHeld && batteryExempt,
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Finish Setup")
@@ -164,6 +204,11 @@ private fun hasCallScreeningRole(context: Context): Boolean {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return true
     return context.getSystemService(RoleManager::class.java)
         .isRoleHeld(RoleManager.ROLE_CALL_SCREENING)
+}
+
+private fun isIgnoringBatteryOptimizations(context: Context): Boolean {
+    val pm = context.getSystemService(PowerManager::class.java) ?: return false
+    return pm.isIgnoringBatteryOptimizations(context.packageName)
 }
 
 @Composable

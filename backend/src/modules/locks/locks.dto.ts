@@ -7,15 +7,22 @@ const timeSchema = z
   .string({ required_error: 'time is required' })
   .regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'time must be in HH:MM format');
 
-export const createLockSchema = z.object({
-  // Omit to apply the window to every device of the child.
-  device_id: z.string().uuid('must be a valid UUID').optional(),
-  // 0 (Sunday) - 6 (Saturday); null/omitted = every day.
-  day_of_week: z.number().int('day_of_week must be an integer').min(0).max(6).nullable().optional(),
-  start_time: timeSchema,
-  end_time: timeSchema,
-  is_active: z.boolean().optional(),
-});
+// start_time must differ from end_time — zero-length windows are
+// rejected; start > end is an overnight window crossing midnight.
+export const createLockSchema = z
+  .object({
+    // Omit to apply the window to every device of the child.
+    device_id: z.string().uuid('must be a valid UUID').optional(),
+    // 0 (Sunday) - 6 (Saturday); null/omitted = every day.
+    day_of_week: z.number().int('day_of_week must be an integer').min(0).max(6).nullable().optional(),
+    start_time: timeSchema,
+    end_time: timeSchema,
+    is_active: z.boolean().optional(),
+  })
+  .refine((data) => data.start_time !== data.end_time, {
+    message: 'start_time and end_time cannot be identical',
+    path: ['start_time'],
+  });
 
 export const updateLockSchema = z.object({
   device_id: z.string().uuid('must be a valid UUID').optional(),

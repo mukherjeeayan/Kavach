@@ -1,6 +1,8 @@
 package com.safeguard.parentalcontrol.data.remote.api
 
+import com.safeguard.parentalcontrol.data.remote.dto.AdminStatusRequest
 import com.safeguard.parentalcontrol.data.remote.dto.ApiResponse
+import com.safeguard.parentalcontrol.data.remote.dto.FcmTokenRequest
 import com.safeguard.parentalcontrol.data.remote.dto.ContactInput
 import com.safeguard.parentalcontrol.data.remote.dto.ContactRuleDto
 import com.safeguard.parentalcontrol.data.remote.dto.LocationDto
@@ -105,6 +107,20 @@ interface ParentalApi {
     suspend fun uploadLocation(
         @Path("deviceId") deviceId: String,
         @Body request: LocationUploadRequest
+    ): Response<ApiResponse<Unit>>
+
+    // ── Device admin status ─────────────────────────────────────────
+
+    @PUT("api/v1/devices/{deviceId}/admin-status")
+    suspend fun reportAdminStatus(
+        @Path("deviceId") deviceId: String,
+        @Body body: AdminStatusRequest
+    ): Response<ApiResponse<Unit>>
+
+    @PUT("api/v1/devices/{deviceId}/fcm-token")
+    suspend fun reportFcmToken(
+        @Path("deviceId") deviceId: String,
+        @Body body: FcmTokenRequest
     ): Response<ApiResponse<Unit>>
 
     @GET("api/v1/children/{childId}/locations/current")

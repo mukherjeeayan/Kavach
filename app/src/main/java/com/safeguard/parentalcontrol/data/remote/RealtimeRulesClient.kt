@@ -3,6 +3,7 @@ package com.safeguard.parentalcontrol.data.remote
 import android.util.Log
 import com.safeguard.parentalcontrol.BuildConfig
 import com.safeguard.parentalcontrol.data.local.OnboardingStore
+import com.safeguard.parentalcontrol.data.local.TokenStore
 import com.safeguard.parentalcontrol.repository.appblock.AppBlockingRepository
 import com.safeguard.parentalcontrol.repository.phase1.Phase1Repository
 import io.socket.client.IO
@@ -24,14 +25,19 @@ import javax.inject.Singleton
  * enforcement applies the new policy within seconds — no 15-minute
  * wait for the periodic sync worker.
  *
+ * The socket handshake carries the parent access token — the server
+ * rejects unauthenticated connections and unauthorized room joins.
+ *
  * The socket is a singleton: it lives for the whole app process and is
- * (re)started from the Application and after onboarding completes.
- * If the socket is unavailable (no network, blocked websockets) the
- * periodic sync worker remains the fallback — never fail closed.
+ * (re)started from the Application, after onboarding completes, and
+ * from the BootReceiver after a reboot. If the socket is unavailable
+ * (no network, blocked websockets) the periodic sync worker remains
+ * the fallback — never fail closed.
  */
 @Singleton
 class RealtimeRulesClient @Inject constructor(
     private val onboardingStore: OnboardingStore,
+    private val tokenStore: TokenStore,
     private val appBlockingRepository: AppBlockingRepository,
     private val phase1Repository: Phase1Repository
 ) {
@@ -48,12 +54,14 @@ class RealtimeRulesClient @Inject constructor(
         if (socket?.connected() == true) return
         val childId = onboardingStore.childId ?: return
         val deviceId = onboardingStore.deviceId ?: return
+        val token = tokenStore.token ?: return
 
         val options = IO.Options().apply {
             reconnection = true
             reconnectionAttempts = Int.MAX_VALUE
             reconnectionDelay = 5_000
             timeout = 10_000
+            auth = mapOf("token" to "Bearer $token")
         }
         val newSocket = IO.socket(serverUrl(), options)
 

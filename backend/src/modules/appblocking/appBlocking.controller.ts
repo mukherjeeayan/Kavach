@@ -198,6 +198,43 @@ export const rejectUnblock = async (
 };
 
 /**
+ * PUT /api/v1/children/:childId/apps/block/:ruleId/limit
+ * Body: { daily_limit_minutes: number | null }
+ * Sets or clears the per-app daily usage cap; the device enforces it
+ * and the backend raises PER_APP_LIMIT_REACHED alerts when crossed.
+ */
+export const setAppDailyLimit = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const parentId = req.user!.userId;
+    const { childId, ruleId } = req.params;
+    const { daily_limit_minutes } = req.body;
+
+    const rule = await appBlockingService.setAppDailyLimit(
+      parentId,
+      childId,
+      ruleId,
+      daily_limit_minutes
+    );
+
+    emitRuleChange(childId);
+
+    res.status(200).json({
+      success: true,
+      data: rule,
+      error: null,
+      timestamp: new Date().toISOString(),
+      request_id: req.headers['x-request-id'],
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
  * GET /api/v1/children/:childId/apps/unblock-requests?page=1&limit=20
  * Returns: 200 with the page of pending unblock requests.
  */

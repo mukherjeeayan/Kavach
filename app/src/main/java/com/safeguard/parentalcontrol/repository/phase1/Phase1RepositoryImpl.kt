@@ -16,6 +16,8 @@ import com.safeguard.parentalcontrol.data.remote.dto.ScheduledLockDto
 import com.safeguard.parentalcontrol.data.remote.dto.ScreenTimeRowDto
 import com.safeguard.parentalcontrol.data.remote.dto.ScreenTimeSummaryDto
 import com.safeguard.parentalcontrol.data.remote.dto.ScreenTimeUploadEntry
+import com.safeguard.parentalcontrol.data.remote.dto.AdminStatusRequest
+import com.safeguard.parentalcontrol.data.remote.dto.FcmTokenRequest
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -279,6 +281,22 @@ class Phase1RepositoryImpl @Inject constructor(
             }
             locationDao.deleteSyncedOlderThan(System.currentTimeMillis() - DAY_MS * 7)
             syncedIds.size == pending.size
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    override suspend fun reportAdminStatus(deviceId: String, adminActive: Boolean): Boolean {
+        return try {
+            api.reportAdminStatus(deviceId, AdminStatusRequest(adminActive)).isSuccessful
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    override suspend fun reportFcmToken(deviceId: String, token: String): Boolean {
+        return try {
+            api.reportFcmToken(deviceId, FcmTokenRequest(token)).isSuccessful
         } catch (_: Exception) {
             false
         }

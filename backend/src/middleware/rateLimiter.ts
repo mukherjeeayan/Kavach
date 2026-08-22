@@ -1,6 +1,7 @@
 import 'dotenv/config'; // Must load before reading env vars below
 import rateLimit from 'express-rate-limit';
 import { Request, Response } from 'express';
+import { createRateLimitStore } from './rateLimiterStore';
 
 const windowMs = parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000', 10); // 15 minutes
 const maxRequests = parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100', 10);
@@ -8,6 +9,7 @@ const maxRequests = parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100', 10);
 export const standardLimiter = rateLimit({
   windowMs,
   max: maxRequests,
+  store: createRateLimitStore('safeguard-rl:std:'),
   message: {
     success: false,
     data: {},
@@ -21,6 +23,7 @@ export const standardLimiter = rateLimit({
 export const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 5, // 5 requests per windowMs
+  store: createRateLimitStore('safeguard-rl:auth:'),
   message: {
     success: false,
     data: {},
@@ -39,7 +42,8 @@ export const authLimiter = rateLimit({
  */
 export const deviceIngestionLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  max: 10, // 10 pings/min ≈ 1 per 6s
+max: 10, // 10 pings/min ≈ 1 per 6s
+  store: createRateLimitStore('safeguard-rl:dev:'),
   keyGenerator: (req: Request) => req.params.deviceId || req.ip || 'unknown',
   handler: (req: Request, res: Response) => {
     res.status(429).json({

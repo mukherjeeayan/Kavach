@@ -5,6 +5,7 @@ import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import com.safeguard.parentalcontrol.data.local.OnboardingStore
 import com.safeguard.parentalcontrol.data.remote.RealtimeRulesClient
+import com.safeguard.parentalcontrol.notifications.SafeGuardMessagingService
 import com.safeguard.parentalcontrol.work.SyncScheduler
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
@@ -36,6 +37,8 @@ class SafeGuardApplication : Application(), Configuration.Provider {
         // Start the foreground enforcement/location services, the
         // periodic sync, and the realtime rule push on every app
         // launch (boot is handled by BootReceiver).
+        SafeGuardMessagingService.ensureChannel(this)
+        SafeGuardMessagingService.syncToken(this)
         SyncScheduler.startEnforcementService(this)
         SyncScheduler.startLocationService(this)
         SyncScheduler.schedule(this)

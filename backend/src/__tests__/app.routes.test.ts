@@ -52,7 +52,7 @@ const AUTH_PROTECTED_PATHS: Array<[string, string]> = [
   ['get', `/api/v1/children/${CHILD_ID}/locations/current`],
   ['get', `/api/v1/children/${CHILD_ID}/locations/history`],
   ['post', `/api/v1/devices/register`],
-  ['get', `/api/v1/devices/${DEVICE_ID}/heartbeat`],
+  ['post', `/api/v1/devices/${DEVICE_ID}/heartbeat`],
   ['post', `/api/v1/devices/${DEVICE_ID}/tamper-alert`],
   ['post', `/api/v1/devices/${DEVICE_ID}/screen-time`],
   ['post', `/api/v1/devices/${DEVICE_ID}/location`],
@@ -95,12 +95,14 @@ describe('API route surface', () => {
     expect(response.status).toBe(422);
   });
 
-  test('logout is mounted and validates its refresh token (422)', async () => {
+  test('logout is mounted and responds idempotently (200)', async () => {
     const response = await request(app)
       .post('/api/v1/auth/logout')
       .send({});
-    // 422 from zod validation proves the route is mounted and live.
-    expect(response.status).toBe(422);
+    // Logout is intentionally idempotent — empty body + no cookie →
+    // 200 with revoked:false, which proves the route is mounted.
+    expect(response.status).toBe(200);
+    expect(response.body.data.revoked).toBe(false);
   });
 
   test('pin verify is public and validates its body (422)', async () => {

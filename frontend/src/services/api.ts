@@ -49,9 +49,9 @@ export const register = async (payload: RegisterPayload): Promise<LoginPayload> 
   return response.data.data!;
 };
 
-/** Revokes the refresh token server-side. Idempotent; call on sign-out. */
-export const logout = async (refreshToken: string): Promise<void> => {
-  await apiClient.post('/auth/logout', { refresh_token: refreshToken });
+/** Revokes the refresh token server-side and clears session cookies. Idempotent; call on sign-out. */
+export const logout = async (): Promise<void> => {
+  await apiClient.post('/auth/logout');
 };
 
 export const fetchChildren = async (): Promise<ChildProfile[]> => {
@@ -123,6 +123,19 @@ export const respondToUnblockRequest = async (
 ): Promise<AppBlockRule> => {
   const response = await apiClient.post<ApiResponse<AppBlockRule>>(
     `/children/${childId}/apps/block/${ruleId}/${decision}-unblock`
+  );
+  return response.data.data!;
+};
+
+/** Set (or clear, with null) a per-app daily usage limit in minutes. */
+export const setAppDailyLimit = async (
+  childId: string,
+  ruleId: string,
+  dailyLimitMinutes: number | null
+): Promise<AppBlockRule> => {
+  const response = await apiClient.put<ApiResponse<AppBlockRule>>(
+    `/children/${childId}/apps/block/${ruleId}/limit`,
+    { daily_limit_minutes: dailyLimitMinutes }
   );
   return response.data.data!;
 };

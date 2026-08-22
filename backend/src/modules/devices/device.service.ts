@@ -16,6 +16,8 @@ export interface RegisteredDevice {
   device_type: string;
   os_version: string | null;
   fcm_token: string | null;
+  admin_active: boolean;
+  last_active: string | null;
 }
 
 export interface RegisterDeviceInput {
@@ -55,7 +57,7 @@ export const registerDevice = async (
              fcm_token = $4, last_active = now()
          WHERE id = $5
          RETURNING id AS device_id, child_id, device_name, device_type,
-                   os_version, fcm_token`,
+                   os_version, fcm_token, admin_active, last_active`,
         [
           input.device_name.trim(),
           input.device_type,
@@ -80,7 +82,7 @@ export const registerDevice = async (
     `INSERT INTO devices (child_id, device_name, device_type, os_version, fcm_token, last_active)
      VALUES ($1, $2, $3, $4, $5, now())
      RETURNING id AS device_id, child_id, device_name, device_type,
-               os_version, fcm_token`,
+               os_version, fcm_token, admin_active, last_active`,
     [
       input.child_id,
       input.device_name.trim(),
@@ -134,7 +136,7 @@ export const listDevicesForChild = async (
   ]);
   const result = await query(
     `SELECT id AS device_id, child_id, device_name, device_type,
-            os_version, fcm_token, last_active
+            os_version, fcm_token, admin_active, last_active
      FROM devices
      WHERE child_id = $1
      ORDER BY created_at ASC
@@ -142,4 +144,107 @@ export const listDevicesForChild = async (
     [childId, limit, toOffset(page, limit)]
   );
   return { items: result.rows, total: count.rows[0].total };
+};
+
+/**
+ * Record whether SafeGuard is active as a device admin on the child's
+ * device. The device reports this whenever the admin state changes;
+ * the dashboard shows it as the "protected" badge. Admin deactivation
+ * is an important bypass signal, so it is always audited.
+ */
+export const setDeviceAdminStatus = async (
+  parentId: string,
+  deviceId: string,
+  adminActive: boolean
+): Promise<RegisteredDevice> => {
+  const device = await query(
+    `SELECT d.id, d.child_id FROM devices d
+     JOIN children c ON c.id = d.child_id
+     WHERE d.id = $1 AND c.parent_id = $2`,
+    [deviceId, parentId]
+  );
+  if (device.rows.length === 0) {
+    throw new NotFoundError('Device not found for this parent');
+  }
+
+  const updated = await query(
+    `UPDATE devices
+     SET admin_active = $1, last_active = now()
+     WHERE id = $2
+     RETURNING id AS device_id, child_id, device_name, device_type,
+               os_version, fcm_token, admin_active, last_active`,
+    [adminActive, deviceId]
+  );
+
+  await writeAuditLog({
+    actorId: parentId,
+    targetChildId: device.rows[0].child_id,
+    action: 'DEVICE_ADMIN_STATUS',
+    resourceType: 'device',
+    details: { device_id: deviceId, admin_active: adminActive },
+  });
+
+  return updated.rows[0];
+};
+
+/**
+ * Refresh the FCM push token for a device. Called by the app whenever
+ * Firebase issues a new token (and on startup, so a stale token is
+ * replaced quickly). Last_active is refreshed too, so a device that
+ * only ever syncs via this endpoint still looks alive.
+ */
+export const updateFcmToken = async (
+  parentId: string,
+  deviceId: string,
+  fcmToken: string | null
+): Promise<RegisteredDevice> => {
+  const device = await query(
+    `SELECT d.id, d.child_id FROM devices d
+     JOIN children c ON c.id = d.child_id
+     WHERE d.id = $1 AND c.parent_id = $2`,
+    [deviceId, parentId]
+  );
+  if (device.rows.length === 0) {
+    throw new NotFoundError('Device not found for this parent');
+  }
+
+  const updated = await query(
+    `UPDATE devices
+     SET fcm_token = $1, last_active = now()
+     WHERE id = $2
+     RETURNING id AS device_id, child_id, device_name, device_type,
+               os_version, fcm_token, admin_active, last_active`,
+    [fcmToken, deviceId]
+  );
+
+  return updated.rows[0];
+};
+/**
+ * Unpair (delete) a device the parent owns. Cascades remove all
+ * rules/logs tied to the device so orphaned devices stop receiving
+ * rules or FCM pushes.
+ */
+export const unpairDevice = async (
+  parentId: string,
+  deviceId: string
+): Promise<void> => {
+  const device = await query(
+    `SELECT d.id, d.child_id, d.device_name FROM devices d
+     JOIN children c ON c.id = d.child_id
+     WHERE d.id = $1 AND c.parent_id = $2`,
+    [deviceId, parentId]
+  );
+  if (device.rows.length === 0) {
+    throw new NotFoundError('Device not found for this parent');
+  }
+
+  await query(`DELETE FROM devices WHERE id = $1`, [deviceId]);
+
+  await writeAuditLog({
+    actorId: parentId,
+    targetChildId: device.rows[0].child_id,
+    action: 'UNPAIR_DEVICE',
+    resourceType: 'devices',
+    details: { device_id: deviceId, device_name: device.rows[0].device_name },
+  });
 };

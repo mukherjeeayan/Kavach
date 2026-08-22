@@ -25,6 +25,7 @@ data class AppBlockRuleDto(
     val block_reason: String?,
     val unblock_requested: Boolean,
     val unblock_reason: String?,
+    val daily_limit_minutes: Int? = null,
     val created_at: String,
     val updated_at: String
 )

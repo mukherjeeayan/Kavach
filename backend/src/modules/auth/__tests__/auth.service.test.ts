@@ -213,12 +213,15 @@ describe('auth.service', () => {
     it('should rotate a valid refresh token and issue a new pair', async () => {
       const jwt = jest.requireMock('jsonwebtoken');
       jwt.verify.mockReturnValueOnce({ userId: PARENT_ID, exp: Date.now() / 1000 + 604800 });
-      // SELECT refresh_tokens (active)
-      mockedQuery.mockResolvedValueOnce({ rows: [{ revoked_at: null }] } as any);
-      // UPDATE revoke old token
-      mockedQuery.mockResolvedValueOnce({ rows: [] } as any);
-      // INSERT new refresh token
-      mockedQuery.mockResolvedValueOnce({ rows: [] } as any);
+      const client = mockClient();
+      client.query
+        .mockResolvedValueOnce({ rows: [] }) // BEGIN
+        .mockResolvedValueOnce({
+          rows: [{ revoked_at: null, family_id: 'family-1' }],
+        }) // SELECT ... FOR UPDATE
+        .mockResolvedValueOnce({ rows: [] }) // UPDATE revoke old token
+        .mockResolvedValueOnce({ rows: [] }) // INSERT new refresh token
+        .mockResolvedValueOnce({ rows: [] }); // COMMIT
 
       const result = await authService.refreshAccessToken('valid-refresh-token');
 
@@ -230,28 +233,37 @@ describe('auth.service', () => {
         { algorithms: ['HS256'] }
       );
       // The old token must be revoked during rotation
-      expect(mockedQuery).toHaveBeenCalledWith(
+      expect(client.query).toHaveBeenCalledWith(
         expect.stringContaining('UPDATE refresh_tokens'),
         expect.anything()
       );
+      expect(client.release).toHaveBeenCalledTimes(1);
     });
 
-    it('should reject a revoked refresh token', async () => {
+    it('should reject and roll back when the token was already revoked', async () => {
       const jwt = jest.requireMock('jsonwebtoken');
       jwt.verify.mockReturnValueOnce({ userId: PARENT_ID, exp: Date.now() / 1000 + 604800 });
-      mockedQuery.mockResolvedValueOnce({ rows: [{ revoked_at: new Date().toISOString() }] } as any);
+      const client = mockClient();
+      client.query
+        .mockResolvedValueOnce({ rows: [] }) // BEGIN
+        .mockResolvedValueOnce({
+          rows: [{ revoked_at: new Date().toISOString(), family_id: 'family-1' }],
+        }) // SELECT ... FOR UPDATE
+        .mockResolvedValueOnce({ rows: [] }); // ROLLBACK
 
       await expect(authService.refreshAccessToken('revoked-token')).rejects.toThrow(
         UnauthorizedError
       );
-      // No rotation queries may run for a revoked token
-      expect(mockedQuery).toHaveBeenCalledTimes(1);
     });
 
     it('should reject a refresh token that was never issued', async () => {
       const jwt = jest.requireMock('jsonwebtoken');
       jwt.verify.mockReturnValueOnce({ userId: PARENT_ID, exp: Date.now() / 1000 + 604800 });
-      mockedQuery.mockResolvedValueOnce({ rows: [] } as any);
+      const client = mockClient();
+      client.query
+        .mockResolvedValueOnce({ rows: [] }) // BEGIN
+        .mockResolvedValueOnce({ rows: [] }) // SELECT ... FOR UPDATE → no row
+        .mockResolvedValueOnce({ rows: [] }); // ROLLBACK
 
       await expect(authService.refreshAccessToken('forged-token')).rejects.toThrow(
         UnauthorizedError

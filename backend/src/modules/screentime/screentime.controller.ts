@@ -5,14 +5,15 @@ const today = () => new Date().toISOString().slice(0, 10);
 
 export const upload = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    await screentimeService.recordScreenTime(
+    const result = await screentimeService.recordScreenTime(
       req.user!.userId,
       req.params.deviceId,
-      req.body.entries
+      req.body.entries,
+      req.body.batch_id
     );
     res.status(201).json({
       success: true,
-      data: { uploaded: req.body.entries.length },
+      data: { uploaded: req.body.entries.length, duplicate_batch: result.duplicate },
       error: null,
       timestamp: new Date().toISOString(),
       request_id: req.headers['x-request-id'],

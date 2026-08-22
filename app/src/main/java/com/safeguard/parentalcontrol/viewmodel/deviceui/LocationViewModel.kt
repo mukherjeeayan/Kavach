@@ -42,6 +42,9 @@ class LocationViewModel @Inject constructor(
     private val _uiState = MutableStateFlow<LocationUiState>(LocationUiState.Loading)
     val uiState: StateFlow<LocationUiState> = _uiState.asStateFlow()
 
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
+
     init {
         viewModelScope.launch {
             locationDao.flowRecent()
@@ -59,17 +62,26 @@ class LocationViewModel @Inject constructor(
 
     fun refreshFromServer() {
         viewModelScope.launch {
-            val server = phase1Repository.getCurrentLocations(childId).mapNotNull { dto ->
-                LocationEntryEntity(
-                    latitude = dto.latitude,
-                    longitude = dto.longitude,
-                    accuracyM = dto.accuracy_m,
-                    speedKmh = dto.speed_kmh,
-                    recordedAt = parseIsoMillis(dto.recorded_at) ?: System.currentTimeMillis()
-                )
+            _isRefreshing.value = true
+            try {
+                val server = phase1Repository.getCurrentLocations(childId).mapNotNull { dto ->
+                    LocationEntryEntity(
+                        latitude = dto.latitude,
+                        longitude = dto.longitude,
+                        accuracyM = dto.accuracy_m,
+                        speedKmh = dto.speed_kmh,
+                        recordedAt = parseIsoMillis(dto.recorded_at) ?: System.currentTimeMillis()
+                    )
+                }
+                val local = locationDao.flowRecent().first()
+                _uiState.value = LocationUiState.Success(localPings = local, serverPings = server)
+            } catch (e: Exception) {
+                android.util.Log.e("LocationVM", "Refresh failed", e)
+                val local = locationDao.flowRecent().first()
+                _uiState.value = LocationUiState.Success(localPings = local, serverPings = emptyList())
+            } finally {
+                _isRefreshing.value = false
             }
-            val local = locationDao.flowRecent().first()
-            _uiState.value = LocationUiState.Success(localPings = local, serverPings = server)
         }
     }
 

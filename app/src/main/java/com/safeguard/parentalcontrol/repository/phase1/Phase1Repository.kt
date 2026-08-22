@@ -56,4 +56,10 @@ interface Phase1Repository {
 
     /** Uploads all unsynced location entries, marking them synced on success. */
     suspend fun uploadBufferedLocations(deviceId: String): Boolean
+
+    /** Reports whether SafeGuard is active as a device admin. */
+    suspend fun reportAdminStatus(deviceId: String, adminActive: Boolean): Boolean
+
+    /** Pushes the current Firebase push token to the server. */
+    suspend fun reportFcmToken(deviceId: String, token: String): Boolean
 }

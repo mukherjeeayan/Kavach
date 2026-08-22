@@ -8,6 +8,7 @@ import android.content.Intent
 import android.util.Log
 import com.safeguard.parentalcontrol.data.local.OnboardingStore
 import com.safeguard.parentalcontrol.repository.appblock.AppBlockingRepository
+import com.safeguard.parentalcontrol.repository.phase1.Phase1Repository
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -24,6 +25,9 @@ class SafeGuardDeviceAdminReceiver : DeviceAdminReceiver() {
     @Inject
     lateinit var appBlockingRepository: AppBlockingRepository
 
+    @Inject
+    lateinit var phase1Repository: Phase1Repository
+
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override fun onEnabled(context: Context, intent: Intent) {
@@ -34,12 +38,13 @@ class SafeGuardDeviceAdminReceiver : DeviceAdminReceiver() {
         // child can no longer see, open, or uninstall the app. The parent
         // reaches the app through the PIN gate only.
         hideSelfFromLauncher(context)
-        // TODO: Sync state with server indicating Admin is Active
+        reportAdminState(true)
     }
 
     override fun onDisabled(context: Context, intent: Intent) {
         super.onDisabled(context, intent)
         Log.w(TAG, "Device Admin Disabled - Child might have bypassed security!")
+        reportAdminState(false)
         // Fire an emergency alert to the backend: disabling the device
         // admin makes the app uninstallable, so this is the last chance
         // to tell the parent something is wrong. Best-effort — if the
@@ -54,6 +59,26 @@ class SafeGuardDeviceAdminReceiver : DeviceAdminReceiver() {
                 } catch (e: Exception) {
                     Log.w(TAG, "Failed to send tamper alert: ${e.message}")
                 }
+            }
+        }
+    }
+
+    /**
+     * Best-effort sync of the local admin state to the server so the
+     * parent dashboard shows the "protected" badge truthfully.
+     */
+    private fun reportAdminState(adminActive: Boolean) {
+        val deviceId = onboardingStore.deviceId
+        if (deviceId.isNullOrEmpty()) return
+        scope.launch {
+            try {
+                if (phase1Repository.reportAdminStatus(deviceId, adminActive)) {
+                    Log.i(TAG, "Admin status reported: admin_active=$adminActive")
+                } else {
+                    Log.w(TAG, "Admin status report failed")
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to report admin status: ${e.message}")
             }
         }
     }

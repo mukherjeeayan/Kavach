@@ -7,6 +7,7 @@ import { AppBlockRule } from './AppBlockRule.model';
 import logger from '../../utils/logger';
 import { NotFoundError, ForbiddenError, ConflictError } from '../../utils/errors';
 import { writeAuditLog } from '../shared/audit.service';
+import { sendToChild } from '../shared/firebase.service';
 
 // ── Typed Errors ──────────────────────────────────────────────────
 // Defined centrally in utils/errors.ts; re-exported here so existing
@@ -147,6 +148,46 @@ export const requestUnblock = async (
 };
 
 /**
+ * Set (or clear, with null) the per-app daily usage limit. The
+ * backend evaluates the cap on every screen-time upload and raises a
+ * PER_APP_LIMIT_REACHED alert (surfaced on the dashboard); the device
+ * additionally enforces it by killing the app once today's usage
+ * crosses the cap.
+ */
+export const setAppDailyLimit = async (
+  parentId: string,
+  childId: string,
+  ruleId: string,
+  dailyLimitMinutes: number | null
+): Promise<AppBlockRule> => {
+  await verifyChildBelongsToParent(childId, parentId);
+
+  const existingRule = await appBlockRuleRepo.getRuleByIdAndChildId(ruleId, childId);
+  if (!existingRule) {
+    throw new NotFoundError('Block rule not found for this child');
+  }
+
+  const updatedRule = await appBlockRuleRepo.setDailyLimit(ruleId, dailyLimitMinutes);
+  if (!updatedRule) {
+    throw new NotFoundError('Failed to update the daily limit');
+  }
+
+  logger.info(
+    `Daily limit set: rule ${ruleId} = ${dailyLimitMinutes} min for child ${childId} by parent ${parentId}`
+  );
+
+  await writeAuditLog({
+    actorId: parentId,
+    targetChildId: childId,
+    action: 'SET_APP_DAILY_LIMIT',
+    resourceType: 'app_block_rules',
+    details: { rule_id: ruleId, package_name: existingRule.package_name, daily_limit_minutes: dailyLimitMinutes },
+  });
+
+  return { ...updatedRule, child_id: childId };
+};
+
+/**
  * Get all blocked apps for a child (paginated).
  */
 export const getBlockedApps = async (
@@ -193,6 +234,13 @@ export const approveUnblock = async (
     details: { rule_id: ruleId, package_name: existingRule.package_name },
   });
 
+  await sendToChild(
+    childId,
+    'Unblock approved',
+    `${existingRule.app_name ?? existingRule.package_name} is unlocked now.`,
+    { type: 'unblock_approved', rule_id: ruleId }
+  );
+
   return { ...updatedRule, child_id: childId };
 };
 
@@ -229,6 +277,13 @@ export const rejectUnblock = async (
     resourceType: 'app_block_rules',
     details: { rule_id: ruleId, package_name: existingRule.package_name },
   });
+
+  await sendToChild(
+    childId,
+    'Unblock request declined',
+    `${existingRule.app_name ?? existingRule.package_name} stays blocked.`,
+    { type: 'unblock_rejected', rule_id: ruleId }
+  );
 
   return { ...updatedRule, child_id: childId };
 };

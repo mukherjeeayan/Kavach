@@ -53,7 +53,10 @@ class AppBlockingViewModel @Inject constructor(
     private val _uiState = MutableStateFlow<AppBlockingUiState>(AppBlockingUiState.Loading)
     val uiState: StateFlow<AppBlockingUiState> = _uiState.asStateFlow()
 
-    private val _uiEvents = kotlinx.coroutines.flow.MutableSharedFlow<AppBlockingUiEvent>()
+    // Buffered with replay so a toast emitted before a collector
+    // subscribes (or during a re-subscribe) is never silently lost.
+    private val _uiEvents =
+        kotlinx.coroutines.flow.MutableSharedFlow<AppBlockingUiEvent>(replay = 4, extraBufferCapacity = 8)
     val uiEvents = _uiEvents.asSharedFlow()
 
     // Tracks optimistic toggle states before the API completes

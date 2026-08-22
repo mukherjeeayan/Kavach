@@ -13,7 +13,7 @@ import javax.inject.Singleton
  * (the security-crypto library already declared in build.gradle.kts).
  */
 @Singleton
-class TokenStore @Inject constructor(@ApplicationContext context: Context) {
+open class TokenStore @Inject constructor(@ApplicationContext context: Context) {
 
     private val prefs: SharedPreferences by lazy {
         val masterKey = MasterKey.Builder(context)

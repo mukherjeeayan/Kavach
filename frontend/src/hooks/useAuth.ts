@@ -5,7 +5,6 @@ import { useDispatch } from 'react-redux';
 import * as yup from 'yup';
 import { login as loginApi, logout as logoutApi, register as registerApi } from '../services/api';
 import { clearSession, setSession } from '../store/authSlice';
-import { getStoredRefreshToken } from '../services/session';
 import { getErrorMessage } from '../utils/apiError';
 
 // ── Login ─────────────────────────────────────────────────────────
@@ -140,14 +139,12 @@ export const useLogout = () => {
   const navigate = useNavigate();
 
   const handleLogout = () => {
-    // Revoke the refresh token server-side (best-effort, idempotent)
-    // so it can never be replayed after sign-out.
-    const refreshToken = getStoredRefreshToken();
-    if (refreshToken) {
-      logoutApi(refreshToken).catch(() => {
-        // Offline or server error — local session is still cleared.
-      });
-    }
+    // Revoke the refresh token server-side (best-effort, idempotent).
+    // The httpOnly cookie is sent automatically and cleared by the
+    // backend; the in-memory access token dies with the page.
+    logoutApi().catch(() => {
+      // Offline or server error — local session is still cleared.
+    });
     dispatch(clearSession());
     navigate('/login', { replace: true });
   };

@@ -3,7 +3,9 @@ import http from 'http';
 import app from './app';
 import logger from './utils/logger';
 import { Server } from 'socket.io';
+import jwt from 'jsonwebtoken';
 import { ruleEvents } from './utils/socketHub';
+import { startScheduler, stopScheduler } from './jobs/scheduler';
 // Ensure DB is connected/initialized
 import pool from './config/database';
 
@@ -23,6 +25,9 @@ const allowedOrigins = (process.env.ALLOWED_ORIGINS || '')
 
 const server = http.createServer(app);
 
+// Daily retention purges (location/screen-time/audit logs, refresh tokens)
+startScheduler();
+
 // Initialize Socket.IO
 const io = new Server(server, {
   cors: {
@@ -31,15 +36,52 @@ const io = new Server(server, {
   }
 });
 
+// Every socket must authenticate during the handshake with a valid,
+// unscoped parent access token. Unauthenticated clients are rejected
+// before any event handler is registered.
+io.use((socket, next) => {
+  const authHeader = socket.handshake.auth?.token as string | undefined;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return next(new Error('Unauthorized: no token provided'));
+  }
+  const token = authHeader.slice('Bearer '.length);
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET!, {
+      algorithms: ['HS256'],
+    }) as { userId?: string; role?: string; scope?: string };
+    if (!decoded.userId || decoded.role !== 'parent' || decoded.scope) {
+      return next(new Error('Unauthorized: invalid token'));
+    }
+    socket.data.userId = decoded.userId;
+    next();
+  } catch {
+    next(new Error('Unauthorized: invalid or expired token'));
+  }
+});
+
 io.on('connection', (socket) => {
   logger.info(`New client connected: ${socket.id}`);
 
   // The dashboard subscribes to a child's room to receive rule changes
-  // in real time (no polling).
-  socket.on('subscribe:child', (childId: string) => {
-    if (typeof childId === 'string' && childId.length > 0) {
+  // in real time (no polling). Subscription is authorized: the
+  // authenticated parent must own the child.
+  socket.on('subscribe:child', async (childId: string) => {
+    if (typeof childId !== 'string' || childId.length === 0) return;
+    try {
+      const result = await pool.query(
+        `SELECT 1 FROM children WHERE id = $1 AND parent_id = $2`,
+        [childId, socket.data.userId]
+      );
+      if ((result.rowCount ?? 0) === 0) {
+        logger.warn(
+          `Socket ${socket.id} denied subscription to child ${childId}`
+        );
+        return;
+      }
       socket.join(`child:${childId}`);
       logger.info(`Client ${socket.id} subscribed to child ${childId}`);
+    } catch (err) {
+      logger.error(`Socket subscribe failed for ${socket.id}: ${err}`);
     }
   });
 
@@ -57,6 +99,7 @@ ruleEvents.on('rule:changed', (childId: string) => {
 // Graceful shutdown
 const gracefulShutdown = async () => {
   logger.info('Shutting down server gracefully...');
+  stopScheduler();
   // Force-exit fallback so keep-alive connections can't hang shutdown
   const forceExit = setTimeout(() => {
     logger.warn('Forcing exit after 10s shutdown timeout');

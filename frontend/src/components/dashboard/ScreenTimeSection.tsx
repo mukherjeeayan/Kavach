@@ -14,6 +14,7 @@ import {
   useScreenTimeLimitAction,
   useScreenTimeSummary,
 } from '../../hooks/usePhase1Data';
+import { SkeletonChart, SkeletonStats, SkeletonTable } from '../ui/Skeleton';
 
 const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const RANGES = ['day', 'week', 'month'] as const;
@@ -34,7 +35,6 @@ function todayLocal(): string {
 
 interface ScreenTimeSectionProps {
   childId: string | null;
-  /** Current daily limit in minutes (null = no limit). */
   limitMinutes: number | null;
 }
 
@@ -46,6 +46,8 @@ export default function ScreenTimeSection({ childId, limitMinutes }: ScreenTimeS
   const saveLimit = useScreenTimeLimitAction(childId);
 
   const data = summary.data;
+  const isLoading = summary.isLoading || daily.isLoading;
+  const isError = summary.isError || daily.isError;
 
   const handleSaveLimit = () => {
     const parsed = Number(limitInput);
@@ -61,18 +63,19 @@ export default function ScreenTimeSection({ childId, limitMinutes }: ScreenTimeS
   };
 
   return (
-    <section>
+    <section className="animate-fade-in">
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-lg font-semibold">Screen Time</h2>
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Screen Time</h2>
         <div className="flex gap-1">
           {RANGES.map((r) => (
             <button
               key={r}
               onClick={() => setRange(r)}
+              aria-pressed={range === r}
               className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
                 range === r
                   ? 'bg-blue-600 text-white'
-                  : 'bg-white border text-gray-600 hover:bg-gray-50'
+                  : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
               }`}
             >
               {r[0].toUpperCase() + r.slice(1)}
@@ -81,139 +84,159 @@ export default function ScreenTimeSection({ childId, limitMinutes }: ScreenTimeS
         </div>
       </div>
 
-      <div className="bg-white rounded-lg p-4 border mb-4 flex flex-wrap items-end gap-3">
-        <div>
-          <label className="text-sm text-gray-500 block mb-1">
-            Daily screen-time limit (minutes)
-          </label>
-          <input
-            type="number"
-            min={0}
-            max={1440}
-            value={limitInput}
-            onChange={(e) => setLimitInput(e.target.value)}
-            placeholder="No limit"
-            className="border rounded-md px-3 py-2 text-sm w-32"
-          />
-        </div>
-        <button
-          onClick={handleSaveLimit}
-          disabled={saveLimit.isPending}
-          className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 disabled:opacity-50"
-        >
-          {saveLimit.isPending ? 'Saving…' : 'Set limit'}
-        </button>
-        <button
-          onClick={handleClearLimit}
-          disabled={saveLimit.isPending}
-          className="px-4 py-2 bg-white border text-gray-600 text-sm font-medium rounded-md hover:bg-gray-50 disabled:opacity-50"
-        >
-          Clear
-        </button>
-        <p className="text-sm text-gray-500">
-          {limitMinutes
-            ? `Current limit: ${limitMinutes} min/day. The backend alerts you when it's exceeded.`
-            : 'No limit set — the child can use apps freely.'}
-        </p>
-      </div>
-
-      <div className="grid grid-cols-2 gap-3 mb-4">
-        <div className="bg-white rounded-lg p-4 border">
-          <p className="text-sm text-gray-500">Total ({range})</p>
-          <p className="text-2xl font-bold">{formatDuration(data?.total_seconds ?? 0)}</p>
-        </div>
-        <div className="bg-white rounded-lg p-4 border">
-          <p className="text-sm text-gray-500">Top app</p>
-          <p className="text-xl font-bold truncate">
-            {data?.by_app[0]?.app_package ?? '—'}
-          </p>
-          <p className="text-sm text-gray-500">
-            {data?.by_app[0] ? formatDuration(data.by_app[0].total_seconds) : ''}
-          </p>
-        </div>
-      </div>
-
-      {data && data.daily.length > 0 && (
-        <div className="bg-white rounded-lg p-4 border mb-4">
-          <p className="text-sm text-gray-500 mb-2">Per day</p>
-          <div className="h-40">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={data.daily} margin={{ top: 4, right: 8, left: -16, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis
-                  dataKey="date_recorded"
-                  tickFormatter={(value: string) => {
-                    const label = DAY_NAMES[new Date(`${value}T00:00:00`).getDay()];
-                    return label ?? '';
-                  }}
-                  tick={{ fontSize: 11 }}
-                />
-                <YAxis
-                  tickFormatter={(value: number) => formatDuration(value)}
-                  tick={{ fontSize: 11 }}
-                />
-                <Tooltip
-                  formatter={(value) => formatDuration(Number(value))}
-                  labelFormatter={(value) =>
-                    new Date(`${value}T00:00:00`).toLocaleDateString()
-                  }
-                />
-                {limitMinutes != null && limitMinutes > 0 && (
-                  <ReferenceLine
-                    y={limitMinutes * 60}
-                    stroke="#f59e0b"
-                    strokeDasharray="4 4"
-                    label={{ value: `limit ${limitMinutes}m`, fontSize: 10, fill: '#b45309' }}
-                  />
-                )}
-                <Bar dataKey="total_seconds" fill="#2563eb" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+      {isLoading && (
+        <div className="space-y-4">
+          <SkeletonStats />
+          <SkeletonChart />
+          <SkeletonTable />
         </div>
       )}
 
-      <div className="bg-white rounded-lg border overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50 text-left text-gray-500">
-            <tr>
-              <th className="px-4 py-2 font-medium">App</th>
-              <th className="px-4 py-2 font-medium">Category</th>
-              <th className="px-4 py-2 font-medium text-right">Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            {(data?.by_app ?? []).map((app) => (
-              <tr key={app.app_package} className="border-t">
-                <td className="px-4 py-2 font-mono">{app.app_package}</td>
-                <td className="px-4 py-2 text-gray-500">{app.app_category}</td>
-                <td className="px-4 py-2 text-right font-medium">
-                  {formatDuration(app.total_seconds)}
-                </td>
-              </tr>
-            ))}
-            {(data?.by_app ?? []).length === 0 &&
-              daily.data &&
-              daily.data.length > 0 &&
-              daily.data.map((row) => (
-                <tr key={row.app_package} className="border-t">
-                  <td className="px-4 py-2 font-mono">{row.app_package}</td>
-                  <td className="px-4 py-2 text-gray-500">{row.app_category ?? '—'}</td>
-                  <td className="px-4 py-2 text-right font-medium">
-                    {formatDuration(row.total_seconds)}
-                  </td>
-                </tr>
-              ))}
-            {(data?.by_app ?? []).length === 0 && (daily.data ?? []).length === 0 && (
-              <tr>
-                <td colSpan={3} className="px-4 py-6 text-center text-gray-400">
-                  No usage recorded yet — it appears after the child uses the device.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+      {isError && (
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+          <p className="text-sm text-red-600 dark:text-red-400">Failed to load screen time data.</p>
+        </div>
+      )}
+
+      {!isLoading && !isError && (
+        <>
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700 mb-4 flex flex-wrap items-end gap-3">
+            <div className="flex-1 min-w-[200px]">
+              <label className="text-sm text-gray-500 dark:text-gray-400 block mb-1">
+                Daily screen-time limit (minutes)
+              </label>
+              <input
+                type="number"
+                min={0}
+                max={1440}
+                value={limitInput}
+                onChange={(e) => setLimitInput(e.target.value)}
+                placeholder="No limit"
+                className="border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm w-32 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:border-primary focus:ring focus:ring-primary focus:ring-opacity-50"
+              />
+            </div>
+            <button
+              onClick={handleSaveLimit}
+              disabled={saveLimit.isPending}
+              className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 disabled:opacity-50 transition-colors"
+            >
+              {saveLimit.isPending ? 'Saving...' : 'Set limit'}
+            </button>
+            <button
+              onClick={handleClearLimit}
+              disabled={saveLimit.isPending}
+              className="px-4 py-2 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 text-sm font-medium rounded-md hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 transition-colors"
+            >
+              Clear
+            </button>
+            <p className="text-sm text-gray-500 dark:text-gray-400 w-full">
+              {limitMinutes
+                ? `Current limit: ${limitMinutes} min/day. The backend alerts you when it's exceeded.`
+                : 'No limit set - the child can use apps freely.'}
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+              <p className="text-sm text-gray-500 dark:text-gray-400">Total ({range})</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">{formatDuration(data?.total_seconds ?? 0)}</p>
+            </div>
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+              <p className="text-sm text-gray-500 dark:text-gray-400">Top app</p>
+              <p className="text-xl font-bold truncate text-gray-900 dark:text-white">
+                {data?.by_app[0]?.app_package ?? '—'}
+              </p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                {data?.by_app[0] ? formatDuration(data.by_app[0].total_seconds) : ''}
+              </p>
+            </div>
+          </div>
+
+          {data && data.daily.length > 0 && (
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700 mb-4">
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Per day</p>
+              <div className="h-48 sm:h-40">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={data.daily} margin={{ top: 4, right: 8, left: -16, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis
+                      dataKey="date_recorded"
+                      tickFormatter={(value: string) => {
+                        const label = DAY_NAMES[new Date(`${value}T00:00:00`).getDay()];
+                        return label ?? '';
+                      }}
+                      tick={{ fontSize: 11 }}
+                    />
+                    <YAxis
+                      tickFormatter={(value: number) => formatDuration(value)}
+                      tick={{ fontSize: 11 }}
+                    />
+                    <Tooltip
+                      formatter={(value) => formatDuration(Number(value))}
+                      labelFormatter={(value) =>
+                        new Date(`${value}T00:00:00`).toLocaleDateString()
+                      }
+                    />
+                    {limitMinutes != null && limitMinutes > 0 && (
+                      <ReferenceLine
+                        y={limitMinutes * 60}
+                        stroke="#f59e0b"
+                        strokeDasharray="4 4"
+                        label={{ value: `limit ${limitMinutes}m`, fontSize: 10, fill: '#b45309' }}
+                      />
+                    )}
+                    <Bar dataKey="total_seconds" fill="#2563eb" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          )}
+
+          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 dark:bg-gray-700 text-left text-gray-500 dark:text-gray-400">
+                  <tr>
+                    <th className="px-4 py-2 font-medium">App</th>
+                    <th className="px-4 py-2 font-medium hidden sm:table-cell">Category</th>
+                    <th className="px-4 py-2 font-medium text-right">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(data?.by_app ?? []).map((app) => (
+                    <tr key={app.app_package} className="border-t border-gray-200 dark:border-gray-700">
+                      <td className="px-4 py-2 font-mono text-gray-900 dark:text-gray-100">{app.app_package}</td>
+                      <td className="px-4 py-2 text-gray-500 dark:text-gray-400 hidden sm:table-cell">{app.app_category}</td>
+                      <td className="px-4 py-2 text-right font-medium text-gray-900 dark:text-gray-100">
+                        {formatDuration(app.total_seconds)}
+                      </td>
+                    </tr>
+                  ))}
+                  {(data?.by_app ?? []).length === 0 &&
+                    daily.data &&
+                    daily.data.length > 0 &&
+                    daily.data.map((row) => (
+                      <tr key={row.app_package} className="border-t border-gray-200 dark:border-gray-700">
+                        <td className="px-4 py-2 font-mono text-gray-900 dark:text-gray-100">{row.app_package}</td>
+                        <td className="px-4 py-2 text-gray-500 dark:text-gray-400 hidden sm:table-cell">{row.app_category ?? '—'}</td>
+                        <td className="px-4 py-2 text-right font-medium text-gray-900 dark:text-gray-100">
+                          {formatDuration(row.total_seconds)}
+                        </td>
+                      </tr>
+                    ))}
+                  {(data?.by_app ?? []).length === 0 && (daily.data ?? []).length === 0 && (
+                    <tr>
+                      <td colSpan={3} className="px-4 py-8 text-center text-gray-400 dark:text-gray-500">
+                        No usage recorded yet - it appears after the child uses the device.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
+      )}
     </section>
   );
 }

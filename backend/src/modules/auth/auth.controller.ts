@@ -3,6 +3,11 @@
 
 import { Request, Response, NextFunction } from 'express';
 import * as authService from './auth.service';
+import {
+  setSessionCookies,
+  clearSessionCookies,
+  extractRefreshToken,
+} from '../shared/cookies';
 
 const respond = (res: Response, status: number, data: unknown, req: Request) => {
   res.status(status).json({
@@ -17,12 +22,14 @@ const respond = (res: Response, status: number, data: unknown, req: Request) => 
 /**
  * POST /api/v1/auth/login
  * Body: { email, password }
- * Returns: 200 with { token, refresh_token, user }
+ * Returns: 200 with { token, refresh_token, user } and sets httpOnly
+ * session cookies for browser clients (mobile keeps using the body).
  */
 export const login = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { email, password } = req.body;
     const session = await authService.login(email, password);
+    setSessionCookies(res, session);
     respond(res, 200, session, req);
   } catch (err) {
     next(err);
@@ -44,6 +51,7 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
       child_name,
       birth_date,
     });
+    setSessionCookies(res, session);
     respond(res, 201, session, req);
   } catch (err) {
     next(err);
@@ -52,14 +60,24 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
 
 /**
  * POST /api/v1/auth/refresh-token
- * Body: { refresh_token }
+ * Body: { refresh_token } — or the httpOnly refresh cookie (web).
  * Rotates the refresh token and returns a fresh access token + new
- * refresh token.
+ * refresh token (cookies re-set for browser clients).
  */
 export const refreshToken = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { refresh_token } = req.body;
-    const session = await authService.refreshAccessToken(refresh_token);
+    const refreshToken = extractRefreshToken(req, req.body?.refresh_token);
+    if (!refreshToken) {
+      return res.status(401).json({
+        success: false,
+        data: {},
+        error: 'No refresh token provided',
+        timestamp: new Date().toISOString(),
+        request_id: req.headers['x-request-id'],
+      });
+    }
+    const session = await authService.refreshAccessToken(refreshToken);
+    setSessionCookies(res, session);
     respond(res, 200, session, req);
   } catch (err) {
     next(err);
@@ -68,14 +86,17 @@ export const refreshToken = async (req: Request, res: Response, next: NextFuncti
 
 /**
  * POST /api/v1/auth/logout
- * Body: { refresh_token }
+ * Body: { refresh_token } — or the httpOnly refresh cookie (web).
  * Revokes the refresh token server-side so it can no longer be rotated.
- * Idempotent — always 200.
+ * Idempotent — always 200. Session cookies are cleared either way.
  */
 export const logout = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { refresh_token } = req.body;
-    const result = await authService.logout(refresh_token);
+    const refreshToken = extractRefreshToken(req, req.body?.refresh_token);
+    const result = refreshToken
+      ? await authService.logout(refreshToken)
+      : { revoked: false };
+    clearSessionCookies(res);
     respond(res, 200, result, req);
   } catch (err) {
     next(err);
@@ -122,6 +143,97 @@ export const biometricToken = async (req: Request, res: Response, next: NextFunc
     const { email, password } = req.body;
     const session = await authService.issueBiometricToken(email, password);
     respond(res, 200, session, req);
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * POST /api/v1/auth/forgot-password
+ * Body: { email }
+ * Always returns 200 to prevent email enumeration.
+ */
+export const forgotPassword = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { email } = req.body;
+    const result = await authService.forgotPassword(email);
+    respond(res, 200, result, req);
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * POST /api/v1/auth/reset-password
+ * Body: { token, new_password }
+ * Verifies the reset token and updates the password.
+ */
+export const resetPassword = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { token, new_password } = req.body;
+    const result = await authService.resetPassword(token, new_password);
+    respond(res, 200, result, req);
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * GET /api/v1/auth/me
+ * Returns the authenticated parent's profile.
+ */
+export const me = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const user = await authService.getMe(req.user!.userId);
+    respond(res, 200, { user }, req);
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * PUT /api/v1/auth/profile
+ * Body: { name }
+ */
+export const updateProfile = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const user = await authService.updateProfile(req.user!.userId, req.body.name);
+    respond(res, 200, { user }, req);
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * PUT /api/v1/auth/password
+ * Body: { current_password, new_password }
+ * Revokes all sessions on success.
+ */
+export const changePassword = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { current_password, new_password } = req.body;
+    const result = await authService.changePassword(
+      req.user!.userId,
+      current_password,
+      new_password
+    );
+    // All sessions (including this one's refresh token) were revoked.
+    clearSessionCookies(res);
+    respond(res, 200, result, req);
+  } catch (err) {
+    next(err);
+  }
+};
+/**
+ * POST /api/v1/auth/logout-all
+ * Revokes every active refresh token for the authenticated parent.
+ * Access tokens expire naturally within 15 minutes.
+ */
+export const logoutAll = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const result = await authService.logoutAll(req.user!.userId);
+    clearSessionCookies(res);
+    respond(res, 200, result, req);
   } catch (err) {
     next(err);
   }

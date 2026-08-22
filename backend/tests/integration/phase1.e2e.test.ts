@@ -10,9 +10,10 @@
 // TEST_DB_PASSWORD / TEST_DB_NAME (defaults: safeguard / safeguard /
 // safeguard_test on localhost:5432 — the docker-compose service).
 //
-// The suite self-skips when the database is unreachable so that plain
-// `npm test` (unit tests, no DB) keeps working. Run it explicitly
-// with `npm run test:e2e`.
+// When DB_DRIVER=pg-mem the suite runs against an in-memory PostgreSQL
+// emulation instead (no Docker required) — see npm run test:e2e:pgmem.
+// With the real database unreachable and DB_DRIVER unset, the suite
+// fails loudly so a skipped e2e run is never mistaken for a pass.
 
 import { Pool } from 'pg';
 import fs from 'fs';
@@ -29,11 +30,23 @@ const TEST_DB = {
   database: process.env.TEST_DB_NAME || 'safeguard_test',
 };
 
-process.env.DB_HOST = TEST_DB.host;
-process.env.DB_PORT = String(TEST_DB.port);
-process.env.DB_USER = TEST_DB.user;
-process.env.DB_PASSWORD = TEST_DB.password;
-process.env.DB_NAME = TEST_DB.database;
+const USE_PG_MEM = process.env.DB_DRIVER === 'pg-mem';
+
+let TEST_POOL: Pool | null = null;
+
+if (USE_PG_MEM) {
+  // Import before the app so config/database.ts picks up the same
+  // in-memory pool (the module is cached after the first import).
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { getPgMem } = require('../../src/config/pgmem');
+  TEST_POOL = getPgMem().pool;
+} else {
+  process.env.DB_HOST = TEST_DB.host;
+  process.env.DB_PORT = String(TEST_DB.port);
+  process.env.DB_USER = TEST_DB.user;
+  process.env.DB_PASSWORD = TEST_DB.password;
+  process.env.DB_NAME = TEST_DB.database;
+}
 
 // ── Fixtures ───────────────────────────────────────────────────────
 const EMAIL = `e2e-${Date.now()}@test.local`;
@@ -51,6 +64,33 @@ let ruleId = '';
 const auth = () => ({ Authorization: `Bearer ${token}` });
 
 // ── Database bootstrap ─────────────────────────────────────────────
+// pg-mem cannot parse plpgsql bodies or CREATE TRIGGER. The trigger
+// only maintains updated_at, which every UPDATE statement in the app
+// already sets explicitly — so it is safe to strip both for the
+// in-memory run.
+function sanitizeForPgMem(sql: string): string {
+  return sql
+    .replace(
+      /^\s*CREATE\s+OR\s+REPLACE\s+FUNCTION[\s\S]*?\$\$\s*LANGUAGE\s+'?plpgsql'?\s*;/gim,
+      '-- pg-mem: plpgsql function stripped'
+    )
+    .replace(/^\s*CREATE\s+TRIGGER[\s\S]*?;/gim, '-- pg-mem: trigger stripped')
+    .replace(/\bDECIMAL\s*\(\s*\d+\s*,\s*\d+\s*\)/gi, 'DECIMAL')
+    // 004 re-creates four tables that 001 already created in final
+    // shape; pg-mem keeps stale constraint names after DROP, so skip
+    // the redundant DROP + CREATE pairs but keep the parents ALTER.
+    .replace(
+      /DROP TABLE IF EXISTS (\w+) CASCADE;\s*CREATE TABLE IF NOT EXISTS \1[\s\S]*?\);\s*CREATE INDEX IF NOT EXISTS [\s\S]*?;/g,
+      '-- pg-mem: redundant DROP+CREATE stripped (001 already final)'
+    )
+    // pg-mem fails on ADD COLUMN ... CHECK in one statement
+    // ("Corrupted alias") — split the constraint onto its own ALTER.
+    .replace(
+      /ALTER TABLE (\w+) ADD COLUMN IF NOT EXISTS (\w+)([\s\S]*?)\s*CHECK \(([\s\S]*?)\)/g,
+      'ALTER TABLE $1 ADD COLUMN IF NOT EXISTS $2$3;\nALTER TABLE $1 ADD CONSTRAINT ck_$2 CHECK ($4)'
+    );
+}
+
 async function bootstrapDatabase(pool: Pool): Promise<void> {
   const migrationsDir = path.resolve(__dirname, '../../db/migrations');
   const files = fs
@@ -58,8 +98,9 @@ async function bootstrapDatabase(pool: Pool): Promise<void> {
     .filter((f) => f.endsWith('.sql'))
     .sort();
   for (const file of files) {
-    const sql = fs.readFileSync(path.join(migrationsDir, file), 'utf8');
+    let sql = fs.readFileSync(path.join(migrationsDir, file), 'utf8');
     // Down-migration blocks are /* */ comments — safe to run whole file.
+    if (USE_PG_MEM) sql = sanitizeForPgMem(sql);
     await pool.query(sql);
   }
 }
@@ -74,9 +115,21 @@ async function canConnect(pool: Pool): Promise<boolean> {
 }
 
 // ── Suite ──────────────────────────────────────────────────────────
-let pool: Pool;
+let pool: Pool | null = null;
 
 beforeAll(async () => {
+  if (USE_PG_MEM) {
+    pool = TEST_POOL!;
+    await bootstrapDatabase(pool);
+    // Clean slate: parents is the root FK (everything cascades from it).
+    await pool.query('TRUNCATE parents CASCADE');
+
+    // Import AFTER env wiring so config/database.ts picks the test DB.
+    const { default: appModule } = await import('../../src/app');
+    app = appModule;
+    return;
+  }
+
   pool = new Pool({
     host: TEST_DB.host,
     port: TEST_DB.port,
@@ -206,8 +259,8 @@ const e2e = runner('Phase 1 e2e (real database)', () => {
       .send({ child_id: childId, device_name: 'E2E Phone', device_type: 'android' });
 
     expect(res.status).toBe(201);
-    expect(res.body.data.device_id).toBeDefined();
-    deviceId = res.body.data.device_id;
+    expect(res.body.data.device.device_id).toBeDefined();
+    deviceId = res.body.data.device.device_id;
   });
 
   test('heartbeat updates last activity', async () => {
@@ -272,6 +325,7 @@ const e2e = runner('Phase 1 e2e (real database)', () => {
       .set(auth())
       .send({ device_id: deviceId, package_name: APP_PACKAGE, app_name: 'Game' });
 
+    if (res.status !== 201) console.log('[debug block]', res.status, JSON.stringify(res.body));
     expect(res.status).toBe(201);
     expect(res.body.data.rule.id).toBeDefined();
     expect(res.body.data.rule.is_blocked).toBe(true);

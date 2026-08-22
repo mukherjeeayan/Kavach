@@ -40,6 +40,7 @@ const mockRule = {
   block_reason: 'Inappropriate content',
   unblock_requested: false,
   unblock_reason: null,
+  daily_limit_minutes: null,
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
 };
@@ -327,6 +328,60 @@ describe('appBlocking.service', () => {
 
       expect(result.items).toHaveLength(1);
       expect(result.items[0].unblock_requested).toBe(true);
+    });
+  });
+
+  // ── setAppDailyLimit ─────────────────────────────────────────
+
+  describe('setAppDailyLimit', () => {
+    it('should set a daily limit on a rule', async () => {
+      mockedQuery.mockResolvedValueOnce({ rows: [{ id: CHILD_ID }] } as any);
+      mockedRepo.getRuleByIdAndChildId.mockResolvedValueOnce({
+        ...mockRule,
+        package_name: 'com.example.game',
+      } as any);
+      mockedRepo.setDailyLimit.mockResolvedValueOnce({
+        ...mockRule,
+        daily_limit_minutes: 60,
+      } as any);
+
+      const result = await appBlockingService.setAppDailyLimit(PARENT_ID, CHILD_ID, 'rule-1', 60);
+
+      expect(result.daily_limit_minutes).toBe(60);
+      expect(mockedRepo.setDailyLimit).toHaveBeenCalledWith('rule-1', 60);
+    });
+
+    it('should clear the daily limit when null is passed', async () => {
+      mockedQuery.mockResolvedValueOnce({ rows: [{ id: CHILD_ID }] } as any);
+      mockedRepo.getRuleByIdAndChildId.mockResolvedValueOnce({
+        ...mockRule,
+        daily_limit_minutes: 60,
+      } as any);
+      mockedRepo.setDailyLimit.mockResolvedValueOnce({
+        ...mockRule,
+        daily_limit_minutes: null,
+      } as any);
+
+      const result = await appBlockingService.setAppDailyLimit(PARENT_ID, CHILD_ID, 'rule-1', null);
+
+      expect(result.daily_limit_minutes).toBeNull();
+    });
+
+    it('should throw NotFoundError when rule does not exist', async () => {
+      mockedQuery.mockResolvedValueOnce({ rows: [{ id: CHILD_ID }] } as any);
+      mockedRepo.getRuleByIdAndChildId.mockResolvedValueOnce(null);
+
+      await expect(
+        appBlockingService.setAppDailyLimit(PARENT_ID, CHILD_ID, 'nonexistent', 60)
+      ).rejects.toThrow('Block rule not found');
+    });
+
+    it('should throw ForbiddenError when child does not belong to parent', async () => {
+      mockedQuery.mockResolvedValueOnce({ rows: [] } as any);
+
+      await expect(
+        appBlockingService.setAppDailyLimit(PARENT_ID, CHILD_ID, 'rule-1', 60)
+      ).rejects.toThrow();
     });
   });
 });

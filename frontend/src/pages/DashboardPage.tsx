@@ -23,6 +23,8 @@ import AlertsSection from '../components/dashboard/AlertsSection';
 import LocksSection from '../components/dashboard/LocksSection';
 import ContactsSection from '../components/dashboard/ContactsSection';
 import LocationsSection from '../components/dashboard/LocationsSection';
+import Toast from '../components/ui/Toast';
+import { SkeletonList } from '../components/ui/Skeleton';
 import type { RootState } from '../store/store';
 
 export default function DashboardPage() {
@@ -95,10 +97,10 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background dark:bg-gray-900">
       <Header user={user} onLogout={handleLogout} />
 
-      <main className="max-w-6xl mx-auto px-6 py-6 space-y-8">
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6 sm:space-y-8">
         <ChildSelector
           children={childrenQuery.data ?? []}
           selectedChildId={childId}
@@ -122,27 +124,32 @@ export default function DashboardPage() {
             <AlertsSection childId={childId} />
             <LocationsSection childId={childId} />
 
-            {devicesQuery.isLoading && (
-              <p className="text-sm text-gray-500">Loading devices...</p>
-            )}
+            {devicesQuery.isLoading && <SkeletonList items={2} />}
             {devicesQuery.isError && (
-              <p className="text-sm text-red-500" role="alert">
-                Failed to load devices.
-              </p>
+              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+                <p className="text-sm text-red-600 dark:text-red-400" role="alert">
+                  Failed to load devices. Please try refreshing the page.
+                </p>
+              </div>
             )}
-            {blockedQuery.isLoading && (
-              <p className="text-sm text-gray-500">Loading blocked apps...</p>
-            )}
+            {blockedQuery.isLoading && <SkeletonList items={2} />}
             {blockedQuery.isError && (
-              <p className="text-sm text-red-500" role="alert">
-                Failed to load blocked apps.
-              </p>
+              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+                <p className="text-sm text-red-600 dark:text-red-400" role="alert">
+                  Failed to load blocked apps. Please try refreshing the page.
+                </p>
+              </div>
             )}
 
             {pinGateOpen && (
-              <section className="bg-white rounded-lg p-6 border flex flex-col items-center gap-3">
-                <h2 className="text-lg font-semibold">Parent verification</h2>
-                <p className="text-sm text-gray-500 text-center">
+              <section className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700 flex flex-col items-center gap-3">
+                <div className="w-12 h-12 bg-primary/10 dark:bg-primary/20 rounded-full flex items-center justify-center mb-2">
+                  <svg className="w-6 h-6 text-primary dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                </div>
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Parent verification</h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400 text-center max-w-sm">
                   Managing locks and contacts is protected. Enter the PIN you set during setup.
                 </p>
                 <form
@@ -160,14 +167,14 @@ export default function DashboardPage() {
                     placeholder="PIN"
                     maxLength={6}
                     autoFocus
-                    className="border rounded-md px-3 py-2 text-sm w-32 text-center"
+                    className="border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm w-32 text-center bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:border-primary focus:ring focus:ring-primary focus:ring-opacity-50"
                   />
                   <button
                     type="submit"
                     disabled={verifyPin.isPending}
-                    className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 disabled:opacity-50"
+                    className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 disabled:opacity-50 transition-colors"
                   >
-                    {verifyPin.isPending ? 'Checking…' : 'Unlock'}
+                    {verifyPin.isPending ? 'Checking...' : 'Unlock'}
                   </button>
                 </form>
                 {verifyPin.isError && (
@@ -193,7 +200,7 @@ export default function DashboardPage() {
                       inputMode="numeric"
                       placeholder="New PIN (4-6 digits)"
                       maxLength={6}
-                      className="border rounded-md px-3 py-2 text-sm w-48 text-center"
+                      className="border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm w-48 text-center bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:border-primary focus:ring focus:ring-primary focus:ring-opacity-50"
                     />
                     <input
                       name="confirmPin"
@@ -201,14 +208,14 @@ export default function DashboardPage() {
                       inputMode="numeric"
                       placeholder="Confirm PIN"
                       maxLength={6}
-                      className="border rounded-md px-3 py-2 text-sm w-48 text-center"
+                      className="border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm w-48 text-center bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:border-primary focus:ring focus:ring-primary focus:ring-opacity-50"
                     />
                     <button
                       type="submit"
                       disabled={setPin.isPending}
-                      className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 disabled:opacity-50"
+                      className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 disabled:opacity-50 transition-colors"
                     >
-                      {setPin.isPending ? 'Saving…' : 'Save PIN'}
+                      {setPin.isPending ? 'Saving...' : 'Save PIN'}
                     </button>
                   </form>
                 ) : (
@@ -217,7 +224,7 @@ export default function DashboardPage() {
                       setPinSetupOpen(true);
                       setPinSetupHint(null);
                     }}
-                    className="text-sm text-blue-600 hover:underline"
+                    className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
                   >
                     Never set a PIN? Set one now
                   </button>
@@ -251,7 +258,7 @@ export default function DashboardPage() {
                   onBlock={handleBlock}
                 />
 
-                <BlockedAppsTable rules={blockedQuery.data ?? []} />
+                <BlockedAppsTable rules={blockedQuery.data ?? []} childId={childId} />
 
                 <UnblockRequests
                   rules={requestsQuery.data ?? []}
@@ -269,9 +276,7 @@ export default function DashboardPage() {
         )}
 
         {actionError && (
-          <p className="text-sm text-red-500" role="alert">
-            {actionError}
-          </p>
+          <Toast message={actionError} type="error" onClose={() => setActionError(null)} />
         )}
       </main>
     </div>

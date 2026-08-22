@@ -13,6 +13,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.IBinder
+import android.os.SystemClock
 import android.util.Log
 import com.safeguard.parentalcontrol.BuildConfig
 import com.safeguard.parentalcontrol.data.local.OnboardingStore
@@ -21,6 +22,7 @@ import com.safeguard.parentalcontrol.data.local.dao.ScreenTimeDao
 import com.safeguard.parentalcontrol.data.local.entity.AppBlockRuleEntity
 import com.safeguard.parentalcontrol.data.local.entity.ScheduledLockEntity
 import com.safeguard.parentalcontrol.repository.appblock.AppBlockingRepository
+import com.safeguard.parentalcontrol.repository.phase1.Phase1Repository
 import com.safeguard.parentalcontrol.security.SafeGuardDeviceAdminReceiver
 import com.safeguard.parentalcontrol.security.TamperDetector
 import com.safeguard.parentalcontrol.security.TamperState
@@ -28,6 +30,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -70,7 +73,10 @@ class AppBlockingService : Service() {
     @Inject
     lateinit var scheduledLockDao: ScheduledLockDao
 
-    private val serviceScope = CoroutineScope(Dispatchers.Default + Job())
+    @Inject
+    lateinit var phase1Repository: Phase1Repository
+
+    private val serviceScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     private var monitoringJob: Job? = null
     private var tamperCheckJob: Job? = null
     private var lockNotifyJob: Job? = null
@@ -87,6 +93,20 @@ class AppBlockingService : Service() {
     // Foreground-time accumulation between DB flushes (screen time).
     private val usageAccumulator = mutableMapOf<String, Int>()
     private var usageTicks = 0
+
+    // elapsedRealtime at the previous loop tick, for accurate per-tick
+    // usage accounting (a "1 second" tick can run long under load).
+    private var lastTickElapsed: Long = SystemClock.elapsedRealtime()
+
+    // Per-app daily caps (package -> minutes, from Room rules). Apps
+    // whose today's usage reaches the cap are treated as blocked.
+    @Volatile
+    private var limitedPackages: Map<String, Int> = emptyMap()
+
+    // Today's usage per package (seconds), seeded from Room at start
+    // and incremented every tick. Used only for cap enforcement.
+    private val todayUsageSeconds = mutableMapOf<String, Int>()
+    private var usageDayKey: String? = null
 
     // Lock-window warnings already shown today (key = window id + date),
     // so the child isn't spammed every minute before a window.
@@ -112,8 +132,12 @@ class AppBlockingService : Service() {
                     .map { it.packageName }
                     .toSet()
 
+                limitedPackages = rules
+                    .filter { it.dailyLimitMinutes != null && it.dailyLimitMinutes!! > 0 }
+                    .associate { it.packageName to it.dailyLimitMinutes!! }
+
                 if (BuildConfig.DEBUG) {
-                    Log.d(TAG, "Blocked list updated: ${blockedPackages.size} apps")
+                    Log.d(TAG, "Blocked list updated: ${blockedPackages.size} apps, ${limitedPackages.size} with daily caps")
                 }
             }
         }
@@ -156,6 +180,30 @@ class AppBlockingService : Service() {
         startMonitoring()
         startTamperDetection()
         startLockNotificationWatch()
+
+        // Report the current device-admin state on every (re)start so
+        // the server's "protected" flag stays fresh even if the
+        // enable/disable broadcast was missed (e.g. while offline).
+        reportAdminStatus()
+    }
+
+    /**
+     * Best-effort sync of the current device-admin state. Reads the
+     * live DevicePolicyManager answer — never a cached assumption.
+     */
+    private fun reportAdminStatus() {
+        val deviceId = getDeviceIdentifier()
+        if (deviceId.isEmpty()) return
+        serviceScope.launch {
+            try {
+                val dpm = getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
+                val admin = ComponentName(this@AppBlockingService, SafeGuardDeviceAdminReceiver::class.java)
+                val active = dpm.isAdminActive(admin)
+                phase1Repository.reportAdminStatus(deviceId, active)
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to report admin status: ${e.message}")
+            }
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -184,12 +232,54 @@ class AppBlockingService : Service() {
             val activityManager =
                 getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
 
+            // Seed today's usage from Room so caps survive a service
+            // restart (server keeps the authoritative total; the local
+            // count drives enforcement between syncs).
+            try {
+                val today = dayKey()
+                usageDayKey = today
+                screenTimeDao.getByDate(today).forEach {
+                    todayUsageSeconds[it.appPackage] = it.seconds
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to seed today's usage: ${e.message}")
+            }
+
             while (isActive) {
+                // Measure the real elapsed time per iteration — under
+                // GC/CPU contention a "1 second" tick can take longer,
+                // which would otherwise under-count screen time.
+                val tickStart = SystemClock.elapsedRealtime()
                 try {
                     val currentForegroundPackage = getCurrentForegroundApp(usageStatsManager)
                     val lockActive = isLockWindowActive()
 
+                    // Midnight rollover: fresh counters for the new day.
+                    // Checked unconditionally (not only when a foreground
+                    // app is present) so usage right after midnight with
+                    // the screen off can never be misattributed to the
+                    // previous day.
+                    val today = dayKey()
+                    if (usageDayKey != today) {
+                        usageDayKey = today
+                        usageAccumulator.clear()
+                        todayUsageSeconds.clear()
+                    }
+
                     if (currentForegroundPackage != null) {
+
+                        val elapsedSeconds =
+                            ((tickStart - lastTickElapsed + 500) / 1000).coerceAtLeast(1L)
+
+                        todayUsageSeconds[currentForegroundPackage] =
+                            (todayUsageSeconds[currentForegroundPackage] ?: 0) + elapsedSeconds.toInt()
+
+                        val overDailyLimit = limitedPackages[currentForegroundPackage]
+                            ?.let { limitMinutes ->
+                                (todayUsageSeconds[currentForegroundPackage] ?: 0) >=
+                                    limitMinutes * 60
+                            } ?: false
+
                         if (lockActive) {
                             // Scheduled lock window: allow only the
                             // launcher, system UI, settings and ourselves.
@@ -197,15 +287,17 @@ class AppBlockingService : Service() {
                                 killBlockedApp(activityManager, currentForegroundPackage)
                             }
                         } else if (
-                            blockedPackages.contains(currentForegroundPackage) &&
-                            currentForegroundPackage != packageName // Never block ourselves
+                            blockedPackages.contains(currentForegroundPackage) ||
+                            overDailyLimit
                         ) {
-                            killBlockedApp(activityManager, currentForegroundPackage)
+                            if (currentForegroundPackage != packageName) { // Never block ourselves
+                                killBlockedApp(activityManager, currentForegroundPackage)
+                            }
                         }
 
                         // Screen-time recording (per-app foreground seconds)
                         usageAccumulator[currentForegroundPackage] =
-                            (usageAccumulator[currentForegroundPackage] ?: 0) + 1
+                            (usageAccumulator[currentForegroundPackage] ?: 0) + elapsedSeconds.toInt()
                     }
 
                     if (++usageTicks >= SCREEN_TIME_FLUSH_TICKS) {
@@ -215,6 +307,8 @@ class AppBlockingService : Service() {
                 } catch (e: Exception) {
                     Log.e(TAG, "Error in monitoring loop", e)
                     // Never crash — log and continue (mandatory per Android skill)
+                } finally {
+                    lastTickElapsed = tickStart
                 }
 
                 // Poll every 1 second
@@ -348,7 +442,7 @@ class AppBlockingService : Service() {
      */
     private suspend fun flushUsageAccumulator() {
         if (usageAccumulator.isEmpty()) return
-        val today = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
+        val today = dayKey()
         val snapshot = usageAccumulator.toMap()
         usageAccumulator.clear()
         for ((pkg, seconds) in snapshot) {
@@ -360,6 +454,9 @@ class AppBlockingService : Service() {
             }
         }
     }
+
+    private fun dayKey(): String =
+        SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
 
     // ── Scheduled Lock Window Warning ───────────────────────────────
 
@@ -573,7 +670,7 @@ class AppBlockingService : Service() {
         private const val MONITORING_INTERVAL_MS = 1000L           // 1 second
         private const val MONITORING_WINDOW_MS = 2000L             // 2 seconds
         private const val TAMPER_CHECK_INTERVAL_MS = 30_000L       // 30 seconds
-        private const val SCREEN_TIME_FLUSH_TICKS = 30             // flush every ~30s
+        private const val SCREEN_TIME_FLUSH_TICKS = 10             // flush every ~10s (limits loss on process death)
         private const val LOCK_WATCH_INTERVAL_MS = 60_000L         // 1 minute
         private const val LOCK_WARN_BEFORE_MINUTES = 10            // warn 10 min ahead
     }

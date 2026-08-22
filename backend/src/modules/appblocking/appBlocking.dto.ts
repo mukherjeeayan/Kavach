@@ -33,7 +33,21 @@ export const requestUnblockSchema = z.object({
     .max(500, 'reason cannot exceed 500 characters'),
 });
 
+/**
+ * Per-app daily usage limit in minutes. `null` clears the cap.
+ * Bounded by a sane maximum (24 h) like the child-level limit.
+ */
+export const dailyLimitSchema = z.object({
+  daily_limit_minutes: z
+    .number({ required_error: 'daily_limit_minutes is required' })
+    .int('daily_limit_minutes must be an integer')
+    .min(0, 'daily_limit_minutes cannot be negative')
+    .max(1440, 'daily_limit_minutes cannot exceed 1440 (24 hours)')
+    .nullable(),
+});
+
 // Inferred TypeScript types from the schemas — keeps DTOs and
 // validation perfectly in sync without manual duplication.
 export type BlockAppInput = z.infer<typeof blockAppSchema>;
 export type RequestUnblockInput = z.infer<typeof requestUnblockSchema>;
+export type DailyLimitInput = z.infer<typeof dailyLimitSchema>;

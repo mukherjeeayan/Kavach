@@ -1,0 +1,1747 @@
+openapi: 3.0.3
+info:
+  title: SafeGuard Parental Control API
+  description: API for the Kavach parental control application
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:3000/api/v1
+
+security:
+  - bearerAuth: []
+  - sessionCookie: []
+
+tags:
+  - name: Health
+  - name: Auth
+  - name: Children
+  - name: Guardians
+  - name: Devices
+  - name: App Blocking
+  - name: Screen Time
+  - name: Locks
+  - name: Contacts
+  - name: Location
+  - name: Consent
+  - name: Geo
+
+paths:
+  /health:
+    get:
+      tags: [Health]
+      summary: Liveness check
+      security: []
+      operationId: getHealth
+      responses:
+        "200":
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  timestamp:
+                    type: string
+                    format: date-time
+        "503":
+          description: Service is unhealthy
+
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Create a new account
+      security: []
+      operationId: register
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, password]
+              properties:
+                name:
+                  type: string
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+                child_name:
+                  type: string
+                birth_date:
+                  type: string
+                  format: date
+      responses:
+        "201":
+          description: Account created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Envelope"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Envelope"
+        "409":
+          description: Email already exists
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Log in and receive tokens
+      security: []
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+      responses:
+        "200":
+          description: Logged in (cookies set)
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Envelope"
+        "401":
+          description: Invalid credentials
+
+  /auth/refresh-token:
+    post:
+      tags: [Auth]
+      summary: Refresh access token
+      operationId: refreshToken
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                refresh_token:
+                  type: string
+      responses:
+        "200":
+          description: Token refreshed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Envelope"
+        "401":
+          description: Invalid or expired refresh token
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Log out current session
+      operationId: logout
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                refresh_token:
+                  type: string
+      responses:
+        "200":
+          description: Logged out (cookies cleared)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Envelope"
+
+  /auth/me:
+    get:
+      tags: [Auth]
+      summary: Get current user
+      operationId: getMe
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Envelope"
+        "401":
+          description: Unauthorized
+
+  /auth/profile:
+    put:
+      tags: [Auth]
+      summary: Update profile name
+      operationId: updateProfile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+      responses:
+        "200":
+          description: Profile updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Envelope"
+
+  /auth/password:
+    put:
+      tags: [Auth]
+      summary: Change password (revokes all sessions)
+      operationId: changePassword
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [current_password, new_password]
+              properties:
+                current_password:
+                  type: string
+                  format: password
+                new_password:
+                  type: string
+                  format: password
+      responses:
+        "200":
+          description: Password changed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Envelope"
+        "401":
+          description: Current password incorrect
+
+  /auth/logout-all:
+    post:
+      tags: [Auth]
+      summary: Log out all sessions
+      operationId: logoutAll
+      responses:
+        "200":
+          description: All sessions revoked
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Envelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          revoked:
+                            type: integer
+
+  /auth/pin:
+    put:
+      tags: [Auth]
+      summary: Set or update PIN
+      operationId: setPin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [pin]
+              properties:
+                pin:
+                  type: string
+                  minLength: 4
+                  maxLength: 6
+      responses:
+        "200":
+          description: PIN set
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Envelope"
+
+  /auth/pin/verify:
+    post:
+      tags: [Auth]
+      summary: Verify PIN (locks after 3 failures)
+      security: []
+      operationId: verifyPin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, pin]
+              properties:
+                email:
+                  type: string
+                  format: email
+                pin:
+                  type: string
+      responses:
+        "200":
+          description: PIN valid
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Envelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          valid:
+                            type: boolean
+                          token:
+                            type: string
+                          user:
+                            $ref: "#/components/schemas/User"
+                          child:
+                            $ref: "#/components/schemas/Child"
+        "401":
+          description: Invalid PIN or lockout
+
+  /auth/biometric-token:
+    post:
+      tags: [Auth]
+      summary: Get short-lived biometric token (15 min, rate-limited)
+      security: []
+      operationId: getBiometricToken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+      responses:
+        "200":
+          description: Biometric token issued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Envelope"
+        "429":
+          description: Rate limit exceeded
+
+  /children:
+    get:
+      tags: [Children]
+      summary: List children
+      operationId: listChildren
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Paginated list of children
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Envelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Child"
+                      pagination:
+                        $ref: "#/components/schemas/Pagination"
+    post:
+      tags: [Children]
+      summary: Add a child
+      operationId: createChild
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                birth_date:
+                  type: string
+                  format: date
+      responses:
+        "201":
+          description: Child created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Envelope"
+
+  /children/{childId}:
+    parameters:
+      - $ref: "#/components/parameters/ChildId"
+    get:
+      tags: [Children]
+      summary: Get child by ID
+      operationId: getChild
+      responses:
+        "200":
+          description: Child details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Envelope"
+        "404":
+          description: Child not found
+    patch:
+      tags: [Children]
+      summary: Update child
+      operationId: updateChild
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                birth_date:
+                  type: string
+                  format: date
+      responses:
+        "200":
+          description: Child updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Envelope"
+    delete:
+      tags: [Children]
+      summary: Remove child (owner only)
+      operationId: deleteChild
+      responses:
+        "200":
+          description: Child removed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Envelope"
+        "403":
+          description: Only the owner can delete
+
+  /children/{childId}/alerts:
+    parameters:
+      - $ref: "#/components/parameters/ChildId"
+    get:
+      tags: [Children]
+      summary: List alerts for a child
+      operationId: listChildAlerts
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Paginated alerts
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Envelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Alert"
+                      pagination:
+                        $ref: "#/components/schemas/Pagination"
+
+  /children/{childId}/alerts/ack:
+    parameters:
+      - $ref: "#/components/parameters/ChildId"
+    post:
+      tags: [Children]
+      summary: Acknowledge alerts
+      operationId: acknowledgeAlerts
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                alert_ids:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+      responses:
+        "200":
+          description: Alerts acknowledged
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Envelope"
+
+  /children/{childId}/guardians:
+    parameters:
+      - $ref: "#/components/parameters/ChildId"
+    get:
+      tags: [Guardians]
+      summary: List guardians
+      operationId: listGuardians
+      responses:
+        "200":
+          description: List of guardians
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Envelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Guardian"
+    post:
+      tags: [Guardians]
+      summary: Add a guardian
+      operationId: addGuardian
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  format: email
+      responses:
+        "201":
+          description: Guardian added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Envelope"
+        "403":
+          description: Forbidden
+        "404":
+          description: User not found
+
+  /children/{childId}/guardians/{guardianId}:
+    parameters:
+      - $ref: "#/components/parameters/ChildId"
+      - $ref: "#/components/parameters/GuardianId"
+    delete:
+      tags: [Guardians]
+      summary: Remove a guardian
+      operationId: removeGuardian
+      responses:
+        "200":
+          description: Guardian removed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Envelope"
+        "403":
+          description: Forbidden
+        "409":
+          description: Conflict (e.g. cannot remove owner)
+
+  /devices/register:
+    post:
+      tags: [Devices]
+      summary: Register a device
+      operationId: registerDevice
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [child_id, device_name, device_type]
+              properties:
+                child_id:
+                  type: string
+                  format: uuid
+                device_id:
+                  type: string
+                device_name:
+                  type: string
+                device_type:
+                  type: string
+                os_version:
+                  type: string
+                fcm_token:
+                  type: string
+      responses:
+        "201":
+          description: Device registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Envelope"
+
+  /devices/{deviceId}:
+    parameters:
+      - $ref: "#/components/parameters/DeviceId"
+    delete:
+      tags: [Devices]
+      summary: Unpair device (cascades)
+      operationId: unpairDevice
+      responses:
+        "200":
+          description: Device unpaired
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Envelope"
+
+  /devices/{deviceId}/heartbeat:
+    parameters:
+      - $ref: "#/components/parameters/DeviceId"
+    get:
+      tags: [Devices]
+      summary: Device heartbeat check
+      operationId: deviceHeartbeat
+      responses:
+        "200":
+          description: Heartbeat status
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Envelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          rules_changed:
+                            type: boolean
+                          force_logout:
+                            type: boolean
+
+  /devices/{deviceId}/admin-status:
+    parameters:
+      - $ref: "#/components/parameters/DeviceId"
+    put:
+      tags: [Devices]
+      summary: Update admin active status
+      operationId: updateAdminStatus
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [admin_active]
+              properties:
+                admin_active:
+                  type: boolean
+      responses:
+        "200":
+          description: Status updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Envelope"
+
+  /devices/{deviceId}/fcm-token:
+    parameters:
+      - $ref: "#/components/parameters/DeviceId"
+    put:
+      tags: [Devices]
+      summary: Update FCM token
+      operationId: updateFcmToken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [fcm_token]
+              properties:
+                fcm_token:
+                  type: string
+      responses:
+        "200":
+          description: Token updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Envelope"
+
+  /devices/{deviceId}/tamper-alert:
+    parameters:
+      - $ref: "#/components/parameters/DeviceId"
+    post:
+      tags: [Devices]
+      summary: Report tamper alert
+      operationId: reportTamperAlert
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [details]
+              properties:
+                details:
+                  type: string
+      responses:
+        "201":
+          description: Tamper alert recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Envelope"
+
+  /children/{childId}/devices:
+    parameters:
+      - $ref: "#/components/parameters/ChildId"
+    get:
+      tags: [Devices]
+      summary: List devices for a child
+      operationId: listChildDevices
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Paginated devices
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Envelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Device"
+                      pagination:
+                        $ref: "#/components/schemas/Pagination"
+
+  /children/{childId}/apps/blocked:
+    parameters:
+      - $ref: "#/components/parameters/ChildId"
+    get:
+      tags: [App Blocking]
+      summary: List blocked apps
+      operationId: listBlockedApps
+      responses:
+        "200":
+          description: List of block rules
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Envelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/BlockRule"
+
+  /children/{childId}/apps/block:
+    parameters:
+      - $ref: "#/components/parameters/ChildId"
+    post:
+      tags: [App Blocking]
+      summary: Block an app
+      operationId: blockApp
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [device_id, package_name]
+              properties:
+                device_id:
+                  type: string
+                  format: uuid
+                package_name:
+                  type: string
+                app_name:
+                  type: string
+                block_reason:
+                  type: string
+      responses:
+        "201":
+          description: App blocked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Envelope"
+
+  /children/{childId}/apps/block/{ruleId}:
+    parameters:
+      - $ref: "#/components/parameters/ChildId"
+      - $ref: "#/components/parameters/RuleId"
+    delete:
+      tags: [App Blocking]
+      summary: Remove block rule
+      operationId: unblockApp
+      responses:
+        "200":
+          description: Block rule removed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Envelope"
+
+  /children/{childId}/apps/unblock-request:
+    parameters:
+      - $ref: "#/components/parameters/ChildId"
+    post:
+      tags: [App Blocking]
+      summary: Request app unblock (device auth)
+      operationId: requestUnblock
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [rule_id, reason]
+              properties:
+                rule_id:
+                  type: string
+                  format: uuid
+                reason:
+                  type: string
+      responses:
+        "201":
+          description: Unblock request created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Envelope"
+
+  /children/{childId}/apps/unblock-requests:
+    parameters:
+      - $ref: "#/components/parameters/ChildId"
+    get:
+      tags: [App Blocking]
+      summary: List unblock requests
+      operationId: listUnblockRequests
+      responses:
+        "200":
+          description: List of unblock requests
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Envelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                              format: uuid
+                            rule_id:
+                              type: string
+                              format: uuid
+                            reason:
+                              type: string
+                            status:
+                              type: string
+                              enum: [pending, approved, rejected]
+                            created_at:
+                              type: string
+                              format: date-time
+
+  /children/{childId}/apps/block/{ruleId}/unblock:
+    parameters:
+      - $ref: "#/components/parameters/ChildId"
+      - $ref: "#/components/parameters/RuleId"
+      - name: decision
+        in: query
+        required: true
+        schema:
+          type: string
+          enum: [approve, reject]
+    post:
+      tags: [App Blocking]
+      summary: Approve or reject unblock request
+      operationId: decideUnblockRequest
+      responses:
+        "200":
+          description: Decision recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Envelope"
+
+  /devices/{deviceId}/screen-time:
+    parameters:
+      - $ref: "#/components/parameters/DeviceId"
+    post:
+      tags: [Screen Time]
+      summary: Submit screen time entries (10/min per device)
+      operationId: submitScreenTime
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                batch_id:
+                  type: string
+                  format: uuid
+                entries:
+                  type: array
+                  items:
+                    type: object
+                    required: [app_package, seconds]
+                    properties:
+                      app_package:
+                        type: string
+                      app_category:
+                        type: string
+                      seconds:
+                        type: integer
+                      date:
+                        type: string
+                        format: date
+      responses:
+        "200":
+          description: Screen time recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Envelope"
+        "429":
+          description: Rate limit exceeded
+
+  /children/{childId}/screen-time:
+    parameters:
+      - $ref: "#/components/parameters/ChildId"
+    get:
+      tags: [Screen Time]
+      summary: Get screen time for a date
+      operationId: getScreenTime
+      parameters:
+        - name: date
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: Screen time data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Envelope"
+
+  /children/{childId}/screen-time/summary:
+    parameters:
+      - $ref: "#/components/parameters/ChildId"
+    get:
+      tags: [Screen Time]
+      summary: Get screen time summary
+      operationId: getScreenTimeSummary
+      parameters:
+        - name: range
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [day, week, month]
+      responses:
+        "200":
+          description: Screen time summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Envelope"
+
+  /children/{childId}/screen-time-limit:
+    parameters:
+      - $ref: "#/components/parameters/ChildId"
+    put:
+      tags: [Screen Time]
+      summary: Set daily screen time limit (0-1440 minutes, null to remove)
+      operationId: setScreenTimeLimit
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [limit_minutes]
+              properties:
+                limit_minutes:
+                  type: integer
+                  minimum: 0
+                  maximum: 1440
+                  nullable: true
+      responses:
+        "200":
+          description: Limit updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Envelope"
+
+  /children/{childId}/locks:
+    parameters:
+      - $ref: "#/components/parameters/ChildId"
+    get:
+      tags: [Locks]
+      summary: List locks
+      operationId: listLocks
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Paginated locks
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Envelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Lock"
+                      pagination:
+                        $ref: "#/components/schemas/Pagination"
+    post:
+      tags: [Locks]
+      summary: Create a lock schedule
+      operationId: createLock
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [start_time, end_time]
+              properties:
+                device_id:
+                  type: string
+                  format: uuid
+                  nullable: true
+                day_of_week:
+                  type: integer
+                  minimum: 0
+                  maximum: 6
+                  nullable: true
+                start_time:
+                  type: string
+                  pattern: "^\\d{2}:\\d{2}$"
+                end_time:
+                  type: string
+                  pattern: "^\\d{2}:\\d{2}$"
+                is_active:
+                  type: boolean
+                  default: true
+      responses:
+        "201":
+          description: Lock created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Envelope"
+
+  /children/{childId}/locks/{lockId}:
+    parameters:
+      - $ref: "#/components/parameters/ChildId"
+      - $ref: "#/components/parameters/LockId"
+    put:
+      tags: [Locks]
+      summary: Update a lock
+      operationId: updateLock
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                device_id:
+                  type: string
+                  format: uuid
+                  nullable: true
+                day_of_week:
+                  type: integer
+                  minimum: 0
+                  maximum: 6
+                  nullable: true
+                start_time:
+                  type: string
+                  pattern: "^\\d{2}:\\d{2}$"
+                end_time:
+                  type: string
+                  pattern: "^\\d{2}:\\d{2}$"
+                is_active:
+                  type: boolean
+      responses:
+        "200":
+          description: Lock updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Envelope"
+    delete:
+      tags: [Locks]
+      summary: Delete a lock
+      operationId: deleteLock
+      responses:
+        "200":
+          description: Lock deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Envelope"
+
+  /children/{childId}/contacts:
+    parameters:
+      - $ref: "#/components/parameters/ChildId"
+    get:
+      tags: [Contacts]
+      summary: List contacts
+      operationId: listContacts
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Paginated contacts
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Envelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Contact"
+                      pagination:
+                        $ref: "#/components/schemas/Pagination"
+    post:
+      tags: [Contacts]
+      summary: Add a contact rule
+      operationId: createContact
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phone_number, rule_type]
+              properties:
+                phone_number:
+                  type: string
+                contact_name:
+                  type: string
+                rule_type:
+                  type: string
+                  enum: [ALLOW, BLOCK]
+                device_id:
+                  type: string
+                  format: uuid
+      responses:
+        "201":
+          description: Contact created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Envelope"
+
+  /children/{childId}/contacts/{contactId}:
+    parameters:
+      - $ref: "#/components/parameters/ChildId"
+      - $ref: "#/components/parameters/ContactId"
+    put:
+      tags: [Contacts]
+      summary: Update a contact
+      operationId: updateContact
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                contact_name:
+                  type: string
+                rule_type:
+                  type: string
+                  enum: [ALLOW, BLOCK]
+                is_active:
+                  type: boolean
+      responses:
+        "200":
+          description: Contact updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Envelope"
+    delete:
+      tags: [Contacts]
+      summary: Delete a contact
+      operationId: deleteContact
+      responses:
+        "200":
+          description: Contact deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Envelope"
+
+  /devices/{deviceId}/location:
+    parameters:
+      - $ref: "#/components/parameters/DeviceId"
+    post:
+      tags: [Location]
+      summary: Report device location (10/min per device)
+      operationId: reportLocation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [latitude, longitude]
+              properties:
+                latitude:
+                  type: number
+                  format: double
+                longitude:
+                  type: number
+                  format: double
+                accuracy_m:
+                  type: number
+                  format: float
+                speed_kmh:
+                  type: number
+                  format: float
+                recorded_at:
+                  type: string
+                  format: date-time
+      responses:
+        "200":
+          description: Location recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Envelope"
+        "429":
+          description: Rate limit exceeded
+
+  /children/{childId}/locations/current:
+    parameters:
+      - $ref: "#/components/parameters/ChildId"
+    get:
+      tags: [Location]
+      summary: Get current location
+      operationId: getCurrentLocation
+      responses:
+        "200":
+          description: Current location
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Envelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        nullable: true
+                        properties:
+                          latitude:
+                            type: number
+                            format: double
+                          longitude:
+                            type: number
+                            format: double
+                          accuracy_m:
+                            type: number
+                            format: float
+                          speed_kmh:
+                            type: number
+                            format: float
+                          recorded_at:
+                            type: string
+                            format: date-time
+                          device_id:
+                            type: string
+                            format: uuid
+
+  /children/{childId}/locations/history:
+    parameters:
+      - $ref: "#/components/parameters/ChildId"
+    get:
+      tags: [Location]
+      summary: Get location history (max 500)
+      operationId: getLocationHistory
+      parameters:
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 500
+            default: 100
+      responses:
+        "200":
+          description: Location history
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Envelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                              format: uuid
+                            device_id:
+                              type: string
+                              format: uuid
+                            latitude:
+                              type: number
+                              format: double
+                            longitude:
+                              type: number
+                              format: double
+                            accuracy_m:
+                              type: number
+                              format: float
+                            speed_kmh:
+                              type: number
+                              format: float
+                            recorded_at:
+                              type: string
+                              format: date-time
+
+  /children/{childId}/consent:
+    parameters:
+      - $ref: "#/components/parameters/ChildId"
+    get:
+      tags: [Consent]
+      summary: List consents
+      operationId: listConsents
+      responses:
+        "200":
+          description: List of consents
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Envelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Consent"
+    post:
+      tags: [Consent]
+      summary: Grant consent (DPDP)
+      operationId: grantConsent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [consent_type]
+              properties:
+                consent_type:
+                  type: string
+      responses:
+        "201":
+          description: Consent granted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Envelope"
+
+  /children/{childId}/consent/{consentType}:
+    parameters:
+      - $ref: "#/components/parameters/ChildId"
+      - $ref: "#/components/parameters/ConsentType"
+    delete:
+      tags: [Consent]
+      summary: Revoke consent
+      operationId: revokeConsent
+      responses:
+        "200":
+          description: Consent revoked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Envelope"
+        "404":
+          description: Consent not found
+
+  /children/{childId}/consent/check/{consentType}:
+    parameters:
+      - $ref: "#/components/parameters/ChildId"
+      - $ref: "#/components/parameters/ConsentType"
+    get:
+      tags: [Consent]
+      summary: Check if consent is granted
+      operationId: checkConsent
+      responses:
+        "200":
+          description: Consent status
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Envelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: boolean
+
+  /geo/mapbox-token:
+    get:
+      tags: [Geo]
+      summary: Get Mapbox public token
+      operationId: getMapboxToken
+      responses:
+        "200":
+          description: Mapbox token
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Envelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          token:
+                            type: string
+        "503":
+          description: Mapbox not configured
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: kavach_access
+
+  parameters:
+    Page:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    Limit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+    ChildId:
+      name: childId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    DeviceId:
+      name: deviceId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    RuleId:
+      name: ruleId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    LockId:
+      name: lockId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    ContactId:
+      name: contactId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    ConsentType:
+      name: consentType
+      in: path
+      required: true
+      schema:
+        type: string
+    GuardianId:
+      name: guardianId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  schemas:
+    Envelope:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          oneOf:
+            - type: object
+            - type: array
+            - type: string
+            - type: number
+            - type: boolean
+            - type: "null"
+          nullable: true
+        error:
+          type: string
+          nullable: true
+        timestamp:
+          type: string
+          format: date-time
+        request_id:
+          type: string
+          format: uuid
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+        limit:
+          type: integer
+        total:
+          type: integer
+        pages:
+          type: integer
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+
+    Child:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        birth_date:
+          type: string
+          format: date
+          nullable: true
+
+    Alert:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        alert_type:
+          type: string
+        details:
+          type: string
+        acknowledged_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    Guardian:
+      type: object
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+        is_owner:
+          type: boolean
+        joined_at:
+          type: string
+          format: date-time
+
+    Consent:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        consent_type:
+          type: string
+        granted:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+
+    Lock:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        device_id:
+          type: string
+          format: uuid
+          nullable: true
+        day_of_week:
+          type: integer
+          minimum: 0
+          maximum: 6
+          nullable: true
+        start_time:
+          type: string
+        end_time:
+          type: string
+        is_active:
+          type: boolean
+
+    Contact:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        phone_number:
+          type: string
+        contact_name:
+          type: string
+          nullable: true
+        rule_type:
+          type: string
+          enum: [ALLOW, BLOCK]
+        is_active:
+          type: boolean
+
+    Device:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        device_id:
+          type: string
+        device_name:
+          type: string
+        device_type:
+          type: string
+        os_version:
+          type: string
+        last_active:
+          type: string
+          format: date-time
+
+    BlockRule:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        package_name:
+          type: string
+        app_name:
+          type: string
+          nullable: true
+        block_reason:
+          type: string
+          nullable: true
+        is_active:
+          type: boolean
+        status:
+          type: string
+          enum: [active, pending_unblock, blocked]

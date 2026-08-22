@@ -5,6 +5,7 @@ import {
   fetchChildDevices,
   fetchChildren,
   fetchUnblockRequests,
+  setAppDailyLimit,
 } from '../services/api';
 
 export const useChildren = () =>
@@ -59,4 +60,21 @@ export const useInvalidateChildData = (childId: string | null) => {
       queryClient.invalidateQueries({ queryKey: ['unblockRequests', childId] });
     }
   };
+};
+
+/** Sets or clears a per-app daily usage cap, then refreshes the rules. */
+export const useSetAppDailyLimit = (childId: string | null) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      ruleId,
+      dailyLimitMinutes,
+    }: {
+      ruleId: string;
+      dailyLimitMinutes: number | null;
+    }) => setAppDailyLimit(childId as string, ruleId, dailyLimitMinutes),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['blocked', childId] });
+    },
+  });
 };

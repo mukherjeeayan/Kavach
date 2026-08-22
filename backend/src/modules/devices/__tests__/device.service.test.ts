@@ -161,6 +161,105 @@ describe('device.service', () => {
     });
   });
 
+  describe('setDeviceAdminStatus', () => {
+    const adminRow = {
+      ...deviceRow,
+      admin_active: true,
+      last_active: new Date().toISOString(),
+    };
+
+    it('should update admin_active and audit the change', async () => {
+      // SELECT device ownership
+      mockedQuery.mockResolvedValueOnce({ rows: [{ id: DEVICE_ID, child_id: CHILD_ID }] } as any);
+      // UPDATE devices
+      mockedQuery.mockResolvedValueOnce({ rows: [adminRow] } as any);
+      // INSERT audit_logs
+      mockedQuery.mockResolvedValueOnce({ rows: [] } as any);
+
+      const result = await deviceService.setDeviceAdminStatus(PARENT_ID, DEVICE_ID, true);
+
+      expect(result.admin_active).toBe(true);
+      expect(mockedQuery).toHaveBeenNthCalledWith(
+        2,
+        expect.stringContaining('UPDATE devices'),
+        [true, DEVICE_ID]
+      );
+      expect(mockedQuery).toHaveBeenNthCalledWith(
+        3,
+        expect.stringContaining('INSERT INTO audit_logs'),
+        expect.anything()
+      );
+    });
+
+    it('should audit admin deactivation (a bypass signal)', async () => {
+      mockedQuery.mockResolvedValueOnce({ rows: [{ id: DEVICE_ID, child_id: CHILD_ID }] } as any);
+      mockedQuery.mockResolvedValueOnce({
+        rows: [{ ...adminRow, admin_active: false }],
+      } as any);
+      mockedQuery.mockResolvedValueOnce({ rows: [] } as any);
+
+      const result = await deviceService.setDeviceAdminStatus(PARENT_ID, DEVICE_ID, false);
+
+      expect(result.admin_active).toBe(false);
+      expect(mockedQuery).toHaveBeenNthCalledWith(
+        3,
+        expect.stringContaining('INSERT INTO audit_logs'),
+        [
+          PARENT_ID,
+          CHILD_ID,
+          'DEVICE_ADMIN_STATUS',
+          'device',
+          expect.stringContaining('"admin_active":false'),
+        ]
+      );
+    });
+
+    it('should throw NotFoundError when the device does not belong to the parent', async () => {
+      mockedQuery.mockResolvedValueOnce({ rows: [] } as any);
+
+      await expect(
+        deviceService.setDeviceAdminStatus(PARENT_ID, DEVICE_ID, true)
+      ).rejects.toThrow(NotFoundError);
+    });
+  });
+
+  describe('updateFcmToken', () => {
+    it('should refresh the token and last_active for an owned device', async () => {
+      mockedQuery.mockResolvedValueOnce({ rows: [{ id: DEVICE_ID, child_id: CHILD_ID }] } as any);
+      mockedQuery.mockResolvedValueOnce({
+        rows: [{ ...deviceRow, fcm_token: 'new-token' }],
+      } as any);
+
+      const result = await deviceService.updateFcmToken(PARENT_ID, DEVICE_ID, 'new-token');
+
+      expect(result.fcm_token).toBe('new-token');
+      expect(mockedQuery).toHaveBeenNthCalledWith(
+        2,
+        expect.stringContaining('UPDATE devices'),
+        ['new-token', DEVICE_ID]
+      );
+    });
+
+    it('should clear the token when null is sent', async () => {
+      mockedQuery.mockResolvedValueOnce({ rows: [{ id: DEVICE_ID, child_id: CHILD_ID }] } as any);
+      mockedQuery.mockResolvedValueOnce({
+        rows: [{ ...deviceRow, fcm_token: null }],
+      } as any);
+
+      const result = await deviceService.updateFcmToken(PARENT_ID, DEVICE_ID, null);
+
+      expect(result.fcm_token).toBeNull();
+    });
+
+    it('should throw NotFoundError when the device does not belong to the parent', async () => {
+      mockedQuery.mockResolvedValueOnce({ rows: [] } as any);
+
+      await expect(
+        deviceService.updateFcmToken(PARENT_ID, DEVICE_ID, 'token')
+      ).rejects.toThrow(NotFoundError);
+    });
+  });
+
   describe('listDevicesForChild', () => {
     it('should verify ownership and return the child\'s devices', async () => {
       // verifyChildBelongsToParent

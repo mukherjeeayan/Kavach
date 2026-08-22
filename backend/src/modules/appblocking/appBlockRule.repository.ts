@@ -39,6 +39,7 @@ export const getBlockedAppsByChildId = async (
     `SELECT abr.id, abr.device_id, abr.package_name, abr.app_name,
             abr.is_blocked, abr.block_reason,
             abr.unblock_requested, abr.unblock_reason,
+            abr.daily_limit_minutes,
             abr.created_at, abr.updated_at
      FROM app_block_rules abr
      INNER JOIN devices d ON abr.device_id = d.id
@@ -70,7 +71,7 @@ export const createBlockRule = async (rule: CreateAppBlockRuleInput): Promise<Ap
                    updated_at = now()
      RETURNING id, device_id, package_name, app_name, is_blocked,
                block_reason, unblock_requested, unblock_reason,
-               created_at, updated_at`,
+               daily_limit_minutes, created_at, updated_at`,
     [rule.device_id, rule.package_name, rule.app_name || null, rule.block_reason || null]
   );
   return { ...result.rows[0], child_id: rule.child_id };
@@ -89,7 +90,8 @@ export const updateBlockStatus = async (
          updated_at = now()
      WHERE id = $2
      RETURNING id, device_id, package_name, app_name, is_blocked,
-               block_reason, unblock_requested, unblock_reason, created_at, updated_at`,
+               block_reason, unblock_requested, unblock_reason,
+               daily_limit_minutes, created_at, updated_at`,
     [isBlocked, ruleId]
   );
   return result.rows[0] || null;
@@ -126,6 +128,7 @@ export const getUnblockRequests = async (
     `SELECT abr.id, abr.device_id, abr.package_name, abr.app_name,
             abr.is_blocked, abr.block_reason,
             abr.unblock_requested, abr.unblock_reason,
+            abr.daily_limit_minutes,
             abr.created_at, abr.updated_at
      FROM app_block_rules abr
      INNER JOIN devices d ON abr.device_id = d.id
@@ -152,7 +155,8 @@ export const setUnblockRequest = async (
      SET unblock_requested = true, unblock_reason = $1, updated_at = now()
      WHERE id = $2
      RETURNING id, device_id, package_name, app_name, is_blocked,
-               block_reason, unblock_requested, unblock_reason, created_at, updated_at`,
+               block_reason, unblock_requested, unblock_reason,
+               daily_limit_minutes, created_at, updated_at`,
     [reason, ruleId]
   );
   return result.rows[0] || null;
@@ -169,6 +173,7 @@ export const getRuleByIdAndChildId = async (
     `SELECT abr.id, abr.device_id, abr.package_name, abr.app_name,
             abr.is_blocked, abr.block_reason,
             abr.unblock_requested, abr.unblock_reason,
+            abr.daily_limit_minutes,
             abr.created_at, abr.updated_at
      FROM app_block_rules abr
      INNER JOIN devices d ON abr.device_id = d.id
@@ -179,4 +184,39 @@ export const getRuleByIdAndChildId = async (
     return { ...result.rows[0], child_id: childId };
   }
   return null;
+};
+
+/**
+ * Set (or clear, with null) the per-app daily usage limit of a rule.
+ */
+export const setDailyLimit = async (
+  ruleId: string,
+  dailyLimitMinutes: number | null
+): Promise<AppBlockRule | null> => {
+  const result = await query(
+    `UPDATE app_block_rules
+     SET daily_limit_minutes = $1, updated_at = now()
+     WHERE id = $2
+     RETURNING id, device_id, package_name, app_name, is_blocked,
+               block_reason, unblock_requested, unblock_reason,
+               daily_limit_minutes, created_at, updated_at`,
+    [dailyLimitMinutes, ruleId]
+  );
+  return result.rows[0] || null;
+};
+
+/**
+ * All rules with an active daily usage cap for a device — the screen
+ * time upload path uses these to raise PER_APP_LIMIT_REACHED alerts.
+ */
+export const getLimitRulesForDevice = async (
+  deviceId: string
+): Promise<Array<{ id: string; package_name: string; daily_limit_minutes: number }>> => {
+  const result = await query(
+    `SELECT id, package_name, daily_limit_minutes
+     FROM app_block_rules
+     WHERE device_id = $1 AND daily_limit_minutes IS NOT NULL`,
+    [deviceId]
+  );
+  return result.rows;
 };

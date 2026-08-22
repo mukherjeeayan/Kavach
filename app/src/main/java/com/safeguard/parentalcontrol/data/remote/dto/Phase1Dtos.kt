@@ -116,3 +116,16 @@ data class LocationUploadRequest(
     val speed_kmh: Double? = null,
     val recorded_at: String? = null
 )
+/**
+ * Request body for PUT /devices/:deviceId/admin-status.
+ */
+data class AdminStatusRequest(
+    val admin_active: Boolean
+)
+
+/**
+ * Request body for PUT /devices/:deviceId/fcm-token.
+ */
+data class FcmTokenRequest(
+    val fcm_token: String
+)

@@ -50,6 +50,10 @@ data class AppBlockRuleEntity(
     @ColumnInfo(name = "unblock_reason")
     val unblockReason: String? = null,
 
+    /** Per-app daily usage cap in minutes; null = no cap. */
+    @ColumnInfo(name = "dailyLimitMinutes")
+    val dailyLimitMinutes: Int? = null,
+
     @ColumnInfo(name = "created_at")
     val createdAt: String,
 

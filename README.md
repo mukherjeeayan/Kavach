@@ -92,6 +92,8 @@ See [doc/API.md](doc/API.md) for the complete endpoint reference.
 
 ## Documentation
 
+- [Developer guide](doc/DEVELOPER_GUIDE.md) — full local setup walkthrough
 - [Design plan](doc/PARENTAL_CONTROL_APP_DESIGN_PLAN.md)
-- [Task list](doc/PROJECT_TASKLIST.md)
+- [API reference](doc/API.md)
+- [OpenAPI spec](backend/openapi.yaml) (interactive docs at `/api/docs` when running)
 - Per-stack skill guides: `doc/SKILL_*.md`

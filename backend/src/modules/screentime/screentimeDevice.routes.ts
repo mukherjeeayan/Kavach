@@ -1,12 +1,10 @@
-// screentimeDevice.routes.ts
-// Mounted at: /api/v1/devices
-// POST /devices/:deviceId/screen-time — batch upload from the app.
-
 import { Router } from 'express';
-import { authenticateJWT } from '../../middleware/auth';
+import { authenticateJWT, requireRole } from '../../middleware/auth';
 import { validate, validateParams } from '../../middleware/validate';
 import { uuidParams } from '../../middleware/params';
+import { deviceIngestionLimiter } from '../../middleware/rateLimiter';
 import { screenTimeUploadSchema } from './screentime.dto';
+import { requireConsent } from '../../middleware/consent';
 import * as screentimeController from './screentime.controller';
 
 const router = Router({ mergeParams: true });
@@ -14,8 +12,11 @@ const router = Router({ mergeParams: true });
 router.post(
   '/:deviceId/screen-time',
   authenticateJWT,
+  requireRole('parent'),
   validateParams(uuidParams('deviceId')),
+  deviceIngestionLimiter,
   validate(screenTimeUploadSchema),
+  requireConsent('app_usage'),
   screentimeController.upload
 );
 

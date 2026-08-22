@@ -15,7 +15,7 @@ import javax.inject.Singleton
  * that are sent to the backend with every request anyway.
  */
 @Singleton
-class OnboardingStore @Inject constructor(@ApplicationContext context: Context) {
+open class OnboardingStore @Inject constructor(@ApplicationContext context: Context) {
 
     private val prefs: SharedPreferences =
         context.getSharedPreferences("safeguard_onboarding", Context.MODE_PRIVATE)

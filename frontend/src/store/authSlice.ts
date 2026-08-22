@@ -1,10 +1,10 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import {
   clearStoredSession,
-  getStoredToken,
+  getAccessToken,
   getStoredUser,
   persistSession,
-  PersistedSession,
+  AuthSession,
 } from '../services/session';
 
 export interface AuthUser {
@@ -14,12 +14,15 @@ export interface AuthUser {
 }
 
 interface AuthState {
-  token: string | null;
+  // Presence of the in-memory token (or a restorable cookie session)
+  // decides route protection. The token value itself is never kept in
+  // the Redux store / localStorage.
+  hasToken: boolean;
   user: AuthUser | null;
 }
 
 const initialState: AuthState = {
-  token: getStoredToken(),
+  hasToken: Boolean(getAccessToken()) || Boolean(getStoredUser()),
   user: getStoredUser(),
 };
 
@@ -27,13 +30,13 @@ const authSlice = createSlice({
   name: 'auth',
   initialState,
   reducers: {
-    setSession(state, action: PayloadAction<PersistedSession>) {
-      state.token = action.payload.token;
+    setSession(state, action: PayloadAction<AuthSession>) {
+      state.hasToken = true;
       state.user = action.payload.user;
       persistSession(action.payload);
     },
     clearSession(state) {
-      state.token = null;
+      state.hasToken = false;
       state.user = null;
       clearStoredSession();
     },

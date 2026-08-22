@@ -5,6 +5,8 @@ import com.safeguard.parentalcontrol.data.local.TokenStore
 import com.safeguard.parentalcontrol.data.remote.api.AuthApi
 import com.safeguard.parentalcontrol.data.remote.dto.RefreshTokenRequest
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.Response
@@ -33,6 +35,8 @@ class AuthInterceptor @Inject constructor(
             .create(AuthApi::class.java)
     }
 
+    private val refreshMutex = Mutex()
+
     override fun intercept(chain: Interceptor.Chain): Response {
         val request = chain.request()
 
@@ -53,6 +57,8 @@ class AuthInterceptor @Inject constructor(
 
         if (response.code == 401 && request.header(RETRY_HEADER) == null) {
             response.close()
+            // Serialize concurrent 401 handling: parallel refreshes would
+            // rotate (and invalidate) each other's refresh tokens.
             if (refreshAccessToken()) {
                 val retried = request.newBuilder()
                     .header("Authorization", "Bearer ${tokenStore.token}")
@@ -64,25 +70,28 @@ class AuthInterceptor @Inject constructor(
         return response
     }
 
-    private fun refreshAccessToken(): Boolean {
-        val refreshToken = tokenStore.refreshToken ?: return false
-        return try {
-            val response = runBlocking {
-                authApi.refreshToken(RefreshTokenRequest(refreshToken))
-            }
-            val data = response.body()?.data
-            if (response.isSuccessful && data != null) {
-                tokenStore.token = data.token
-                tokenStore.refreshToken = data.refresh_token
-                true
-            } else {
-                // The refresh token is dead — force a fresh login.
-                tokenStore.clear()
+    private fun refreshAccessToken(): Boolean = runBlocking {
+        refreshMutex.withLock {
+            // Another request may have refreshed while this one waited
+            // for the lock — reuse the fresh token instead of rotating
+            // again (which would invalidate the sibling's new token).
+            val currentToken = tokenStore.refreshToken ?: return@withLock false
+            return@withLock try {
+                val response = authApi.refreshToken(RefreshTokenRequest(currentToken))
+                val data = response.body()?.data
+                if (response.isSuccessful && data != null) {
+                    tokenStore.token = data.token
+                    tokenStore.refreshToken = data.refresh_token
+                    true
+                } else {
+                    // The refresh token is dead — force a fresh login.
+                    tokenStore.clear()
+                    false
+                }
+            } catch (e: Exception) {
+                // Offline: the original request 401'd anyway.
                 false
             }
-        } catch (e: Exception) {
-            // Offline: the original request 401'd anyway.
-            false
         }
     }
 

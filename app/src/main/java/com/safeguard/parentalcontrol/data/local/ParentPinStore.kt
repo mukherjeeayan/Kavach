@@ -23,7 +23,7 @@ import javax.inject.Singleton
  *   bcrypt hash for the web dashboard (set via PUT /auth/pin).
  */
 @Singleton
-class ParentPinStore @Inject constructor(@ApplicationContext context: Context) {
+open class ParentPinStore @Inject constructor(@ApplicationContext context: Context) {
 
     private val prefs: SharedPreferences by lazy {
         val masterKey = MasterKey.Builder(context)

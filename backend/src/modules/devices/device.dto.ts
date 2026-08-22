@@ -20,4 +20,16 @@ export const registerDeviceSchema = z.object({
   fcm_token: z.string().max(255).optional(),
 });
 
+/** PUT /devices/:deviceId/admin-status body. */
+export const adminStatusSchema = z.object({
+  admin_active: z.boolean({ required_error: 'admin_active is required' }),
+});
+
+/** PUT /devices/:deviceId/fcm-token body. */
+export const fcmTokenSchema = z.object({
+  fcm_token: z.string().max(255).nullable(),
+});
+
 export type RegisterDeviceInput = z.infer<typeof registerDeviceSchema>;
+export type AdminStatusInput = z.infer<typeof adminStatusSchema>;
+export type FcmTokenInput = z.infer<typeof fcmTokenSchema>;

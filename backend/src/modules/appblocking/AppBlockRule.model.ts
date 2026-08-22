@@ -12,6 +12,7 @@ export interface AppBlockRule {
   block_reason: string | null;  // Why the parent blocked this app
   unblock_requested: boolean;   // Whether the child has asked for unblock
   unblock_reason: string | null;// Child's reason for requesting unblock
+  daily_limit_minutes: number | null; // Per-app daily usage cap (minutes); null = no cap
   created_at: string;
   updated_at: string;
 }

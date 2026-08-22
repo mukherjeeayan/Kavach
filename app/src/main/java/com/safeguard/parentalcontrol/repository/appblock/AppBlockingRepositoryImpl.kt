@@ -62,6 +62,7 @@ class AppBlockingRepositoryImpl @Inject constructor(
                         blockReason = dto.block_reason,
                         unblockRequested = dto.unblock_requested,
                         unblockReason = dto.unblock_reason,
+                        dailyLimitMinutes = dto.daily_limit_minutes,
                         createdAt = dto.created_at,
                         updatedAt = dto.updated_at
                     )
@@ -129,7 +130,8 @@ class AppBlockingRepositoryImpl @Inject constructor(
                     blockReason = dto.block_reason,
                     unblockRequested = dto.unblock_requested,
                     unblockReason = dto.unblock_reason,
-                    createdAt = dto.created_at,
+                        dailyLimitMinutes = dto.daily_limit_minutes,
+                        createdAt = dto.created_at,
                     updatedAt = dto.updated_at
                 )
                 dao.insert(entity)
@@ -180,7 +182,8 @@ class AppBlockingRepositoryImpl @Inject constructor(
                     blockReason = dto.block_reason,
                     unblockRequested = dto.unblock_requested,
                     unblockReason = dto.unblock_reason,
-                    createdAt = dto.created_at,
+                        dailyLimitMinutes = dto.daily_limit_minutes,
+                        createdAt = dto.created_at,
                     updatedAt = dto.updated_at
                 )
                 dao.insert(entity)
@@ -218,3 +221,4 @@ class AppBlockingRepositoryImpl @Inject constructor(
         private const val TAG = "AppBlockingRepo"
     }
 }
+

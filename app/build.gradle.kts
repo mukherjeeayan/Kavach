@@ -4,7 +4,16 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
     id("com.google.devtools.ksp")
     id("com.google.dagger.hilt.android")
-    // id("com.google.gms.google-services")
+}
+
+// Firebase is optional: the Google Services plugin hard-fails when
+// google-services.json is missing, so it is only applied when the file
+// is present (drop the real firebase config in app/google-services.json
+// to enable FCM). FCM_ENABLED lets the app guard Firebase calls at
+// runtime so builds without the file still install and run.
+val googleServicesFile = file("google-services.json")
+if (googleServicesFile.exists()) {
+    apply(plugin = "com.google.gms.google-services")
 }
 
 android {
@@ -34,13 +43,26 @@ android {
 
     buildTypes {
         debug {
-            // Local backend as seen from the Android emulator
-            buildConfigField("String", "API_BASE_URL", "\"http://10.0.2.2:3000/\"")
+// Local backend as seen from the Android emulator
+        buildConfigField("String", "API_BASE_URL", "\"http://10.0.2.2:3000/\"")
+        buildConfigField("boolean", "FCM_ENABLED", googleServicesFile.exists().toString())
+        buildConfigField("boolean", "CERT_PINNING_ENABLED", "false")
+        buildConfigField("String", "CERT_PINS", "\"\"")
         }
         release {
             isMinifyEnabled = true
-            // TODO: Replace with the real production API host before release
-            buildConfigField("String", "API_BASE_URL", "\"https://api.kavach.example.com/\"")
+            // Set via local.properties or CI env: -PAPI_BASE_URL=https://your-api-domain.com/
+            buildConfigField("String", "API_BASE_URL", "\"${project.findProperty("API_BASE_URL") ?: "https://api.kavach.example.com/"}\"")
+            buildConfigField("boolean", "FCM_ENABLED", googleServicesFile.exists().toString())
+            // Certificate pinning is mandatory in release. Supply the
+            // production SHA-256 pins via -PSAFEGUARD_PINS="sha256/...,sha256/..."
+            // (see NetworkModule). An empty list fails closed at startup.
+            buildConfigField("boolean", "CERT_PINNING_ENABLED", "true")
+            buildConfigField(
+                "String",
+                "CERT_PINS",
+                "\"${providers.gradleProperty("SAFEGUARD_PINS").getOrElse("")}\""
+            )
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -65,6 +87,7 @@ android {
     testOptions {
         unitTests {
             isReturnDefaultValues = true
+            isIncludeAndroidResources = true
         }
     }
 }
@@ -120,6 +143,7 @@ dependencies {
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:$coroutinesVersion")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:$coroutinesVersion")
 
     // WorkManager
     implementation("androidx.work:work-runtime-ktx:$workVersion")
@@ -140,12 +164,20 @@ dependencies {
 
     // Unit Testing
     testImplementation("junit:junit:4.13.2")
+    testImplementation("androidx.test:core:1.5.0")
+    testImplementation("org.robolectric:robolectric:4.16.1")
     testImplementation("org.mockito.kotlin:mockito-kotlin:5.2.1")
-    testImplementation("org.mockito:mockito-inline:5.2.0")
+    // Mockito 5 uses the inline mock maker by default; the core/byte-buddy
+    // bumps add JDK 25 class-file support (older ByteBuddy cannot
+    // instrument on newer JVMs).
+    testImplementation("org.mockito:mockito-core:5.20.0")
+    testImplementation("net.bytebuddy:byte-buddy:1.17.7")
+    testImplementation("net.bytebuddy:byte-buddy-agent:1.17.7")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:$coroutinesVersion")
 
     // Android/Compose UI Testing
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
+    androidTestImplementation("androidx.test:core:1.5.0")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
     androidTestImplementation(platform("androidx.compose:compose-bom:$composeBomVersion"))
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")

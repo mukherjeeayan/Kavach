@@ -167,25 +167,25 @@ describe('children.service', () => {
     it('should verify ownership and return recent alerts', async () => {
       mockedQuery
         .mockResolvedValueOnce({ rows: [{ id: CHILD_ID }] } as any) // ownership
+        .mockResolvedValueOnce({ rows: [{ total: 1 }] } as any) // count
         .mockResolvedValueOnce({
           rows: [
             {
+              id: 'a1',
               action: 'TAMPER_ALERT',
               resource_type: 'device',
               details: { device_id: 'd1' },
               created_at: new Date().toISOString(),
+              acknowledged_at: null,
             },
           ],
         } as any); // SELECT audit_logs
 
-      const alerts = await childrenService.listChildAlerts(PARENT_ID, CHILD_ID, 10);
+      const { items, total } = await childrenService.listChildAlerts(PARENT_ID, CHILD_ID, 1, 10);
 
-      expect(alerts).toHaveLength(1);
-      expect(alerts[0].action).toBe('TAMPER_ALERT');
-      expect(mockedQuery).toHaveBeenCalledWith(
-        expect.stringContaining('WHERE target_child_id = $1'),
-        [CHILD_ID, 10]
-      );
+      expect(items).toHaveLength(1);
+      expect(total).toBe(1);
+      expect(items[0].action).toBe('TAMPER_ALERT');
     });
 
     it('should throw ForbiddenError when the child is not the parent\'s', async () => {

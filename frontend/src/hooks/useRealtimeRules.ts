@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
+import { getAccessToken } from '../services/session';
 
 /**
  * Subscribes to the backend's real-time `rule:changed` broadcast for a
@@ -20,7 +21,10 @@ export const useRealtimeRules = (
     if (!childId) return;
 
     const url = import.meta.env.VITE_SOCKET_URL as string | undefined;
-    const socket: Socket = url ? io(url) : io();
+    const token = getAccessToken() ?? undefined;
+    // The backend requires an authenticated parent token during the
+    // socket handshake; unauthenticated connections are rejected.
+    const socket: Socket = url ? io(url, { auth: { token } }) : io({ auth: { token } });
     let disposed = false;
 
     const subscribe = () => {

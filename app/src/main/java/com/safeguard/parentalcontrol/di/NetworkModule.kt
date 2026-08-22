@@ -7,6 +7,7 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import okhttp3.CertificatePinner
+import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
@@ -51,22 +52,35 @@ object NetworkModule {
         // production API certificate. Debug builds connect to a local
         // backend (10.0.2.2) whose cert changes constantly, so pinning
         // there would break development — never do that.
-        if (!BuildConfig.DEBUG) {
-            builder.certificatePinner(
-                CertificatePinner.Builder()
-                    .add(
-                        PINNED_HOST,
-                        // TODO(ops): replace with the SHA-256 of the
-                        // production leaf/intermediate cert, e.g.
-                        // "sha256/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
-                        // (run `keytool -printcert -jarfile app.aab` on
-                        //  the deployed cert, or use the CA intermediate).
-                        "sha256/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
-                    )
-                    .build()
-            )
+        if (BuildConfig.CERT_PINNING_ENABLED) {
+            builder.certificatePinner(buildCertificatePinner())
         }
         return builder.build()
+    }
+
+    /**
+     * Builds the pinner from BuildConfig.CERT_PINS (comma-separated
+     * "sha256/..." hashes supplied via -PSAFEGUARD_PINS).
+     *
+     * Fail-closed: a release build without pins refuses to start
+     * instead of silently running unpinned. The pinned host is derived
+     * from BuildConfig.API_BASE_URL so the pin can never drift from
+     * the host it protects.
+     */
+    private fun buildCertificatePinner(): CertificatePinner {
+        val pins = BuildConfig.CERT_PINS
+            .split(",")
+            .map { it.trim() }
+            .filter { it.isNotEmpty() }
+        check(pins.isNotEmpty()) {
+            "Release build has certificate pinning enabled but no pins. " +
+                "Supply them via -PSAFEGUARD_PINS=\"sha256/...,sha256/...\"."
+        }
+
+        val host = BuildConfig.API_BASE_URL.toHttpUrl().host
+        return CertificatePinner.Builder()
+            .add(host, *pins.toTypedArray())
+            .build()
     }
 
     @Provides
@@ -80,12 +94,4 @@ object NetworkModule {
             .addConverterFactory(GsonConverterFactory.create())
             .build()
     }
-
-    /**
-     * Host pattern pinned in release builds. Keep in sync with the
-     * release [BuildConfig.API_BASE_URL] host — a mismatch would
-     * silently disable the pin (CertificatePinner only matches
-     * configured hosts).
-     */
-    private const val PINNED_HOST = "api.kavach.example.com"
 }

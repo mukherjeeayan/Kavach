@@ -1,10 +1,5 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
-import {
-  clearStoredSession,
-  getStoredRefreshToken,
-  getStoredToken,
-  persistSession,
-} from './session';
+import { clearStoredSession, getAccessToken, setAccessToken } from './session';
 
 // The baseUrl can be configured via environment variables. Using proxy for dev.
 const apiClient = axios.create({
@@ -12,12 +7,16 @@ const apiClient = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  // Sends the httpOnly refresh cookie to the backend; required for the
+  // cookie-based session flow.
+  withCredentials: true,
 });
 
-// Attach the JWT to every request. The backend only accepts
-// `Authorization: Bearer <token>` (httpOnly cookies are not used).
+// Attach the in-memory JWT to every request. The long-lived refresh
+// token never touches JS-readable storage — it lives in an httpOnly
+// cookie scoped to /api/v1/auth.
 apiClient.interceptors.request.use((config) => {
-  const token = getStoredToken();
+  const token = getAccessToken();
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -25,13 +24,15 @@ apiClient.interceptors.request.use((config) => {
 });
 
 // Endpoints that must never trigger the refresh flow: they either
-// create the session, verify credentials, or are the refresh itself.
+// create/restore the session or are the refresh itself.
 const PUBLIC_PATHS = [
   '/auth/login',
   '/auth/register',
   '/auth/refresh-token',
   '/auth/pin/verify',
   '/auth/biometric-token',
+  '/auth/forgot-password',
+  '/auth/reset-password',
 ];
 
 interface RetriableRequestConfig extends InternalAxiosRequestConfig {
@@ -41,26 +42,26 @@ interface RetriableRequestConfig extends InternalAxiosRequestConfig {
 // Single-flight refresh: concurrent 401s share one refresh request.
 let refreshPromise: Promise<string> | null = null;
 
+/**
+ * Rotate the refresh token (httpOnly cookie is sent automatically) and
+ * cache the new access token in memory. The new refresh cookie is set
+ * by the backend on the response.
+ */
 const refreshAccessToken = async (): Promise<string> => {
   if (!refreshPromise) {
     refreshPromise = (async () => {
-      const refreshToken = getStoredRefreshToken();
-      if (!refreshToken) {
-        throw new Error('No refresh token stored');
-      }
       // Raw axios on purpose: the interceptor would otherwise retry/redirect.
       const response = await axios.post(
         `${apiClient.defaults.baseURL}/auth/refresh-token`,
-        { refresh_token: refreshToken }
+        {},
+        { withCredentials: true }
       );
-      const session = response.data?.data as
-        | { token: string; refresh_token: string; user: { id: string; name: string; email: string } }
-        | undefined;
-      if (!session?.token || !session.refresh_token) {
-        throw new Error('Refresh response missing tokens');
+      const data = response.data?.data as { token?: string } | undefined;
+      if (!data?.token) {
+        throw new Error('Refresh response missing token');
       }
-      persistSession(session);
-      return session.token;
+      setAccessToken(data.token);
+      return data.token;
     })().finally(() => {
       refreshPromise = null;
     });
@@ -72,9 +73,9 @@ const isPublicPath = (url: string) => PUBLIC_PATHS.some((path) => url.includes(p
 
 // Centralized auth-failure handling.
 // Backend returns 401 for missing/invalid/expired tokens and 403 for
-// role violations. On the first failure the access token is refreshed
-// (single-flight) and the request is retried once. If the refresh
-// fails the session is over: clear storage and redirect to login.
+// role violations. Only 401 triggers a refresh+retry (403 means the
+// server understood the caller but denied the action). On refresh
+// failure the session is over: clear state and redirect to login.
 apiClient.interceptors.response.use(
   (response) => {
     return response;
@@ -84,7 +85,7 @@ apiClient.interceptors.response.use(
     const status = error.response?.status;
     const url = config?.url ?? '';
 
-    if (status && (status === 401 || status === 403) && config && !isPublicPath(url)) {
+    if (status === 401 && config && !isPublicPath(url)) {
       if (!config._retried) {
         config._retried = true;
         try {

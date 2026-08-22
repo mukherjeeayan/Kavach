@@ -79,13 +79,123 @@ export const setScreenTimeLimit = async (req: Request, res: Response, next: Next
  */
 export const listAlerts = async (req: Request, res: Response, next: NextFunction) => {
   try {
+    const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 20;
-    const alerts = await childrenService.listChildAlerts(
+    const { items, total } = await childrenService.listChildAlerts(
       req.user!.userId,
       req.params.childId,
+      page,
       limit
     );
-    respond(res, 200, { alerts }, req);
+    respond(
+      res,
+      200,
+      { alerts: items, pagination: buildPaginationMeta(page, limit, total) },
+      req
+    );
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * POST /api/v1/children/:childId/alerts/ack
+ * Body: { alert_ids?: string[] } — omit to acknowledge all.
+ */
+export const acknowledgeAlerts = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const result = await childrenService.acknowledgeAlerts(
+      req.user!.userId,
+      req.params.childId,
+      req.body?.alert_ids
+    );
+    respond(res, 200, result, req);
+  } catch (err) {
+    next(err);
+  }
+};
+/**
+ * GET /api/v1/children/:childId
+ * Returns a single child profile owned by the parent.
+ */
+export const getChild = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const child = await childrenService.getChild(req.user!.userId, req.params.childId);
+    respond(res, 200, { child }, req);
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * PATCH /api/v1/children/:childId
+ * Body: { name?, birth_date? }
+ * Updates a child profile.
+ */
+export const updateChild = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const child = await childrenService.updateChild(req.user!.userId, req.params.childId, req.body);
+    respond(res, 200, { child }, req);
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * DELETE /api/v1/children/:childId
+ * Deletes the child profile and cascades devices/rules/logs/consents.
+ */
+export const deleteChild = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    await childrenService.deleteChild(req.user!.userId, req.params.childId);
+    respond(res, 200, { deleted: true }, req);
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * GET /api/v1/children/:childId/guardians
+ * Lists all guardians (including the owner) of the child.
+ */
+export const listGuardians = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const guardians = await childrenService.listGuardians(req.user!.userId, req.params.childId);
+    respond(res, 200, { guardians }, req);
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * POST /api/v1/children/:childId/guardians
+ * Body: { email } — owner shares the child with another parent account.
+ */
+export const addGuardian = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const guardian = await childrenService.addGuardian(
+      req.user!.userId,
+      req.params.childId,
+      req.body.email
+    );
+    respond(res, 201, { guardian }, req);
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * DELETE /api/v1/children/:childId/guardians/:guardianId
+ * Owner revokes a guardian's access.
+ */
+export const removeGuardian = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    await childrenService.removeGuardian(
+      req.user!.userId,
+      req.params.childId,
+      req.params.guardianId
+    );
+    respond(res, 200, { removed: true }, req);
   } catch (err) {
     next(err);
   }

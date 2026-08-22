@@ -7,6 +7,7 @@ import android.content.ComponentName
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Process
+import androidx.core.content.ContextCompat
 import com.safeguard.parentalcontrol.security.SafeGuardDeviceAdminReceiver
 
 /** True when the app has been granted Usage Access (AppOps). */
@@ -42,4 +43,18 @@ internal fun hasNotificationPermission(context: Context): Boolean {
     return Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
             context.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) ==
             PackageManager.PERMISSION_GRANTED
+}
+
+/**
+ * True when ACCESS_BACKGROUND_LOCATION is granted (or not required).
+ * On Android 10+ (API 29+), background location must be requested
+ * separately from foreground location. Without this, the location
+ * service cannot record GPS pings when the app is in the background.
+ */
+internal fun hasBackgroundLocationPermission(context: Context): Boolean {
+    return Build.VERSION.SDK_INT < Build.VERSION_CODES.Q ||
+            ContextCompat.checkSelfPermission(
+                context,
+                "android.permission.ACCESS_BACKGROUND_LOCATION"
+            ) == PackageManager.PERMISSION_GRANTED
 }

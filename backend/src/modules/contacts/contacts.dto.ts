@@ -6,8 +6,16 @@ import { z } from 'zod';
 export const createContactSchema = z.object({
   phone_number: z
     .string({ required_error: 'phone_number is required' })
-    .min(3, 'phone_number is too short')
-    .max(32, 'phone_number cannot exceed 32 characters'),
+    // Digits, spaces, hyphens, parentheses; must contain 3-15 digits so
+    // garbage strings can't poison call-screening matches.
+    .regex(/^[+]?[\d\s\-().]{3,20}$/, 'phone_number contains invalid characters')
+    .refine(
+      (v) => {
+        const digits = v.replace(/\D/g, '');
+        return digits.length >= 3 && digits.length <= 15;
+      },
+      { message: 'phone_number must contain 3-15 digits' }
+    ),
   contact_name: z.string().max(255).optional(),
   rule_type: z.enum(['ALLOW', 'BLOCK']).default('BLOCK'),
   device_id: z.string().uuid('must be a valid UUID').optional(),

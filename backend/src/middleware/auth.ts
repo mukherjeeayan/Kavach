@@ -1,10 +1,12 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import logger from '../utils/logger';
+import { extractAccessToken } from '../modules/shared/cookies';
 
 export interface JwtPayload {
   userId: string;
   role: string;
+  scope?: string;
 }
 
 declare global {
@@ -26,7 +28,9 @@ const unauthorized = (res: Response, message: string, requestId?: string) => {
 };
 
 export const authenticateJWT = (req: Request, res: Response, next: NextFunction) => {
-  const authHeader = req.headers.authorization;
+  // Authorization header first (mobile/API clients), then the
+  // httpOnly access-token cookie (web dashboard).
+  const token = extractAccessToken(req);
 
   if (!process.env.JWT_SECRET) {
     // Fail fast: never silently accept tokens without a configured secret.
@@ -40,8 +44,7 @@ export const authenticateJWT = (req: Request, res: Response, next: NextFunction)
     });
   }
 
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    const token = authHeader.split(' ')[1];
+  if (token) {
 
     jwt.verify(
       token,
@@ -53,7 +56,16 @@ export const authenticateJWT = (req: Request, res: Response, next: NextFunction)
           return unauthorized(res, 'Unauthorized: Invalid or expired token', req.headers['x-request-id'] as string);
         }
 
-        req.user = decoded as JwtPayload;
+        const payload = decoded as JwtPayload;
+
+        // Scoped tokens (PIN / biometric unlock factors) must never act
+        // as full access tokens on regular routes.
+        if (payload.scope) {
+          logger.warn(`Scoped token used on full-auth route by user ${payload.userId}`);
+          return unauthorized(res, 'Unauthorized: Scoped token cannot be used for this operation', req.headers['x-request-id'] as string);
+        }
+
+        req.user = payload;
         next();
       }
     );

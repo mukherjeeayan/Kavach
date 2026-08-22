@@ -14,20 +14,20 @@ export default function UnblockRequests({
   onReject,
 }: UnblockRequestsProps) {
   return (
-    <section>
-      <h2 className="text-lg font-semibold mb-3">Unblock Requests</h2>
+    <section className="animate-fade-in">
+      <h2 className="text-lg font-semibold mb-3 text-gray-900 dark:text-white">Unblock Requests</h2>
       <div className="space-y-3">
         {rules.map((rule) => (
           <div
             key={rule.id}
-            className="bg-white rounded-lg p-4 border flex items-center justify-between gap-4"
+            className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
           >
             <div>
-              <p className="font-medium">
+              <p className="font-medium text-gray-900 dark:text-white">
                 {rule.app_name ?? rule.package_name}
-                <span className="ml-2 font-mono text-xs text-gray-400">{rule.package_name}</span>
+                <span className="ml-2 font-mono text-xs text-gray-400 dark:text-gray-500">{rule.package_name}</span>
               </p>
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
                 Reason: {rule.unblock_reason ?? 'No reason given'}
               </p>
             </div>
@@ -49,7 +49,11 @@ export default function UnblockRequests({
             </div>
           </div>
         ))}
-        {rules.length === 0 && <p className="text-sm text-gray-400">No pending unblock requests.</p>}
+        {rules.length === 0 && (
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700 text-center">
+            <p className="text-sm text-gray-400 dark:text-gray-500">No pending unblock requests.</p>
+          </div>
+        )}
       </div>
     </section>
   );
