@@ -41,8 +41,14 @@ Deep codebase audit across all three tiers identified 97 additional findings (29
 20. **OnboardingStore** (`OnboardingStore.kt`): Cached `EncryptedSharedPreferences` in companion `hasCompleted()` to avoid creating a new instance per call.
 
 ### Remaining Low-Priority Items
-- Backend: Standardize remaining 26 `res.status().json()` calls to use `respond()` helper (8 controllers)
-- Backend: Add pagination to `listConsents` and `listGuardians` endpoints
+- ~~Backend: Standardize remaining 26 `res.status().json()` calls to use `respond()` helper (8 controllers)~~ **DONE**
+- ~~Backend: Add pagination to `listConsents` and `listGuardians` endpoints~~ **DONE**
+
+### Changes Made — Backend (continued)
+21. **respond() standardization** (8 controllers): Replaced all 26 manual `res.status().json()` calls with `respond()` helper across appBlocking, contacts, locks, location, screentime, deviceAlert, geo, and auth controllers.
+22. **respondError() helper** (`response.ts`): Added `respondError()` for consistent error responses (`success: false`).
+23. **Pagination** (`parentalConsent.service.ts`, `children.service.ts`): Added `page`/`limit` params with `LIMIT`/`OFFSET` and `COUNT(*)` queries to `listConsents` and `listGuardians`. Both now return `{ items, total }`.
+24. **Guardians test** (`guardians.alerts.integration.test.ts`): Updated mock to expect the additional count query for paginated response.
 
 ---
 
