@@ -82,6 +82,7 @@ router.put(
 // (ownership is verified in the service layer).
 router.post(
   '/unblock-request',
+  requireRole('parent'),
   validateParams(uuidParams('childId')),
   validate(requestUnblockSchema),
   appBlockingController.requestUnblock

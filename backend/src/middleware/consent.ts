@@ -25,6 +25,23 @@ export const requireConsent = (consentType: string) => {
         [deviceId]
       );
       const childId = device.rows[0]?.child_id;
+
+      // Verify the device belongs to a child owned by the authenticated parent
+      if (childId && req.user?.userId) {
+        const ownership = await query(
+          `SELECT 1 FROM children WHERE id = $1 AND parent_id = $2`,
+          [childId, req.user.userId]
+        );
+        if ((ownership.rowCount ?? 0) === 0) {
+          return res.status(403).json({
+            success: false,
+            data: {},
+            error: 'Device does not belong to this parent',
+            timestamp: new Date().toISOString(),
+            request_id: (req.headers['x-request-id'] as string) ?? 'unknown',
+          });
+        }
+      }
       if (!childId) {
         return res.status(404).json({
           success: false,

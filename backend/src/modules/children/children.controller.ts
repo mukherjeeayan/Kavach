@@ -4,16 +4,7 @@
 import { Request, Response, NextFunction } from 'express';
 import * as childrenService from './children.service';
 import { buildPaginationMeta } from '../../utils/pagination';
-
-const respond = (res: Response, status: number, data: unknown, req: Request) => {
-  res.status(status).json({
-    success: true,
-    data,
-    error: null,
-    timestamp: new Date().toISOString(),
-    request_id: req.headers['x-request-id'],
-  });
-};
+import { respond } from '../../utils/response';
 
 /**
  * GET /api/v1/children?page=1&limit=20

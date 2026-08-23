@@ -13,6 +13,16 @@ import com.safeguard.parentalcontrol.data.local.entity.LocationEntryEntity
 import com.safeguard.parentalcontrol.data.local.entity.ScheduledLockEntity
 import com.safeguard.parentalcontrol.data.local.entity.ScreenTimeDailyEntity
 
+/**
+ * Room database for SafeGuard local persistence.
+ *
+ * Version history:
+ * 1 — Initial: app_block_rules
+ * 2 — Added: scheduled_locks, contact_rules, screen_time_daily, location_entries
+ * 3 — Added: daily_limit_minutes column to app_block_rules
+ *
+ * Schema exported to `$projectDir/schemas` for migration testing.
+ */
 @Database(
     entities = [
         AppBlockRuleEntity::class,
@@ -22,7 +32,7 @@ import com.safeguard.parentalcontrol.data.local.entity.ScreenTimeDailyEntity
         LocationEntryEntity::class
     ],
     version = 3,
-    exportSchema = false
+    exportSchema = true
 )
 abstract class SafeGuardDatabase : RoomDatabase() {
     abstract fun appBlockRuleDao(): AppBlockRuleDao

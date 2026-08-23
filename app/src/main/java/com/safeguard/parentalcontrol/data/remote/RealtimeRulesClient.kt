@@ -59,8 +59,11 @@ class RealtimeRulesClient @Inject constructor(
         val options = IO.Options().apply {
             reconnection = true
             reconnectionAttempts = Int.MAX_VALUE
-            reconnectionDelay = 5_000
+            reconnectionDelay = 1_000  // Start with 1 second
+            reconnectionDelayMax = 30_000  // Max 30 seconds
             timeout = 10_000
+            // Socket.IO handles exponential backoff automatically
+            // when reconnectionDelayMax is set
             auth = mapOf("token" to "Bearer $token")
         }
         val newSocket = IO.socket(serverUrl(), options)

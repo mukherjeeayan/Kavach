@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { memo, useState } from 'react';
 import type { ChildProfile } from '../../types/api';
 
 interface ChildSelectorProps {
@@ -12,7 +12,7 @@ interface ChildSelectorProps {
   addChildError: string | null;
 }
 
-export default function ChildSelector({
+export default memo(function ChildSelector({
   children,
   selectedChildId,
   isLoading,
@@ -122,4 +122,4 @@ export default function ChildSelector({
       )}
     </section>
   );
-}
+});

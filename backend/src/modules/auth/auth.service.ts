@@ -297,11 +297,11 @@ export const verifyPin = async (
       `UPDATE parents
        SET failed_pin_attempts = failed_pin_attempts + 1,
            pin_locked_until = CASE
-             WHEN failed_pin_attempts + 1 >= $2 THEN now() + interval '${PIN_LOCKOUT_MINUTES} minutes'
+             WHEN failed_pin_attempts + 1 >= $2 THEN now() + ($3 || ' minutes')::interval
              ELSE pin_locked_until
            END
        WHERE id = $1`,
-      [row.id, MAX_PIN_ATTEMPTS]
+      [row.id, MAX_PIN_ATTEMPTS, PIN_LOCKOUT_MINUTES.toString()]
     );
     throw new UnauthorizedError('Invalid PIN');
   }

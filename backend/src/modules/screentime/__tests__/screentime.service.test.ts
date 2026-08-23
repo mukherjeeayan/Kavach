@@ -87,13 +87,21 @@ describe('screentime.service', () => {
 
       expect(client.query).toHaveBeenCalledWith('BEGIN');
       expect(client.query).toHaveBeenCalledWith('COMMIT');
+      // Batch insert: single INSERT with all entries
       expect(client.query).toHaveBeenCalledWith(
         expect.stringContaining('INSERT INTO screen_time_logs'),
-        [DEVICE_ID, 'com.example.app', null, 60, expect.any(String)]
-      );
-      expect(client.query).toHaveBeenCalledWith(
-        expect.stringContaining('INSERT INTO screen_time_logs'),
-        [DEVICE_ID, 'com.example.game', 'games', 120, '2026-08-18']
+        expect.arrayContaining([
+          DEVICE_ID,
+          'com.example.app',
+          null,
+          60,
+          expect.any(String),
+          DEVICE_ID,
+          'com.example.game',
+          'games',
+          120,
+          '2026-08-18',
+        ])
       );
       expect(mockedAudit.writeAuditLog).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -200,7 +208,7 @@ describe('screentime.service', () => {
         .mockResolvedValueOnce({ rows: [{ id: DEVICE_ID, child_id: CHILD_ID }] } as any) // ownership
         .mockResolvedValueOnce({ rows: [{ daily_screen_time_limit_minutes: null }] } as any) // daily limit fetch
         .mockResolvedValueOnce({ rows: [{ app_package: 'com.example.game', total_seconds: 2400 }] } as any) // per-app totals
-        .mockResolvedValueOnce({ rows: [{ 1: 1 }] } as any); // dedupe check — alert already exists
+        .mockResolvedValueOnce({ rows: [{ rule_id: 'rule-1' }] } as any); // dedupe check — alert already exists
 
       await screentimeService.recordScreenTime(PARENT_ID, DEVICE_ID, [
         { app_package: 'com.example.game', seconds: 60 },

@@ -42,6 +42,7 @@ class LocationService : Service() {
     lateinit var locationDao: LocationDao
 
     private lateinit var fusedClient: FusedLocationProviderClient
+    @Volatile
     private var isTracking = false
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -141,7 +142,7 @@ class LocationService : Service() {
     companion object {
         private const val TAG = "LocationService"
         private const val CHANNEL_ID = "safeguard_location"
-        private const val NOTIFICATION_ID = 1002
+        private const val NOTIFICATION_ID = 1003
         private const val INTERVAL_MS = 5 * 60 * 1000L   // every 5 minutes
         private const val MIN_INTERVAL_MS = 2 * 60 * 1000L
     }

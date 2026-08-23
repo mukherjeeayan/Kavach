@@ -64,15 +64,26 @@ export const recordScreenTime = async (
       }
     }
 
-    for (const entry of entries) {
-      const date = entry.date || new Date().toISOString().slice(0, 10);
+    // Batch insert using unnest for better performance
+    if (entries.length > 0) {
+      const values: string[] = [];
+      const params: unknown[] = [];
+      let paramIndex = 1;
+      
+      for (const entry of entries) {
+        const date = entry.date || new Date().toISOString().slice(0, 10);
+        values.push(`($${paramIndex}, $${paramIndex + 1}, $${paramIndex + 2}, $${paramIndex + 3}, $${paramIndex + 4})`);
+        params.push(deviceId, entry.app_package, entry.app_category || null, entry.seconds, date);
+        paramIndex += 5;
+      }
+      
       await client.query(
         `INSERT INTO screen_time_logs (device_id, app_package, app_category, seconds, date_recorded)
-         VALUES ($1, $2, $3, $4, $5)
+         VALUES ${values.join(', ')}
          ON CONFLICT (device_id, app_package, date_recorded)
          DO UPDATE SET seconds = screen_time_logs.seconds + EXCLUDED.seconds,
                        app_category = COALESCE(EXCLUDED.app_category, screen_time_logs.app_category)`,
-        [deviceId, entry.app_package, entry.app_category || null, entry.seconds, date]
+        params
       );
     }
     await client.query('COMMIT');
@@ -133,20 +144,31 @@ const evaluatePerAppLimits = async (
     ])
   );
 
+  const rulesToAlert: { rule: { id: string; package_name: string; daily_limit_minutes: number }; used: number }[] = [];
   for (const rule of relevant) {
     const used = totals.get(rule.package_name) ?? 0;
     if (used <= rule.daily_limit_minutes * 60) continue;
+    rulesToAlert.push({ rule, used });
+  }
 
-    const existing = await query(
-      `SELECT 1 FROM audit_logs
-       WHERE target_child_id = $1
-         AND action = 'PER_APP_LIMIT_REACHED'
-         AND details->>'rule_id' = $2
-         AND details->>'date' = $3
-       LIMIT 1`,
-      [childId, rule.id, today]
-    );
-    if (existing.rows.length > 0) continue;
+  if (rulesToAlert.length === 0) return;
+
+  const ruleIds = rulesToAlert.map((r) => r.rule.id);
+
+  // Batch-check which rules already have an alert today
+  const existingAlerts = await query(
+    `SELECT details->>'rule_id' AS rule_id FROM audit_logs
+     WHERE target_child_id = $1
+       AND action = 'PER_APP_LIMIT_REACHED'
+       AND details->>'date' = $2
+       AND details->>'rule_id' = ANY($3::text[])`,
+    [childId, today, ruleIds]
+  );
+  const alertedRuleIds = new Set(existingAlerts.rows.map((r: { rule_id: string }) => r.rule_id));
+
+  // Only insert alerts for rules that haven't been alerted yet
+  for (const { rule, used } of rulesToAlert) {
+    if (alertedRuleIds.has(rule.id)) continue;
 
     await writeAuditLog({
       actorId: parentId,

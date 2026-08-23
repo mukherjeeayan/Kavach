@@ -13,6 +13,31 @@ jobs:
     defaults:
       run:
         working-directory: backend
+    
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: testuser
+          POSTGRES_PASSWORD: testpass
+          POSTGRES_DB: testdb
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    
+    env:
+      DB_HOST: localhost
+      DB_PORT: 5432
+      DB_USER: testuser
+      DB_PASSWORD: testpass
+      DB_NAME: testdb
+      JWT_SECRET: test-jwt-secret-for-ci
+      JWT_REFRESH_SECRET: test-jwt-refresh-secret-for-ci
+    
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -51,6 +76,7 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
+          cache: gradle
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
       - name: Assemble debug APK

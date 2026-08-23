@@ -4,16 +4,7 @@
 import { Request, Response, NextFunction } from 'express';
 import * as deviceService from './device.service';
 import { buildPaginationMeta } from '../../utils/pagination';
-
-const respond = (res: Response, status: number, data: unknown, req: Request) => {
-  res.status(status).json({
-    success: true,
-    data,
-    error: null,
-    timestamp: new Date().toISOString(),
-    request_id: req.headers['x-request-id'],
-  });
-};
+import { respond } from '../../utils/response';
 
 /**
  * POST /api/v1/devices/register

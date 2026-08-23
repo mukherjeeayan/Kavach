@@ -28,6 +28,7 @@ import javax.inject.Inject
  * Network-failure-safe implementation: every read degrades to an
  * empty/absent result, every upload reports success so buffered data
  * is only dropped once the server confirmed it.
+ * Includes retry logic for transient failures.
  */
 class Phase1RepositoryImpl @Inject constructor(
     private val api: ParentalApi,
@@ -36,6 +37,30 @@ class Phase1RepositoryImpl @Inject constructor(
     private val screenTimeDao: ScreenTimeDao,
     private val locationDao: LocationDao
 ) : Phase1Repository {
+
+    companion object {
+        private const val DAY_MS = 24L * 60 * 60 * 1000
+        private const val MAX_RETRIES = 3
+        private const val RETRY_DELAY_MS = 1000L
+    }
+
+    /**
+     * Retry wrapper for API calls with exponential backoff.
+     */
+    private suspend fun <T> withRetry(block: suspend () -> T): T {
+        var lastException: Exception? = null
+        repeat(MAX_RETRIES) { attempt ->
+            try {
+                return block()
+            } catch (e: Exception) {
+                lastException = e
+                if (attempt < MAX_RETRIES - 1) {
+                    kotlinx.coroutines.delay(RETRY_DELAY_MS * (1L shl attempt))
+                }
+            }
+        }
+        throw lastException ?: Exception("Unknown error")
+    }
 
     override suspend fun listLocks(childId: String): List<ScheduledLockDto> {
         return try {
@@ -262,25 +287,27 @@ class Phase1RepositoryImpl @Inject constructor(
             val pending = locationDao.getUnsynced()
             if (pending.isEmpty()) return true
 
-            val syncedIds = mutableListOf<Long>()
-            for (entry in pending) {
-                val ok = uploadLocation(
-                    deviceId,
-                    LocationUploadRequest(
-                        latitude = entry.latitude,
-                        longitude = entry.longitude,
-                        accuracy_m = entry.accuracyM,
-                        speed_kmh = entry.speedKmh
-                    ),
-                    entry.recordedAt
+            // Batch upload: send all locations in a single request
+            val batch = pending.map { entry ->
+                LocationUploadRequest(
+                    latitude = entry.latitude,
+                    longitude = entry.longitude,
+                    accuracy_m = entry.accuracyM,
+                    speed_kmh = entry.speedKmh,
+                    recorded_at = isoUtc(entry.recordedAt)
                 )
-                if (ok) syncedIds.add(entry.id)
             }
-            if (syncedIds.isNotEmpty()) {
+            
+            val ok = withRetry {
+                api.uploadLocationBatch(deviceId, batch).isSuccessful
+            }
+            
+            if (ok) {
+                val syncedIds = pending.map { it.id }
                 locationDao.markSynced(syncedIds)
+                locationDao.deleteSyncedOlderThan(System.currentTimeMillis() - DAY_MS * 7)
             }
-            locationDao.deleteSyncedOlderThan(System.currentTimeMillis() - DAY_MS * 7)
-            syncedIds.size == pending.size
+            ok
         } catch (_: Exception) {
             false
         }
@@ -306,9 +333,5 @@ class Phase1RepositoryImpl @Inject constructor(
         val format = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US)
         format.timeZone = TimeZone.getTimeZone("UTC")
         return format.format(Date(epochMs))
-    }
-
-    private companion object {
-        const val DAY_MS = 24L * 60 * 60 * 1000
     }
 }

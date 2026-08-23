@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { memo, useState } from 'react';
 import { useSetAppDailyLimit } from '../../hooks/useChildrenData';
 import type { AppBlockRule } from '../../types/api';
 
@@ -7,7 +7,7 @@ interface BlockedAppsTableProps {
   childId: string | null;
 }
 
-export default function BlockedAppsTable({ rules, childId }: BlockedAppsTableProps) {
+export default memo(function BlockedAppsTable({ rules, childId }: BlockedAppsTableProps) {
   return (
     <section className="animate-fade-in">
       <h2 className="text-lg font-semibold mb-3 text-gray-900 dark:text-white">Blocked Apps</h2>
@@ -39,7 +39,7 @@ export default function BlockedAppsTable({ rules, childId }: BlockedAppsTablePro
       </div>
     </section>
   );
-}
+});
 
 function LimitRow({ rule, childId }: { rule: AppBlockRule; childId: string | null }) {
   const [input, setInput] = useState(rule.daily_limit_minutes?.toString() ?? '');

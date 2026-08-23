@@ -131,7 +131,13 @@ export default function LocksSection({ childId, onError }: LocksSectionProps) {
 
       {locks.isLoading && <SkeletonList items={2} />}
 
-      {!locks.isLoading && (
+      {locks.isError && (
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+          <p className="text-sm text-red-600 dark:text-red-400">Failed to load locks.</p>
+        </div>
+      )}
+
+      {!locks.isLoading && !locks.isError && (
         <div className="space-y-3">
           {(locks.data ?? []).map((lock) => {
             const day = DAY_LABELS.find((d) => d.value === lock.day_of_week)?.label ?? 'Every day';

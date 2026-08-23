@@ -7,11 +7,13 @@ import com.safeguard.parentalcontrol.data.remote.dto.RefreshTokenRequest
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import okhttp3.CertificatePinner
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.Response
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
 /**
@@ -20,16 +22,39 @@ import javax.inject.Inject
  * so the new pair is stored on success).
  *
  * The refresh client is built without this interceptor to avoid an
- * infinite refresh loop on the refresh call itself.
+ * infinite refresh loop on the refresh call itself, but uses the same
+ * certificate pinner as the main client for security.
  */
 class AuthInterceptor @Inject constructor(
     private val tokenStore: TokenStore
 ) : Interceptor {
 
+    private val certificatePinner by lazy {
+        val builder = CertificatePinner.Builder()
+        // Add certificate pins from BuildConfig if available
+        if (BuildConfig.CERTIFICATE_PIN_1.isNotEmpty()) {
+            builder.add(BuildConfig.HOSTNAME, BuildConfig.CERTIFICATE_PIN_1)
+        }
+        if (BuildConfig.CERTIFICATE_PIN_2.isNotEmpty()) {
+            builder.add(BuildConfig.HOSTNAME, BuildConfig.CERTIFICATE_PIN_2)
+        }
+        builder.build()
+    }
+
     private val authApi: AuthApi by lazy {
+        val clientBuilder = OkHttpClient.Builder()
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .writeTimeout(30, TimeUnit.SECONDS)
+        
+        // Apply certificate pinning in release builds
+        if (!BuildConfig.DEBUG) {
+            clientBuilder.certificatePinner(certificatePinner)
+        }
+        
         Retrofit.Builder()
             .baseUrl(BuildConfig.API_BASE_URL)
-            .client(OkHttpClient.Builder().build())
+            .client(clientBuilder.build())
             .addConverterFactory(GsonConverterFactory.create())
             .build()
             .create(AuthApi::class.java)

@@ -13,15 +13,36 @@ export interface EmailOptions {
 
 /**
  * Send an email. In development, logs the content to the console.
- * In production, integrate with your email provider here.
+ * In production, uses nodemailer with SMTP if configured.
  */
 export const sendEmail = async (options: EmailOptions): Promise<void> => {
   if (process.env.NODE_ENV === 'production' && process.env.SMTP_HOST) {
-    // Production: use nodemailer or your email SDK
-    // Example with nodemailer:
-    // const transporter = nodemailer.createTransport({ host: process.env.SMTP_HOST, ... });
-    // await transporter.sendMail({ from: process.env.EMAIL_FROM, ...options });
-    logger.info(`[EMAIL] Sent to ${options.to}: ${options.subject}`);
+    try {
+      // Dynamic import for optional nodemailer dependency
+      const nodemailer = await import('nodemailer') as any;
+      const transporter = nodemailer.createTransport({
+        host: process.env.SMTP_HOST,
+        port: parseInt(process.env.SMTP_PORT || '587'),
+        secure: process.env.SMTP_SECURE === 'true',
+        auth: process.env.SMTP_USER ? {
+          user: process.env.SMTP_USER,
+          pass: process.env.SMTP_PASSWORD,
+        } : undefined,
+      });
+      
+      await transporter.sendMail({
+        from: process.env.EMAIL_FROM || 'noreply@safeguard.com',
+        to: options.to,
+        subject: options.subject,
+        html: options.html,
+        text: options.text,
+      });
+      
+      logger.info(`[EMAIL] Sent to ${options.to}: ${options.subject}`);
+    } catch (error) {
+      logger.error(`[EMAIL] Failed to send to ${options.to}:`, error);
+      throw error;
+    }
   } else {
     // Development: log to console
     logger.info(`[EMAIL-DEV] To: ${options.to}`);
@@ -34,7 +55,7 @@ export const sendPasswordResetEmail = async (
   email: string,
   resetToken: string
 ): Promise<void> => {
-  const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password?token=${resetToken}`;
+  const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password#token=${resetToken}`;
 
   await sendEmail({
     to: email,

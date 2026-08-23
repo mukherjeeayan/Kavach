@@ -21,27 +21,66 @@ export const RETENTION_DAYS = {
 };
 
 export const purgeLocationLogs = async (): Promise<number> => {
-  const result = await query(
-    `DELETE FROM location_logs WHERE recorded_at < now() - ($1 || ' days')::interval`,
-    [String(RETENTION_DAYS.location)]
-  );
-  return (result as any).rowCount ?? 0;
+  let totalDeleted = 0;
+  const batchSize = 10000;
+  
+  while (true) {
+    const result = await query(
+      `DELETE FROM location_logs WHERE id IN (
+        SELECT id FROM location_logs 
+        WHERE recorded_at < now() - ($1 || ' days')::interval 
+        LIMIT $2
+      )`,
+      [String(RETENTION_DAYS.location), batchSize]
+    );
+    const deleted = (result as any).rowCount ?? 0;
+    totalDeleted += deleted;
+    if (deleted < batchSize) break;
+  }
+  
+  return totalDeleted;
 };
 
 export const purgeScreenTimeLogs = async (): Promise<number> => {
-  const result = await query(
-    `DELETE FROM screen_time_logs WHERE date_recorded < CURRENT_DATE - $1::int`,
-    [RETENTION_DAYS.screenTime]
-  );
-  return (result as any).rowCount ?? 0;
+  let totalDeleted = 0;
+  const batchSize = 10000;
+  
+  while (true) {
+    const result = await query(
+      `DELETE FROM screen_time_logs WHERE id IN (
+        SELECT id FROM screen_time_logs 
+        WHERE date_recorded < CURRENT_DATE - $1::int 
+        LIMIT $2
+      )`,
+      [RETENTION_DAYS.screenTime, batchSize]
+    );
+    const deleted = (result as any).rowCount ?? 0;
+    totalDeleted += deleted;
+    if (deleted < batchSize) break;
+  }
+  
+  return totalDeleted;
 };
 
 export const purgeAuditLogs = async (): Promise<number> => {
-  const result = await query(
-    `DELETE FROM audit_logs WHERE created_at < now() - ($1 || ' days')::interval`,
-    [String(RETENTION_DAYS.audit)]
-  );
-  return (result as any).rowCount ?? 0;
+  let totalDeleted = 0;
+  const batchSize = 10000;
+  
+  while (true) {
+    const result = await query(
+      `DELETE FROM audit_logs WHERE id IN (
+        SELECT id FROM audit_logs 
+        WHERE created_at < now() - ($1 || ' days')::interval 
+        LIMIT $2
+      )`,
+      [String(RETENTION_DAYS.audit), batchSize]
+    );
+    const deleted = (result as any).rowCount ?? 0;
+    totalDeleted += deleted;
+    if (deleted < batchSize) break;
+  }
+  
+  return totalDeleted;
 };
 
 export const runAllRetentionPurges = async (): Promise<void> => {

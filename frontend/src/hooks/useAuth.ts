@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
+import { useQueryClient } from '@tanstack/react-query';
 import * as yup from 'yup';
 import { login as loginApi, logout as logoutApi, register as registerApi } from '../services/api';
 import { clearSession, setSession } from '../store/authSlice';
@@ -137,6 +138,7 @@ export const useRegister = () => {
 export const useLogout = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const handleLogout = () => {
     // Revoke the refresh token server-side (best-effort, idempotent).
@@ -146,6 +148,8 @@ export const useLogout = () => {
       // Offline or server error — local session is still cleared.
     });
     dispatch(clearSession());
+    // Clear React Query cache to prevent data leakage between users
+    queryClient.clear();
     navigate('/login', { replace: true });
   };
 

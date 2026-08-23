@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import type { DeviceProfile } from '../../types/api';
 
 interface DeviceListProps {
@@ -6,7 +7,7 @@ interface DeviceListProps {
   onSelect: (deviceId: string) => void;
 }
 
-export default function DeviceList({ devices, selectedDeviceId, onSelect }: DeviceListProps) {
+export default memo(function DeviceList({ devices, selectedDeviceId, onSelect }: DeviceListProps) {
   return (
     <section className="animate-fade-in">
       <h2 className="text-lg font-semibold mb-3 text-gray-900 dark:text-white">Devices</h2>
@@ -60,4 +61,4 @@ export default function DeviceList({ devices, selectedDeviceId, onSelect }: Devi
       </div>
     </section>
   );
-}
+});

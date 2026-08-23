@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import Toast from '../ui/Toast';
 
 interface BlockAppFormProps {
   isPending: boolean;
@@ -15,6 +16,7 @@ export default function BlockAppForm({
 }: BlockAppFormProps) {
   const [packageName, setPackageName] = useState('');
   const [reason, setReason] = useState('');
+  const [showSuccess, setShowSuccess] = useState(false);
 
   const canSubmit = !disabled && packageName.trim().length > 0;
 
@@ -24,6 +26,7 @@ export default function BlockAppForm({
       await onBlock(packageName.trim(), reason.trim());
       setPackageName('');
       setReason('');
+      setShowSuccess(true);
     } catch {
       // keep the input so the user can retry
     }
@@ -55,6 +58,9 @@ export default function BlockAppForm({
       </div>
       {showDeviceHint && (
         <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">Select a device above to target the block.</p>
+      )}
+      {showSuccess && (
+        <Toast message="App blocked successfully" type="success" onClose={() => setShowSuccess(false)} />
       )}
     </section>
   );

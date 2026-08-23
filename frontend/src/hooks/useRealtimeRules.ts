@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { getAccessToken } from '../services/session';
 
@@ -16,6 +16,10 @@ export const useRealtimeRules = (
   onRuleChanged: () => void
 ): { isConnected: boolean } => {
   const [isConnected, setIsConnected] = useState(false);
+  const onRuleChangedRef = useRef(onRuleChanged);
+  
+  // Keep the ref up to date without re-creating the socket
+  onRuleChangedRef.current = onRuleChanged;
 
   useEffect(() => {
     if (!childId) return;
@@ -44,14 +48,14 @@ export const useRealtimeRules = (
     socket.on('connect_error', () => {
       if (!disposed) setIsConnected(false);
     });
-    socket.on('rule:changed', onRuleChanged);
+    // Use ref to always call the latest callback without recreating socket
+    socket.on('rule:changed', () => onRuleChangedRef.current());
 
     return () => {
       disposed = true;
-      socket.off('rule:changed', onRuleChanged);
+      socket.off('rule:changed');
       socket.disconnect();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [childId]);
 
   return { isConnected };

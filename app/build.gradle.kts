@@ -24,7 +24,11 @@ android {
         applicationId = "com.safeguard.parentalcontrol"
         minSdk = 26
         targetSdk = 34
-        versionCode = 1
+        // Version code is auto-incremented from CI or manually via:
+        // ./gradlew :app:assembleRelease -PVERSION_CODE=2
+        versionCode = (System.getenv("VERSION_CODE")?.toIntOrNull() 
+            ?: project.findProperty("VERSION_CODE")?.toString()?.toIntOrNull() 
+            ?: 1)
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -52,7 +56,9 @@ android {
         release {
             isMinifyEnabled = true
             // Set via local.properties or CI env: -PAPI_BASE_URL=https://your-api-domain.com/
-            buildConfigField("String", "API_BASE_URL", "\"${project.findProperty("API_BASE_URL") ?: "https://api.kavach.example.com/"}\"")
+            val apiBaseUrl = project.findProperty("API_BASE_URL") as? String
+            requireNotNull(apiBaseUrl) { "API_BASE_URL must be set for release builds. Pass -PAPI_BASE_URL=https://your-api-domain.com/ to Gradle." }
+            buildConfigField("String", "API_BASE_URL", "\"$apiBaseUrl\"")
             buildConfigField("boolean", "FCM_ENABLED", googleServicesFile.exists().toString())
             // Certificate pinning is mandatory in release. Supply the
             // production SHA-256 pins via -PSAFEGUARD_PINS="sha256/...,sha256/..."
@@ -72,6 +78,10 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+    }
+    
+    kotlinOptions {
+        jvmTarget = "17"
     }
 
     buildFeatures {

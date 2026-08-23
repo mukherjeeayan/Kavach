@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import type { AppBlockRule } from '../../types/api';
 
 interface UnblockRequestsProps {
@@ -7,7 +8,7 @@ interface UnblockRequestsProps {
   onReject: (ruleId: string) => void;
 }
 
-export default function UnblockRequests({
+export default memo(function UnblockRequests({
   rules,
   isPending,
   onApprove,
@@ -57,4 +58,4 @@ export default function UnblockRequests({
       </div>
     </section>
   );
-}
+});

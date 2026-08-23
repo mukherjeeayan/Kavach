@@ -1,14 +1,4 @@
-import { useState } from 'react';
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  ReferenceLine,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts';
+import { useState, lazy, Suspense } from 'react';
 import {
   useDailyScreenTime,
   useScreenTimeLimitAction,
@@ -16,7 +6,16 @@ import {
 } from '../../hooks/usePhase1Data';
 import { SkeletonChart, SkeletonStats, SkeletonTable } from '../ui/Skeleton';
 
-const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+// Lazy load the entire chart for better code splitting
+const ScreenTimeChart = lazy(() => import('./ScreenTimeChart'));
+
+// Chart loading fallback
+const ChartLoader = () => (
+  <div className="h-48 sm:h-40 flex items-center justify-center">
+    <div className="animate-pulse bg-gray-200 dark:bg-gray-700 rounded w-full h-full" />
+  </div>
+);
+
 const RANGES = ['day', 'week', 'month'] as const;
 
 function formatDuration(totalSeconds: number): string {
@@ -156,38 +155,12 @@ export default function ScreenTimeSection({ childId, limitMinutes }: ScreenTimeS
             <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700 mb-4">
               <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Per day</p>
               <div className="h-48 sm:h-40">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={data.daily} margin={{ top: 4, right: 8, left: -16, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                    <XAxis
-                      dataKey="date_recorded"
-                      tickFormatter={(value: string) => {
-                        const label = DAY_NAMES[new Date(`${value}T00:00:00`).getDay()];
-                        return label ?? '';
-                      }}
-                      tick={{ fontSize: 11 }}
-                    />
-                    <YAxis
-                      tickFormatter={(value: number) => formatDuration(value)}
-                      tick={{ fontSize: 11 }}
-                    />
-                    <Tooltip
-                      formatter={(value) => formatDuration(Number(value))}
-                      labelFormatter={(value) =>
-                        new Date(`${value}T00:00:00`).toLocaleDateString()
-                      }
-                    />
-                    {limitMinutes != null && limitMinutes > 0 && (
-                      <ReferenceLine
-                        y={limitMinutes * 60}
-                        stroke="#f59e0b"
-                        strokeDasharray="4 4"
-                        label={{ value: `limit ${limitMinutes}m`, fontSize: 10, fill: '#b45309' }}
-                      />
-                    )}
-                    <Bar dataKey="total_seconds" fill="#2563eb" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
+                <Suspense fallback={<ChartLoader />}>
+                  <ScreenTimeChart
+                    data={data.daily}
+                    limitMinutes={limitMinutes}
+                  />
+                </Suspense>
               </div>
             </div>
           )}

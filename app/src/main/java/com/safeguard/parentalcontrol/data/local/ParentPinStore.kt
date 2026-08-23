@@ -21,6 +21,7 @@ import javax.inject.Singleton
  *   is additionally protected at rest.
  * - Verification is fully offline-capable; the backend keeps its own
  *   bcrypt hash for the web dashboard (set via PUT /auth/pin).
+ * - Brute-force protection: exponential backoff after failed attempts.
  */
 @Singleton
 open class ParentPinStore @Inject constructor(@ApplicationContext context: Context) {
@@ -54,15 +55,48 @@ open class ParentPinStore @Inject constructor(@ApplicationContext context: Conte
         prefs.edit()
             .putString(KEY_SALT, saltHex)
             .putString(KEY_HASH, sha256(saltHex + trimmed))
+            .putInt(KEY_FAILED_ATTEMPTS, 0)
+            .remove(KEY_LOCKOUT_UNTIL)
             .apply()
         Log.i(TAG, "Parent PIN set (digest only, never the raw PIN)")
         return true
     }
 
     fun verifyPin(pin: String): Boolean {
+        // Check lockout first
+        val lockoutUntil = prefs.getLong(KEY_LOCKOUT_UNTIL, 0)
+        if (lockoutUntil > System.currentTimeMillis()) {
+            Log.w(TAG, "PIN verification locked out until $lockoutUntil")
+            return false
+        }
+        
         val salt = prefs.getString(KEY_SALT, null) ?: return false
         val expected = prefs.getString(KEY_HASH, null) ?: return false
-        return sha256(salt + pin.trim()).contentEquals(expected)
+        val valid = sha256(salt + pin.trim()).contentEquals(expected)
+        
+        if (valid) {
+            // Reset attempts on success
+            prefs.edit()
+                .putInt(KEY_FAILED_ATTEMPTS, 0)
+                .remove(KEY_LOCKOUT_UNTIL)
+                .apply()
+        } else {
+            // Increment attempts and apply backoff
+            val attempts = prefs.getInt(KEY_FAILED_ATTEMPTS, 0) + 1
+            prefs.edit().putInt(KEY_FAILED_ATTEMPTS, attempts).apply()
+            
+            if (attempts >= MAX_ATTEMPTS) {
+                // Apply exponential backoff: 30s, 60s, 120s, etc.
+                val backoffMs = minOf(
+                    30_000L * (1L shl (attempts - MAX_ATTEMPTS).coerceAtMost(5)),
+                    MAX_LOCKOUT_MS
+                )
+                prefs.edit().putLong(KEY_LOCKOUT_UNTIL, System.currentTimeMillis() + backoffMs).apply()
+                Log.w(TAG, "PIN locked out for ${backoffMs / 1000}s after $attempts failed attempts")
+            }
+        }
+        
+        return valid
     }
 
     /** Removes the local digest (e.g. on sign-out). */
@@ -70,6 +104,8 @@ open class ParentPinStore @Inject constructor(@ApplicationContext context: Conte
         prefs.edit()
             .remove(KEY_SALT)
             .remove(KEY_HASH)
+            .remove(KEY_FAILED_ATTEMPTS)
+            .remove(KEY_LOCKOUT_UNTIL)
             .apply()
     }
 
@@ -85,7 +121,11 @@ open class ParentPinStore @Inject constructor(@ApplicationContext context: Conte
         private const val TAG = "ParentPinStore"
         private const val KEY_SALT = "pin_salt"
         private const val KEY_HASH = "pin_hash"
+        private const val KEY_FAILED_ATTEMPTS = "failed_attempts"
+        private const val KEY_LOCKOUT_UNTIL = "lockout_until"
         private const val MIN_PIN_LENGTH = 4
         private const val MAX_PIN_LENGTH = 6
+        private const val MAX_ATTEMPTS = 5
+        private const val MAX_LOCKOUT_MS = 30 * 60 * 1000L // 30 minutes max
     }
 }

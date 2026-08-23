@@ -34,9 +34,9 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import java.util.Calendar
-import java.util.Date
 import java.util.Locale
 import javax.inject.Inject
 
@@ -456,7 +456,7 @@ class AppBlockingService : Service() {
     }
 
     private fun dayKey(): String =
-        SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
+        LocalDate.now().format(dayKeyFormatter)
 
     // ── Scheduled Lock Window Warning ───────────────────────────────
 
@@ -673,5 +673,6 @@ class AppBlockingService : Service() {
         private const val SCREEN_TIME_FLUSH_TICKS = 10             // flush every ~10s (limits loss on process death)
         private const val LOCK_WATCH_INTERVAL_MS = 60_000L         // 1 minute
         private const val LOCK_WARN_BEFORE_MINUTES = 10            // warn 10 min ahead
+        private val dayKeyFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd", Locale.US)
     }
 }

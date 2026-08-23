@@ -1,13 +1,20 @@
 package com.safeguard.parentalcontrol.data.local.entity
 
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
 /**
  * Buffered GPS ping awaiting upload. `synced` flips to true once the
  * sync worker has POSTed the entry to the server.
  */
-@Entity(tableName = "location_entries")
+@Entity(
+    tableName = "location_entries",
+    indices = [
+        Index(value = ["synced"]),  // For unsynced entry queries
+        Index(value = ["recordedAt"])  // For time-based queries
+    ]
+)
 data class LocationEntryEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val latitude: Double,

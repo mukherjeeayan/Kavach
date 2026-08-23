@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import type { LocationPoint } from '../../types/api';
@@ -13,7 +13,11 @@ import apiClient from '../../services/apiClient';
 export default function LocationMap({ points }: { points: LocationPoint[] }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
+  const markersRef = useRef<mapboxgl.Marker[]>([]);
   const [token, setToken] = useState<string | null>(null);
+
+  // Memoize points to prevent unnecessary re-renders
+  const memoizedPoints = useMemo(() => points, [JSON.stringify(points)]);
 
   useEffect(() => {
     let active = true;
@@ -31,18 +35,29 @@ export default function LocationMap({ points }: { points: LocationPoint[] }) {
   }, []);
 
   useEffect(() => {
-    if (!token || !containerRef.current || points.length === 0) return;
+    if (!token || !containerRef.current || memoizedPoints.length === 0) return;
 
     mapboxgl.accessToken = token;
-    const map = new mapboxgl.Map({
-      container: containerRef.current,
-      style: 'mapbox://styles/mapbox/streets-v12',
-      center: [points[0].longitude, points[0].latitude],
-      zoom: 10,
-    });
-    mapRef.current = map;
+    
+    // Only create map if it doesn't exist
+    if (!mapRef.current) {
+      const map = new mapboxgl.Map({
+        container: containerRef.current,
+        style: 'mapbox://styles/mapbox/streets-v12',
+        center: [memoizedPoints[0].longitude, memoizedPoints[0].latitude],
+        zoom: 10,
+      });
+      mapRef.current = map;
+    }
 
-    points.forEach((point) => {
+    const map = mapRef.current;
+
+    // Clear existing markers
+    markersRef.current.forEach((marker) => marker.remove());
+    markersRef.current = [];
+
+    // Add new markers
+    memoizedPoints.forEach((point) => {
       const time = document.createTextNode(new Date(point.recorded_at).toLocaleString());
       const strong = document.createElement('strong');
       strong.appendChild(time);
@@ -55,25 +70,35 @@ export default function LocationMap({ points }: { points: LocationPoint[] }) {
             (point.accuracy_m != null ? ` ±${Math.round(point.accuracy_m)} m` : '')
         )
       );
-      new mapboxgl.Marker({ color: '#2563eb' })
+      const marker = new mapboxgl.Marker({ color: '#2563eb' })
         .setLngLat([point.longitude, point.latitude])
         .setPopup(new mapboxgl.Popup({ offset: 18 }).setDOMContent(popupEl))
         .addTo(map);
+      markersRef.current.push(marker);
     });
 
-    if (points.length > 1) {
+    if (memoizedPoints.length > 1) {
       const bounds = new mapboxgl.LngLatBounds();
-      points.forEach((point) => bounds.extend([point.longitude, point.latitude]));
+      memoizedPoints.forEach((point) => bounds.extend([point.longitude, point.latitude]));
       map.fitBounds(bounds, { padding: 48, maxZoom: 13 });
     }
 
     return () => {
-      map.remove();
+      // Only remove markers on unmount, not on points change
+    };
+  }, [token, memoizedPoints]);
+
+  useEffect(() => {
+    return () => {
+      // Cleanup on unmount
+      markersRef.current.forEach((marker) => marker.remove());
+      markersRef.current = [];
+      mapRef.current?.remove();
       mapRef.current = null;
     };
-  }, [token, points]);
+  }, []);
 
-  if (!token || points.length === 0) return null;
+  if (!token || memoizedPoints.length === 0) return null;
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 mb-4 overflow-hidden">

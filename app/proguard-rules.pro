@@ -45,6 +45,19 @@
 # --- AndroidX WorkManager ---
 -dontwarn androidx.work.**
 -keep class * extends androidx.work.Worker
+-keep class * extends androidx.work.CoroutineWorker
 
-# SafeGuardApplication entry points must not be renamed.
+# --- SafeGuard Entry Points ---
+# Application, Services, Receivers must not be renamed.
 -keep class com.safeguard.parentalcontrol.SafeGuardApplication { *; }
+-keep class com.safeguard.parentalcontrol.MainActivity { *; }
+-keep class com.safeguard.parentalcontrol.service.appblock.AppBlockingService { *; }
+-keep class com.safeguard.parentalcontrol.service.location.LocationService { *; }
+-keep class com.safeguard.parentalcontrol.service.contacts.CallScreeningService { *; }
+-keep class com.safeguard.parentalcontrol.receiver.BootReceiver { *; }
+-keep class com.safeguard.parentalcontrol.security.SafeGuardDeviceAdminReceiver { *; }
+-keep class com.safeguard.parentalcontrol.notifications.SafeGuardMessagingService { *; }
+
+# --- Firebase ---
+-dontwarn com.google.firebase.**
+-keep class com.google.firebase.** { *; }

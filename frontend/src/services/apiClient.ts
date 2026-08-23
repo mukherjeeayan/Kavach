@@ -7,6 +7,7 @@ const apiClient = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  timeout: 30000, // 30 second timeout
   // Sends the httpOnly refresh cookie to the backend; required for the
   // cookie-based session flow.
   withCredentials: true,

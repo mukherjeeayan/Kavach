@@ -4,6 +4,7 @@
 // is unreachable — rate limiting must never take the API down.
 
 import Redis from 'ioredis';
+import logger from '../utils/logger';
 
 let client: Redis | null = null;
 
@@ -24,12 +25,14 @@ export const getRedisClient = (): Redis | null => {
     maxRetriesPerRequest: 1,
     retryStrategy: (times: number) => Math.min(times * 500, 5000),
   });
-  client.connect().catch(() => {
-    // Background connect failure is fine — callers fall back to
-    // the in-memory store and ioredis keeps retrying.
+  client.connect().catch((err) => {
+    logger.warn('Redis background connect failed, falling back to in-memory:', err.message);
   });
-  client.on('error', () => {
-    // Suppress noisy error logs; readiness is checked per call.
+  client.on('error', (err) => {
+    logger.warn('Redis error (falling back to in-memory):', err.message);
+  });
+  client.on('connect', () => {
+    logger.info('Redis connected');
   });
   return client;
 };

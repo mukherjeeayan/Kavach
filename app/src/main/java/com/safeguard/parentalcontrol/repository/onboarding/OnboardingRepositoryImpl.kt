@@ -112,12 +112,13 @@ class OnboardingRepositoryImpl @Inject constructor(
             if (response.isSuccessful) {
                 Result.success(Unit)
             } else {
-                Log.w(TAG, "Server PIN update failed (HTTP ${response.code()}) — local digest kept")
-                Result.success(Unit)
+                // Server failed to store PIN - return failure so user knows
+                Log.w(TAG, "Server PIN update failed (HTTP ${response.code()})")
+                Result.failure(Exception("Server PIN update failed (HTTP ${response.code()})"))
             }
         } catch (e: Exception) {
-            Log.w(TAG, "Server PIN update unavailable — local digest kept", e)
-            Result.success(Unit)
+            Log.w(TAG, "Server PIN update unavailable", e)
+            Result.failure(e)
         }
     }
 

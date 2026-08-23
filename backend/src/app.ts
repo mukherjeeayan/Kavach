@@ -81,6 +81,18 @@ try {
   const specPath = path.resolve(__dirname, '..', 'openapi.yaml');
   const specFile = fs.readFileSync(specPath, 'utf8');
   const openapiSpec = YAML.parse(specFile);
+  
+  // Protect Swagger UI in production
+  if (process.env.NODE_ENV === 'production') {
+    app.use('/api/docs', (req, res, next) => {
+      const authHeader = req.headers.authorization;
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ error: 'Authentication required for API docs' });
+      }
+      next();
+    });
+  }
+  
   app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(openapiSpec, {
     customSiteTitle: 'SafeGuard API Docs',
   }));
@@ -119,5 +131,16 @@ app.use('/api/v1/geo', geoRoutes);
 
 // Global Error Handler (must be last)
 app.use(errorHandler);
+
+// 404 handler for undefined routes
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    data: {},
+    error: `Route ${req.method} ${req.path} not found`,
+    timestamp: new Date().toISOString(),
+    request_id: req.headers['x-request-id'] || 'unknown',
+  });
+});
 
 export default app;

@@ -122,7 +122,13 @@ export default function ContactsSection({ childId, onError }: ContactsSectionPro
 
       {contacts.isLoading && <SkeletonList items={2} />}
 
-      {!contacts.isLoading && (
+      {contacts.isError && (
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+          <p className="text-sm text-red-600 dark:text-red-400">Failed to load contacts.</p>
+        </div>
+      )}
+
+      {!contacts.isLoading && !contacts.isError && (
         <div className="space-y-3">
           {(contacts.data ?? []).map((contact) => (
             <div

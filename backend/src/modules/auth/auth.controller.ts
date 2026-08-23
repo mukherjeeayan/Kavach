@@ -8,16 +8,7 @@ import {
   clearSessionCookies,
   extractRefreshToken,
 } from '../shared/cookies';
-
-const respond = (res: Response, status: number, data: unknown, req: Request) => {
-  res.status(status).json({
-    success: true,
-    data,
-    error: null,
-    timestamp: new Date().toISOString(),
-    request_id: req.headers['x-request-id'],
-  });
-};
+import { respond } from '../../utils/response';
 
 /**
  * POST /api/v1/auth/login

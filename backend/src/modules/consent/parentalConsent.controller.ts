@@ -1,15 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import * as consentService from './parentalConsent.service';
-
-const respond = (res: Response, status: number, data: unknown, req: Request) => {
-  res.status(status).json({
-    success: true,
-    data,
-    error: null,
-    timestamp: new Date().toISOString(),
-    request_id: req.headers['x-request-id'],
-  });
-};
+import { respond } from '../../utils/response';
 
 export const grant = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -52,6 +43,10 @@ export const list = async (req: Request, res: Response, next: NextFunction) => {
 
 export const check = async (req: Request, res: Response, next: NextFunction) => {
   try {
+    // Verify the child belongs to the authenticated parent (prevents IDOR)
+    const { verifyChildBelongsToParent } = await import('../children/children.service');
+    await verifyChildBelongsToParent(req.params.childId, req.user!.userId);
+
     const active = await consentService.hasActiveConsent(
       req.params.childId,
       req.params.consentType

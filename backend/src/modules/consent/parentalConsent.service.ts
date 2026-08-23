@@ -2,7 +2,7 @@
 // Business logic for DPDP Act parental consent tracking.
 
 import { query } from '../../config/database';
-import { ForbiddenError, NotFoundError } from '../../utils/errors';
+import { NotFoundError } from '../../utils/errors';
 import { verifyChildBelongsToParent } from '../children/children.service';
 
 export interface ParentalConsent {

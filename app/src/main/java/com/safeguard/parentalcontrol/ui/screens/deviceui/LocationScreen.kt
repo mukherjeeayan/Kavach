@@ -29,9 +29,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.safeguard.parentalcontrol.data.local.entity.LocationEntryEntity
 import com.safeguard.parentalcontrol.viewmodel.deviceui.LocationUiState
 import com.safeguard.parentalcontrol.viewmodel.deviceui.LocationViewModel
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 /**
  * Last-known location for the child device: the latest local pings and
@@ -111,7 +108,9 @@ private fun LocationRow(ping: LocationEntryEntity, onClick: () -> Unit) {
                 text = String.format(Locale.US, "%.6f, %.6f", ping.latitude, ping.longitude),
                 style = MaterialTheme.typography.bodyLarge
             )
-            val time = SimpleDateFormat("HH:mm", Locale.US).format(Date(ping.recordedAt))
+            val time = java.time.Instant.ofEpochMilli(ping.recordedAt)
+                .atZone(java.time.ZoneId.systemDefault())
+                .format(java.time.format.DateTimeFormatter.ofPattern("HH:mm", java.util.Locale.US))
             Text(
                 text = ping.accuracyM?.let { "Recorded at $time · accuracy ±${it.toInt()} m" }
                     ?: "Recorded at $time",
