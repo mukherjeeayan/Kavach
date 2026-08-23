@@ -38,6 +38,7 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Calendar
 import java.util.Locale
+import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 
 /**
@@ -91,7 +92,7 @@ class AppBlockingService : Service() {
     private var lockWindows: List<ScheduledLockEntity> = emptyList()
 
     // Foreground-time accumulation between DB flushes (screen time).
-    private val usageAccumulator = mutableMapOf<String, Int>()
+    private val usageAccumulator = ConcurrentHashMap<String, Int>()
     private var usageTicks = 0
 
     // elapsedRealtime at the previous loop tick, for accurate per-tick
@@ -105,7 +106,7 @@ class AppBlockingService : Service() {
 
     // Today's usage per package (seconds), seeded from Room at start
     // and incremented every tick. Used only for cap enforcement.
-    private val todayUsageSeconds = mutableMapOf<String, Int>()
+    private val todayUsageSeconds = ConcurrentHashMap<String, Int>()
     private var usageDayKey: String? = null
 
     // Lock-window warnings already shown today (key = window id + date),
@@ -482,7 +483,7 @@ class AppBlockingService : Service() {
         val now = Calendar.getInstance()
         val minutesNow = now.get(Calendar.HOUR_OF_DAY) * 60 + now.get(Calendar.MINUTE)
         val todayDow = now.get(Calendar.DAY_OF_WEEK) - 1 // 0=Sunday..6=Saturday
-        val todayKey = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
+        val todayKey = LocalDate.now().format(dayKeyFormatter)
 
         // New day: forget yesterday's notifications.
         if (lastNotifiedDay != todayKey) {

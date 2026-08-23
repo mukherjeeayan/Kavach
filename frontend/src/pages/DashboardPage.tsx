@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useSelector } from 'react-redux';
 import {
   useBlockedApps,
@@ -59,42 +59,54 @@ export default function DashboardPage() {
   const respondToRequest = useRespondToUnblockRequest(childId, invalidateChildData, setActionError);
   const blockApp = useBlockAppAction(childId, invalidateChildData, setActionError);
 
-  const handleAddChild = (name: string, birthDate: string) =>
-    createChild.mutateAsync({ name, birthDate: birthDate || undefined });
+  const handleAddChild = useCallback(
+    (name: string, birthDate: string) =>
+      createChild.mutateAsync({ name, birthDate: birthDate || undefined }),
+    [createChild]
+  );
 
-  const handleBlock = (packageName: string, reason: string) =>
-    blockApp.mutateAsync({
-      device_id: selectedDeviceId as string,
-      package_name: packageName,
-      block_reason: reason || undefined,
-    });
+  const handleBlock = useCallback(
+    (packageName: string, reason: string) =>
+      blockApp.mutateAsync({
+        device_id: selectedDeviceId as string,
+        package_name: packageName,
+        block_reason: reason || undefined,
+      }),
+    [blockApp, selectedDeviceId]
+  );
 
-  const handlePinSubmit = (pin: string) => {
-    if (!user) return;
-    verifyPin.mutate(
-      { email: user.email, pin },
-      {
-        onSuccess: () => {
-          setPinUnlocked(true);
-          setPinGateOpen(false);
-        },
+  const handlePinSubmit = useCallback(
+    (pin: string) => {
+      if (!user) return;
+      verifyPin.mutate(
+        { email: user.email, pin },
+        {
+          onSuccess: () => {
+            setPinUnlocked(true);
+            setPinGateOpen(false);
+          },
+        }
+      );
+    },
+    [verifyPin, user]
+  );
+
+  const handlePinSetup = useCallback(
+    (pin: string, confirm: string) => {
+      if (pin !== confirm || !/^\d{4,6}$/.test(pin)) {
+        setPinSetupHint('PIN must be 4-6 digits and match in both fields.');
+        return;
       }
-    );
-  };
-
-  const handlePinSetup = (pin: string, confirm: string) => {
-    if (pin !== confirm || !/^\d{4,6}$/.test(pin)) {
-      setPinSetupHint('PIN must be 4-6 digits and match in both fields.');
-      return;
-    }
-    setPin.mutate(pin, {
-      onSuccess: () => {
-        setPinSetupOpen(false);
-        setPinSetupHint('PIN saved. Enter it below to unlock.');
-      },
-      onError: () => setPinSetupHint('Failed to save PIN. Please try again.'),
-    });
-  };
+      setPin.mutate(pin, {
+        onSuccess: () => {
+          setPinSetupOpen(false);
+          setPinSetupHint('PIN saved. Enter it below to unlock.');
+        },
+        onError: () => setPinSetupHint('Failed to save PIN. Please try again.'),
+      });
+    },
+    [setPin]
+  );
 
   return (
     <div className="min-h-screen bg-background dark:bg-gray-900">

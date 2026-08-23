@@ -75,21 +75,28 @@ open class OnboardingStore @Inject constructor(@ApplicationContext context: Cont
         private const val KEY_CHILD_NAME = "child_name"
         private const val KEY_DEVICE_NAME = "device_name"
 
+        @Volatile
+        private var cachedPrefs: SharedPreferences? = null
+
+        private fun getPrefs(context: Context): SharedPreferences =
+            cachedPrefs ?: synchronized(this) {
+                cachedPrefs ?: EncryptedSharedPreferences.create(
+                    context,
+                    "safeguard_onboarding_encrypted",
+                    MasterKey.Builder(context)
+                        .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+                        .build(),
+                    EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                    EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+                ).also { cachedPrefs = it }
+            }
+
         /**
          * Context-based check for non-injectable call sites
          * (e.g. BroadcastReceiver).
          */
         fun hasCompleted(context: Context): Boolean {
-            val masterKey = MasterKey.Builder(context)
-                .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-                .build()
-            val prefs = EncryptedSharedPreferences.create(
-                context,
-                "safeguard_onboarding_encrypted",
-                masterKey,
-                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-            )
+            val prefs = getPrefs(context)
             return !prefs.getString(KEY_DEVICE_ID, null).isNullOrEmpty() &&
                     !prefs.getString(KEY_CHILD_ID, null).isNullOrEmpty()
         }

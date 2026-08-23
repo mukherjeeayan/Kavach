@@ -17,12 +17,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.safeguard.parentalcontrol.data.local.entity.ScreenTimeDailyEntity
 import com.safeguard.parentalcontrol.viewmodel.deviceui.ScreenTimeUiState
 import com.safeguard.parentalcontrol.viewmodel.deviceui.ScreenTimeViewModel
@@ -38,7 +38,7 @@ fun ScreenTimeScreen(
     modifier: Modifier = Modifier,
     viewModel: ScreenTimeViewModel = hiltViewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     when (val state = uiState) {
         is ScreenTimeUiState.Loading -> Centered(modifier) { CircularProgressIndicator() }

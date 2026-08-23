@@ -15,12 +15,21 @@ export default memo(function DeviceList({ devices, selectedDeviceId, onSelect }:
         {devices.map((device) => (
           <div
             key={device.device_id}
+            role="button"
+            tabIndex={0}
+            aria-pressed={selectedDeviceId === device.device_id}
             className={`bg-white dark:bg-gray-800 rounded-lg p-4 border cursor-pointer transition-colors ${
               selectedDeviceId === device.device_id
                 ? 'border-primary ring-1 ring-primary dark:border-blue-400 dark:ring-blue-400'
                 : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
             }`}
             onClick={() => onSelect(device.device_id)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onSelect(device.device_id);
+              }
+            }}
           >
             <p className="font-medium text-gray-900 dark:text-white">{device.device_name}</p>
             <p className="text-sm text-gray-500 dark:text-gray-400">

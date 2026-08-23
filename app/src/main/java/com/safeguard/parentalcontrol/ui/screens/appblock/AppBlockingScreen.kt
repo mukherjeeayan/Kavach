@@ -19,6 +19,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.drawable.toBitmap
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.safeguard.parentalcontrol.data.local.entity.AppBlockRuleEntity
 import com.safeguard.parentalcontrol.viewmodel.appblock.AppBlockingUiEvent
 import com.safeguard.parentalcontrol.viewmodel.appblock.AppBlockingUiState
@@ -38,8 +39,8 @@ fun AppBlockingScreen(
     viewModel: AppBlockingViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
-    val uiState by viewModel.uiState.collectAsState()
-    val optimisticBlocks by viewModel.optimisticBlocks.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val optimisticBlocks by viewModel.optimisticBlocks.collectAsStateWithLifecycle()
 
     // Handle UI events like Toasts
     LaunchedEffect(Unit) {

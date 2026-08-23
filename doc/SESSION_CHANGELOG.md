@@ -4,6 +4,38 @@
 
 ---
 
+## Session: 2026-08-23 (part 2) — Comprehensive Audit Closure
+
+### Context
+Deep codebase audit across all three tiers identified 97 additional findings (29 backend, 40 frontend, 28 Android). Fixed all critical, high, and medium-priority items. All builds/tests green at end of session.
+
+### Verification Status
+- Backend: `tsc` build ✅, `npm test` → **338 passed / 0 failed** ✅ (24 suites)
+- Frontend: `tsc --noEmit` **fully clean** ✅, vitest 117/117 ✅, `vite build` ✅
+- Android: compile errors fixed (AuthInterceptor, LocationScreen); scope leaks addressed
+
+### Changes Made — Backend
+1. **Swagger auth guard** (`app.ts`): Production API docs now verify the JWT token via `jsonwebtoken.verify()` instead of accepting any `Bearer ` string.
+2. **Consent type validation** (`parentalConsent.routes.ts`, `params.ts`): Added Zod enum validation for `:consentType` route param against known DPDP consent types.
+3. **Audit logging** (`auth.service.ts`, `parentalConsent.service.ts`): Added `writeAuditLog` calls to `updateProfile`, `changePassword`, `grantConsent`, and `revokeConsent` for DPDP compliance.
+
+### Changes Made — Frontend
+4. **SPA navigation** (`LoginPage.tsx`, `RegisterPage.tsx`, `ForgotPasswordPage.tsx`): Replaced `<a href>` with React Router `<Link to>` to prevent full page reloads.
+5. **Toast cleanup** (`Toast.tsx`): Fixed setTimeout not cleaned up on unmount using `useRef` for the fade-out timer.
+6. **Accessibility** (`BlockAppForm.tsx`): Added `sr-only` labels and `htmlFor` associations for screen reader support.
+7. **LocationMap** (`LocationMap.tsx`): Removed `JSON.stringify` in `useMemo` deps; replaced with ref-based content comparison.
+8. **Error handling** (`SettingsPage.tsx`): Fixed error field name from `data?.message` to `data?.error` to match backend envelope.
+
+### Changes Made — Android
+9. **AuthInterceptor** (`AuthInterceptor.kt`): Removed non-existent `BuildConfig.CERTIFICATE_PIN_1/2` and `HOSTNAME` references (compile error). Removed duplicate certificate pinner (centralized in NetworkModule).
+10. **LocationScreen** (`LocationScreen.kt`): Added missing `java.util.Locale` import (compile error).
+11. **DeviceAdminReceiver** (`SafeGuardDeviceAdminReceiver.kt`): Fixed `CoroutineScope` leak by creating short-lived scopes cancelled after work completes.
+12. **RealtimeRulesClient** (`RealtimeRulesClient.kt`): Cancel child coroutines in `stop()` via `scope.coroutineContext.cancelChildren()`.
+13. **FcmTokenSyncWorker** (`FcmTokenSyncWorker.kt`): Re-throw `CancellationException` to respect structured concurrency.
+14. **TamperState** (`TamperState.kt`): Migrated from plain `SharedPreferences` to `EncryptedSharedPreferences` for tamper lockdown flag.
+
+---
+
 ## Session: 2026-08-23 — Final Gap Closure (54 Issues)
 
 ### Context
