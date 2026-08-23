@@ -57,8 +57,13 @@ android {
             isMinifyEnabled = true
             // Set via local.properties or CI env: -PAPI_BASE_URL=https://your-api-domain.com/
             val apiBaseUrl = project.findProperty("API_BASE_URL") as? String
-            requireNotNull(apiBaseUrl) { "API_BASE_URL must be set for release builds. Pass -PAPI_BASE_URL=https://your-api-domain.com/ to Gradle." }
-            buildConfigField("String", "API_BASE_URL", "\"$apiBaseUrl\"")
+            val buildingRelease = gradle.startParameter.taskNames.any {
+                it.contains("Release", ignoreCase = true)
+            }
+            if (buildingRelease) {
+                requireNotNull(apiBaseUrl) { "API_BASE_URL must be set for release builds. Pass -PAPI_BASE_URL=https://your-api-domain.com/ to Gradle." }
+            }
+            buildConfigField("String", "API_BASE_URL", "\"${apiBaseUrl ?: ""}\"")
             buildConfigField("boolean", "FCM_ENABLED", googleServicesFile.exists().toString())
             // Certificate pinning is mandatory in release. Supply the
             // production SHA-256 pins via -PSAFEGUARD_PINS="sha256/...,sha256/..."
