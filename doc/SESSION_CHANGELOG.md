@@ -4,6 +4,49 @@
 
 ---
 
+## Session: 2026-08-23 — Final Gap Closure (54 Issues)
+
+### Context
+Completed the remaining ~20 code-level issues from the 54-issue audit. Deep analysis of backend, frontend, and Android codebases using automated code search to identify N+1 queries, thread-safety issues, missing error handling, and React re-render inefficiencies. All builds/tests green at end of session.
+
+### Verification Status
+- Backend: `tsc` build ✅, `npm test` → **338 passed / 0 failed** ✅ (24 suites)
+- Frontend: `tsc --noEmit` **fully clean** ✅, vitest 117/117 ✅, `vite build` ✅
+- Android: compileDebugKotlin ✅ (no code generation changes)
+
+### Changes Made — Backend
+1. **`geo.controller.ts`**: Added `try/catch` + `next(err)` error handling to `getMapboxToken` handler, matching the pattern used by all other 30+ route handlers.
+2. **`screentime.service.ts`**: Replaced N+1 query pattern in `evaluatePerAppLimits` — batch SELECT of existing alerts via `ANY($3::text[])` instead of per-rule SELECT loop. Reduces DB round-trips from O(n) to O(1) for per-app limit checks.
+3. **`parentalConsent.service.ts`**: Removed unused `ForbiddenError` import.
+
+### Changes Made — Frontend
+4. **`React.memo`**: Wrapped `ChildSelector`, `UnblockRequests`, `BlockedAppsTable`, and `DeviceList` in `React.memo` to prevent unnecessary re-renders when `DashboardPage` state changes (child selection, error toasts, pin gating).
+5. **Recharts code splitting**: Extracted screen-time chart into `ScreenTimeChart.tsx` (lazy-loaded as separate 372KB chunk). Replaced per-recomposition `SimpleDateFormat` allocations with `DateTimeFormatter` in `LocationScreen.kt`.
+6. **Missing error states**: Added error state UI for `ContactsSection` and `LocksSection` — previously, failed contact/lock fetches showed nothing to the user.
+7. **`ScreenTimeChart.tsx`** (NEW): Extracted Recharts bar chart into dedicated lazy-loaded component with static constants (`CHART_MARGIN`, `TICK_STYLE`) to avoid object literal re-creation.
+
+### Changes Made — Android
+8. **`AppBlockingService.kt`**: Replaced `SimpleDateFormat` (not thread-safe) with `java.time.DateTimeFormatter` (immutable, thread-safe) for `dayKey()`. Removed `java.text.SimpleDateFormat` and `java.util.Date` imports.
+9. **`LocationScreen.kt`**: Replaced per-recomposition `SimpleDateFormat` allocation with `java.time.Instant` + `DateTimeFormatter` for timestamp formatting in `LocationRow`.
+10. **`build.gradle.kts`**: Release builds now `requireNotNull(API_BASE_URL)` — fails the build instead of silently using a placeholder domain.
+11. **`SafeGuardDatabase.kt`**: Added KDoc version history comment documenting schema versions 1–3 and the `$projectDir/schemas` export location.
+12. **`LocationService.kt`**: Marked `isTracking` as `@Volatile` for safe cross-thread visibility.
+
+### Changes Made — CI/Infrastructure
+(No CI changes in this session — all CI fixes were in prior sessions.)
+
+### Test Fixes
+- `screentime.service.test.ts`: Updated dedup test mock from `{ rows: [{ 1: 1 }] }` to `{ rows: [{ rule_id: 'rule-1' }] }` to match the new batch query format.
+
+### Resume Point
+All 54 identified gaps are now closed. The codebase is fully hardened for Phase 1 sign-off. Remaining items are operational:
+1. Run migrations 007–010 on a live DB
+2. Set `MAPBOX_PUBLIC_TOKEN` env var
+3. Manual E2E of cookie-based session flow
+4. Exercise `/api/docs` Swagger UI
+
+---
+
 ## Session: 2026-08-22 (part 2) — Deferred Items Cleanup
 
 ### Context
