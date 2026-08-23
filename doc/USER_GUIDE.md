@@ -20,18 +20,31 @@ Kavach is a parental control platform that helps you protect your child's digita
 
 You are now logged in and ready to set up your child's device.
 
-### Step 2: Install on Your Child's Device
+### Step 2: Set Your Parent PIN
+
+Before pairing a device, set a 4-6 digit PIN:
+
+1. Go to **Settings** (gear icon in the header)
+2. Click **Set PIN**
+3. Enter a 4-6 digit PIN and confirm
+
+This PIN is used to unlock the device and approve sensitive actions.
+
+### Step 3: Install on Your Child's Device
 
 1. On your child's Android phone, install the Kavach app
-2. Open the app and tap **Pair with Parent**
-3. Enter your email address and the 6-digit PIN shown on your dashboard
-4. Grant the requested permissions when prompted:
-   - **Location** — to track your child's whereabouts
-   - **Usage Access** — to monitor screen time and app usage
-   - **Device Admin** — to enforce app blocks and screen locks
-   - **Background Location** — for continuous location tracking
+2. Open the app and tap **Get Started**
+3. Follow the onboarding steps:
+   - **Sign in** with your email and password
+   - **Select or create a child profile**
+   - **Grant permissions** when prompted:
+     - **Location** — to track your child's whereabouts
+     - **Usage Access** — to monitor screen time and app usage
+     - **Device Admin** — to enforce app blocks and screen locks
+     - **Background Location** — for continuous location tracking
+4. The device is now registered and protected
 
-### Step 3: Set Up Rules
+### Step 4: Set Up Rules
 
 Once paired, return to your web dashboard. You'll see your child's name in the top selector.
 
@@ -55,22 +68,23 @@ Block specific apps to prevent distractions during study hours or bedtime.
 
 **To block an app:**
 1. Select your child
-2. Go to **Blocked Apps** section
-3. Click **+ Block App**
-4. Enter the app's package name (e.g., `com.instagram.android`)
-5. Optionally set a daily usage limit for this app
-6. Click **Block**
+2. Scroll to **Blocked Apps** section
+3. Enter the app's package name (e.g., `com.instagram.android`)
+4. Optionally add a reason (shown to the child)
+5. Click **Block**
 
-**How it works:** The blocked app icon is hidden from the launcher on your child's device. If they try to open it another way, it won't launch.
+**How it works:** Blocked apps are killed within ~1 second on the child's device. The enforcement works offline — rules are cached locally.
 
 ### Unblock Requests
 
 When your child wants access to a blocked app, they can submit a request from their device.
 
 **To review a request:**
-1. You'll see a notification badge on **Unblock Requests**
+1. You'll see pending requests in the **Unblock Requests** section
 2. Review the app name and your child's reason
 3. Click **Approve** to unblock, or **Reject** to keep it blocked
+
+The child receives a notification about your decision immediately.
 
 ### Scheduled Locks
 
@@ -80,10 +94,10 @@ Lock the device during specific hours (e.g., bedtime, homework time).
 1. Go to **Scheduled Locks**
 2. Click **+ Add Lock**
 3. Choose the day of week (or every day)
-4. Set start and end times
+4. Set start and end times (24-hour format, e.g., 22:00 to 07:00)
 5. Click **Save Lock**
 
-During a lock window, only the launcher and settings are accessible.
+During a lock window, only the launcher and settings are accessible. The child receives a warning 10 minutes before a lock window starts.
 
 ### Contact Rules
 
@@ -96,13 +110,16 @@ Control who can call or message your child.
 4. Choose **Allow** (always let this number through) or **Block** (reject calls)
 5. Click **Save Contact**
 
+Blocked calls are silently rejected on the child's device.
+
 ### Location Tracking
 
 View your child's current location and location history.
 
 - **Current Location** — shows the most recent GPS ping per device
-- **Location History** — shows a timeline of locations with a map view
+- **Location History** — shows a timeline of locations with timestamps
 - Click **Open in Google Maps** for turn-by-turn directions
+- If Mapbox is configured, an embedded map shows all recent positions
 
 ### Alerts
 
@@ -124,7 +141,7 @@ The dashboard shows important alerts including:
 
 ### Set Parent PIN
 
-The parent PIN is used to unlock the device when it's locked.
+The parent PIN is used to unlock the device when it's locked and to access management sections.
 
 1. Go to **Settings**
 2. Click **Set PIN** or **Change PIN**
@@ -138,13 +155,35 @@ The parent PIN is used to unlock the device when it's locked.
 3. Check your email for a password reset link
 4. Click the link and set a new password
 
+### Log Out
+
+Click your name in the header and select **Sign Out**. On mobile, use the hamburger menu.
+
 ## Dark Mode
 
-The dashboard supports dark mode. Click the moon/sun icon in the header to toggle.
+The dashboard supports dark mode. Click the moon/sun icon in the header to toggle. Your preference is saved locally.
 
 ## Mobile Access
 
 The dashboard is fully responsive. You can manage your child's settings from your phone's browser — hamburger menu for navigation on small screens.
+
+## Troubleshooting
+
+**The child's app says "Not protected":**
+- Device Admin may have been deactivated. Re-enable it in Android Settings > Security > Device Admin Apps.
+
+**Rules aren't being enforced:**
+- Check that the child's device has an internet connection. Rules sync automatically, but first-time setup requires connectivity.
+- Ensure Usage Access permission is granted (Settings > Apps > Special Access > Usage Access).
+
+**Location shows "No locations recorded":**
+- Background Location permission may not be granted. Check Android Settings > Apps > Kavach > Permissions > Location > Allow all the time.
+
+**Screen time data seems inaccurate:**
+- The app records foreground usage only. Time in background or with screen off is not counted.
+
+**I can't log in:**
+- Try the **Forgot password?** link. If that doesn't work, contact your system administrator.
 
 ## FAQ
 
@@ -162,3 +201,12 @@ A: Click **+ Add Child** in the Children section, or install the app on another 
 
 **Q: Can I manage multiple devices per child?**
 A: Yes. Each device is registered separately, but rules (locks, contacts, app blocks) apply to all devices for that child.
+
+**Q: Is my child's data private?**
+A: All data is encrypted in transit (HTTPS) and at rest. Location data is only visible to you (the parent). The app complies with India's Digital Personal Data Protection (DPDP) Act — parental consent is required and audited.
+
+**Q: What happens if the device is rooted or tampered with?**
+A: SafeGuard detects root/debugger threats and automatically locks the device, notifies the server, and applies maximum restrictions. You'll receive a tamper alert on your dashboard.
+
+**Q: How do I share management of a child with another parent?**
+A: Go to **Guardians** (in the child's section) and enter the other parent's email. They must already have a SafeGuard account. They'll get co-parent access with the same permissions.

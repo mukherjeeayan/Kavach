@@ -13,7 +13,7 @@
 
 Phase 1 (MVP) is now **100% code-complete**. All core features (app blocking, screen time, scheduled locks, contacts, location tracking, parental auth, web dashboard) are functionally implemented end-to-end across backend, Android, and frontend. All identified gaps — including the final controller standardization (26 call sites) and pagination (listConsents, listGuardians) — have been fixed. Remaining items are **operational only**: migration deployment, staging verification, and user documentation.
 
-**Total tasks:** 143 | **Complete:** ~140 | **Operational remaining:** ~3 (deploy, staging, docs)
+**Total tasks:** 143 | **Complete:** ~142 | **Operational remaining:** ~1 (migration deployment)
 
 ---
 
@@ -97,9 +97,8 @@ Phase 1 (MVP) is now **100% code-complete**. All core features (app blocking, sc
 - **Status:** SKILL files exist (`SKILL_backend_development.md`, `SKILL_android_development.md`, `SKILL_web_dashboard_development.md`). README exists. Missing a dedicated local development setup walkthrough.
 - **Remaining:** Create `doc/DEVELOPER_GUIDE.md` with step-by-step setup instructions.
 
-### ~~2.7 Documentation: User Documentation~~ ⚠️ PARTIAL
-- **Status:** No end-user documentation exists.
-- **Remaining:** Create `doc/USER_GUIDE.md` with parent onboarding guide, feature explanations, FAQ, troubleshooting guide.
+### ~~2.7 Documentation: User Documentation~~ ✅ COMPLETE
+- **Status:** **RESOLVED** — `doc/USER_GUIDE.md` created with comprehensive parent onboarding guide, all feature explanations, account management, troubleshooting section, FAQ, data privacy info, and multi-device/multi-parent guidance.
 
 ---
 
@@ -229,7 +228,6 @@ React + Vite + Tailwind + Redux + React Query. All 7 features represented.
 13. Comprehensive E2E test suite (Phase 2)
 
 ### Remaining (Non-blocking)
-- **User documentation** (`doc/USER_GUIDE.md`)
 - **Operational verification**: Run migrations 007–010 on live DB, set `MAPBOX_PUBLIC_TOKEN`, manual E2E of cookie session flow, review Swagger UI
 
 ---
