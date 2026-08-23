@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { authenticateJWT, requireRole } from '../../middleware/auth';
 import { validate, validateParams } from '../../middleware/validate';
-import { uuidParams, childAndUuidParams } from '../../middleware/params';
+import { uuidParams, childAndUuidParams, consentTypeParam } from '../../middleware/params';
 import { createConsentSchema, revokeConsentSchema } from './parentalConsent.dto';
 import * as consentController from './parentalConsent.controller';
 
@@ -36,7 +36,7 @@ router.get(
 // GET /children/:childId/consent/check/:consentType - check if consent is active
 router.get(
   '/:childId/consent/check/:consentType',
-  validateParams(childAndUuidParams('childId')),
+  validateParams(childAndUuidParams('childId').merge(consentTypeParam)),
   consentController.check
 );
 

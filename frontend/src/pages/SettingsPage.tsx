@@ -56,7 +56,7 @@ export default function SettingsPage() {
       setConfirmPassword('');
     } catch (err: unknown) {
       setPasswordStatus('error');
-      const message = err instanceof Error ? err.message : (err as any)?.response?.data?.message;
+      const message = err instanceof Error ? err.message : (err as any)?.response?.data?.error;
       setErrorMessage(message || 'Failed to change password.');
     }
   };

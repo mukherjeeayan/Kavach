@@ -34,6 +34,11 @@ export const screenTimeSummaryQuery = z.object({
   range: z.enum(['day', 'week', 'month']).default('day'),
 });
 
+/** Validates the consentType path param against known consent types (DPDP). */
+export const consentTypeParam = z.object({
+  consentType: z.enum(['location', 'app_usage', 'communications', 'mental_health']),
+});
+
 export const locationHistoryQuery = z.object({
   from: z.string().datetime({ offset: true }).optional(),
   to: z.string().datetime({ offset: true }).optional(),

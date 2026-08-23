@@ -29,6 +29,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.safeguard.parentalcontrol.data.local.entity.LocationEntryEntity
 import com.safeguard.parentalcontrol.viewmodel.deviceui.LocationUiState
 import com.safeguard.parentalcontrol.viewmodel.deviceui.LocationViewModel
+import java.util.Locale
 
 /**
  * Last-known location for the child device: the latest local pings and

@@ -10,6 +10,7 @@ import com.safeguard.parentalcontrol.data.local.OnboardingStore
 import com.safeguard.parentalcontrol.repository.phase1.Phase1Repository
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.tasks.await
 
 /**
@@ -38,6 +39,8 @@ class FcmTokenSyncWorker @AssistedInject constructor(
             } else {
                 Result.retry()
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (_: Exception) {
             Result.retry()
         }

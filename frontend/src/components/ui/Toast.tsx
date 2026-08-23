@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 interface ToastProps {
   message: string;
@@ -9,14 +9,24 @@ interface ToastProps {
 
 export default function Toast({ message, type = 'info', duration = 4000, onClose }: ToastProps) {
   const [isVisible, setIsVisible] = useState(true);
+  const fadeTimerRef = useRef<ReturnType<typeof setTimeout>>();
 
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsVisible(false);
-      setTimeout(onClose, 300);
+      fadeTimerRef.current = setTimeout(onClose, 300);
     }, duration);
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      if (fadeTimerRef.current) clearTimeout(fadeTimerRef.current);
+    };
   }, [duration, onClose]);
+
+  const handleClose = () => {
+    setIsVisible(false);
+    if (fadeTimerRef.current) clearTimeout(fadeTimerRef.current);
+    fadeTimerRef.current = setTimeout(onClose, 300);
+  };
 
   const styles = {
     success: 'bg-green-600',
@@ -33,10 +43,8 @@ export default function Toast({ message, type = 'info', duration = 4000, onClose
       <div className="flex items-center gap-3">
         <span>{message}</span>
         <button
-          onClick={() => {
-            setIsVisible(false);
-            setTimeout(onClose, 300);
-          }}
+          onClick={handleClose}
+          aria-label="Close notification"
           className="text-white/80 hover:text-white"
         >
           ×

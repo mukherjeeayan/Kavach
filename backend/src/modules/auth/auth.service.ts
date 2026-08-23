@@ -15,6 +15,7 @@ import {
   hashToken,
   verifyRefreshToken,
 } from '../shared/token.service';
+import { writeAuditLog } from '../shared/audit.service';
 import logger from '../../utils/logger';
 
 export { UnauthorizedError };
@@ -478,6 +479,15 @@ export const updateProfile = async (
   );
   if ((result.rowCount ?? 0) === 0) throw new NotFoundError('User not found');
   const row = result.rows[0];
+
+  await writeAuditLog({
+    actorId: parentId,
+    targetChildId: null,
+    action: 'UPDATE_PROFILE',
+    resourceType: 'parents',
+    details: { name: name.trim() },
+  });
+
   return { id: row.id, email: row.email, name: row.name };
 };
 
@@ -521,6 +531,14 @@ export const changePassword = async (
   } finally {
     client.release();
   }
+
+  await writeAuditLog({
+    actorId: parentId,
+    targetChildId: null,
+    action: 'CHANGE_PASSWORD',
+    resourceType: 'parents',
+    details: {},
+  });
 
   logger.info(`Password changed for user ${parentId}`);
   return { message: 'Password has been changed successfully.' };

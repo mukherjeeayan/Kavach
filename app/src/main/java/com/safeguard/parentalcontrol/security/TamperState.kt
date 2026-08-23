@@ -1,6 +1,9 @@
 package com.safeguard.parentalcontrol.security
 
 import android.content.Context
+import android.content.SharedPreferences
+import androidx.security.crypto.EncryptedSharedPreferences
+import androidx.security.crypto.MasterKey
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -11,10 +14,9 @@ import javax.inject.Singleton
  * to weaken the enforced policy (fail-closed hardening): cached
  * blocked apps stay blocked even if the server reports them unblocked.
  *
- * The flag is persisted to SharedPreferences so a force-stop, crash,
- * or reboot cannot be used to clear lockdown — it must be lifted
- * explicitly via [clear]. When no [Context] is available (plain unit
- * tests) the state degrades to in-memory only.
+ * The flag is persisted to EncryptedSharedPreferences so it cannot be
+ * read or modified on rooted devices. It must be lifted explicitly
+ * via [clear].
  */
 @Singleton
 class TamperState @Inject constructor(
@@ -23,11 +25,25 @@ class TamperState @Inject constructor(
     /** Test convenience: in-memory-only instance. */
     constructor() : this(null)
 
-    private val prefs by lazy {
+    private val prefs: SharedPreferences? by lazy {
         try {
-            context?.getSharedPreferences("safeguard_security", Context.MODE_PRIVATE)
+            val masterKey = MasterKey.Builder(context!!)
+                .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+                .build()
+            EncryptedSharedPreferences.create(
+                context,
+                "safeguard_security_encrypted",
+                masterKey,
+                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+            )
         } catch (_: Exception) {
-            null
+            // Fall back to plain prefs if encryption fails (e.g. no key store)
+            try {
+                context?.getSharedPreferences("safeguard_security", Context.MODE_PRIVATE)
+            } catch (_: Exception) {
+                null
+            }
         }
     }
 

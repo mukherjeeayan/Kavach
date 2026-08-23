@@ -11,6 +11,7 @@ import io.socket.client.Socket
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 import javax.inject.Inject
@@ -92,17 +93,18 @@ class RealtimeRulesClient @Inject constructor(
     fun stop() {
         socket?.disconnect()
         socket = null
+        scope.coroutineContext.cancelChildren()
     }
 
-    /**
-     * Pull fresh rules into Room. The enforcement service watches Room
-     * flows, so it re-applies the new policy as soon as this lands.
-     */
     private fun refreshCaches(childId: String, deviceId: String) {
         scope.launch {
-            appBlockingRepository.syncFromServer(childId, deviceId)
-            phase1Repository.syncLocks(childId)
-            phase1Repository.syncContacts(childId)
+            try {
+                appBlockingRepository.syncFromServer(childId, deviceId)
+                phase1Repository.syncLocks(childId)
+                phase1Repository.syncContacts(childId)
+            } catch (_: Exception) {
+                // Best-effort sync; will retry on next rule:changed event
+            }
         }
     }
 

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 
 import AuthLayout from '../components/auth/AuthLayout';
 import { TextField } from '../components/ui/TextField';
@@ -66,9 +67,9 @@ export default function ForgotPasswordPage() {
 
       <p className="mt-4 text-center text-sm text-gray-600">
         Remember your password?{' '}
-        <a href="/login" className="text-primary hover:underline">
+        <Link to="/login" className="text-primary hover:underline">
           Sign in
-        </a>
+        </Link>
       </p>
     </AuthLayout>
   );

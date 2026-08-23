@@ -4,6 +4,7 @@
 import { query } from '../../config/database';
 import { NotFoundError } from '../../utils/errors';
 import { verifyChildBelongsToParent } from '../children/children.service';
+import { writeAuditLog } from '../shared/audit.service';
 
 export interface ParentalConsent {
   id: string;
@@ -49,6 +50,15 @@ export const grantConsent = async (
      RETURNING id, parent_id, child_id, consent_type, granted_at, revoked_at, ip_address`,
     [parentId, childId, consentType, ipAddress || null]
   );
+
+  await writeAuditLog({
+    actorId: parentId,
+    targetChildId: childId,
+    action: 'CONSENT_GRANTED',
+    resourceType: 'parental_consent',
+    details: { consent_type: consentType },
+  });
+
   return result.rows[0];
 };
 
@@ -70,6 +80,14 @@ export const revokeConsent = async (
   if ((result.rowCount ?? 0) === 0) {
     throw new NotFoundError('No active consent found for this type');
   }
+
+  await writeAuditLog({
+    actorId: parentId,
+    targetChildId: childId,
+    action: 'CONSENT_REVOKED',
+    resourceType: 'parental_consent',
+    details: { consent_type: consentType },
+  });
 };
 
 /**

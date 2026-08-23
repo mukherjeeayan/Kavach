@@ -89,7 +89,13 @@ try {
       if (!authHeader || !authHeader.startsWith('Bearer ')) {
         return res.status(401).json({ error: 'Authentication required for API docs' });
       }
-      next();
+      try {
+        const jwt = require('jsonwebtoken');
+        jwt.verify(authHeader.slice(7), process.env.JWT_SECRET!);
+        next();
+      } catch {
+        return res.status(401).json({ error: 'Invalid or expired token' });
+      }
     });
   }
   

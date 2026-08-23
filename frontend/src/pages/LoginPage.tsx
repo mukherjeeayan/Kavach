@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { useLogin } from '../hooks/useAuth';
 import AuthLayout from '../components/auth/AuthLayout';
 import { TextField } from '../components/ui/TextField';
@@ -37,16 +38,16 @@ export default function LoginPage() {
       </form>
 
       <p className="mt-3 text-center text-sm">
-        <a href="/forgot-password" className="text-primary hover:underline">
+        <Link to="/forgot-password" className="text-primary hover:underline">
           Forgot your password?
-        </a>
+        </Link>
       </p>
 
       <p className="mt-4 text-center text-sm text-gray-600">
         New to SafeGuard?{' '}
-        <a href="/register" className="text-primary hover:underline">
+        <Link to="/register" className="text-primary hover:underline">
           Create an account
-        </a>
+        </Link>
       </p>
     </AuthLayout>
   );

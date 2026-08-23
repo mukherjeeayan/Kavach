@@ -13,6 +13,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -28,66 +29,64 @@ class SafeGuardDeviceAdminReceiver : DeviceAdminReceiver() {
     @Inject
     lateinit var phase1Repository: Phase1Repository
 
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-
     override fun onEnabled(context: Context, intent: Intent) {
         super.onEnabled(context, intent)
         Log.i(TAG, "Device Admin Enabled - App secured against basic uninstalls")
 
-        // Hide SafeGuard from the launcher: with device admin active the
-        // child can no longer see, open, or uninstall the app. The parent
-        // reaches the app through the PIN gate only.
         hideSelfFromLauncher(context)
-        reportAdminState(true)
+        launchScoped { reportAdminState(it, true) }
     }
 
     override fun onDisabled(context: Context, intent: Intent) {
         super.onDisabled(context, intent)
         Log.w(TAG, "Device Admin Disabled - Child might have bypassed security!")
-        reportAdminState(false)
-        // Fire an emergency alert to the backend: disabling the device
-        // admin makes the app uninstallable, so this is the last chance
-        // to tell the parent something is wrong. Best-effort — if the
-        // device is offline the periodic sync has nothing to retry, but
-        // the parent can still see "admin disabled" on the next check-in.
+        launchScoped { reportAdminState(it, false) }
+
         val deviceId = onboardingStore.deviceId
         if (!deviceId.isNullOrEmpty()) {
-            scope.launch {
+            launchScoped { scope ->
                 try {
                     appBlockingRepository.reportTamper(deviceId, "Device admin disabled")
                     Log.i(TAG, "Tamper alert sent to backend")
                 } catch (e: Exception) {
                     Log.w(TAG, "Failed to send tamper alert: ${e.message}")
+                } finally {
+                    scope.cancel()
                 }
             }
         }
     }
 
     /**
-     * Best-effort sync of the local admin state to the server so the
-     * parent dashboard shows the "protected" badge truthfully.
+     * Launches a short-lived coroutine scope that is cancelled after
+     * the work completes, preventing leaks from the transient receiver.
      */
-    private fun reportAdminState(adminActive: Boolean) {
-        val deviceId = onboardingStore.deviceId
-        if (deviceId.isNullOrEmpty()) return
+    private fun launchScoped(block: suspend (CoroutineScope) -> Unit) {
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
         scope.launch {
             try {
-                if (phase1Repository.reportAdminStatus(deviceId, adminActive)) {
-                    Log.i(TAG, "Admin status reported: admin_active=$adminActive")
-                } else {
-                    Log.w(TAG, "Admin status report failed")
-                }
-            } catch (e: Exception) {
-                Log.w(TAG, "Failed to report admin status: ${e.message}")
+                block(scope)
+            } finally {
+                scope.cancel()
             }
         }
     }
 
-    /**
-     * Uses the active DevicePolicyManager to hide our own package from
-     * the launcher (not uninstallable while admin is active anyway).
-     * Best-effort: some OEMs restrict hiding the app itself.
-     */
+    private suspend fun reportAdminState(scope: CoroutineScope, adminActive: Boolean) {
+        val deviceId = onboardingStore.deviceId ?: return
+        try {
+            if (phase1Repository.reportAdminStatus(deviceId, adminActive)) {
+                Log.i(TAG, "Admin status reported: admin_active=$adminActive")
+            } else {
+                Log.w(TAG, "Admin status report failed")
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to report admin status: ${e.message}")
+        } finally {
+            scope.cancel()
+        }
+    }
+
     private fun hideSelfFromLauncher(context: Context) {
         try {
             val dpm = context.getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager

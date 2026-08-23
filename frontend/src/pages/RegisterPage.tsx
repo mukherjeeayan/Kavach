@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { useRegister } from '../hooks/useAuth';
 import AuthLayout from '../components/auth/AuthLayout';
 import { TextField } from '../components/ui/TextField';
@@ -46,9 +47,9 @@ export default function RegisterPage() {
 
       <p className="mt-4 text-center text-sm text-gray-600">
         Already have an account?{' '}
-        <a href="/login" className="text-primary hover:underline">
+        <Link to="/login" className="text-primary hover:underline">
           Sign in
-        </a>
+        </Link>
       </p>
     </AuthLayout>
   );
