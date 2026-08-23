@@ -21,7 +21,7 @@ export default function LocationMap({ points }: { points: LocationPoint[] }) {
     let active = true;
     apiClient
       .get('/geo/mapbox-token')
-      .then((res: any) => {
+      .then((res: { data?: { data?: { token?: string } } }) => {
         if (active) setToken(res?.data?.data?.token ?? null);
       })
       .catch(() => {

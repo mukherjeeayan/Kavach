@@ -31,8 +31,8 @@ export default function ResetPasswordPage() {
         new_password: newPassword,
       });
       setSuccess(true);
-    } catch (err: any) {
-      const message = err?.response?.data?.error;
+    } catch (err: unknown) {
+      const message = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
       setError(
         message === 'Invalid or expired reset token'
           ? 'This reset link is invalid or has already been used. Please request a new one.'

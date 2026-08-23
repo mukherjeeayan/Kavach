@@ -15,8 +15,8 @@ vi.mock('../ui/Skeleton', () => ({
 }));
 
 vi.mock('recharts', () => ({
-  ResponsiveContainer: ({ children }: any) => <div data-testid="responsive-container">{children}</div>,
-  BarChart: ({ children }: any) => <div data-testid="bar-chart">{children}</div>,
+  ResponsiveContainer: ({ children }: { children: React.ReactNode }) => <div data-testid="responsive-container">{children}</div>,
+  BarChart: ({ children }: { children: React.ReactNode }) => <div data-testid="bar-chart">{children}</div>,
   Bar: () => null,
   XAxis: () => null,
   YAxis: () => null,
@@ -53,16 +53,16 @@ beforeEach(() => {
     data: defaultSummaryData,
     isLoading: false,
     isError: false,
-  } as any);
+  } as any); // eslint-disable-line @typescript-eslint/no-explicit-any
   mockDaily.mockReturnValue({
     data: [],
     isLoading: false,
     isError: false,
-  } as any);
+  } as any); // eslint-disable-line @typescript-eslint/no-explicit-any
   mockSaveLimit.mockReturnValue({
     mutate: vi.fn(),
     isPending: false,
-  } as any);
+  } as any); // eslint-disable-line @typescript-eslint/no-explicit-any
 });
 
 describe('ScreenTimeSection', () => {
@@ -117,6 +117,7 @@ describe('ScreenTimeSection', () => {
   });
 
   it('shows loading skeletons', () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     mockSummary.mockReturnValue({ data: null, isLoading: true, isError: false } as any);
     render(<ScreenTimeSection childId="child-1" limitMinutes={null} />);
     expect(screen.getByTestId('skeleton-stats')).toBeInTheDocument();
@@ -125,6 +126,7 @@ describe('ScreenTimeSection', () => {
   });
 
   it('shows error state', () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     mockSummary.mockReturnValue({ data: null, isLoading: false, isError: true } as any);
     render(<ScreenTimeSection childId="child-1" limitMinutes={null} />);
     expect(screen.getByText(/failed to load screen time data/i)).toBeInTheDocument();
@@ -135,8 +137,8 @@ describe('ScreenTimeSection', () => {
       data: { total_seconds: 0, daily: [], by_app: [] },
       isLoading: false,
       isError: false,
-    } as any);
-    mockDaily.mockReturnValue({ data: [], isLoading: false, isError: false } as any);
+    } as any); // eslint-disable-line @typescript-eslint/no-explicit-any
+    mockDaily.mockReturnValue({ data: [], isLoading: false, isError: false } as any); // eslint-disable-line @typescript-eslint/no-explicit-any
     render(<ScreenTimeSection childId="child-1" limitMinutes={null} />);
     expect(screen.getByText(/no usage recorded yet/i)).toBeInTheDocument();
   });

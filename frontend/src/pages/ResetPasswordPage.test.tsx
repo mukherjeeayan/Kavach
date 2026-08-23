@@ -18,6 +18,7 @@ vi.mock('../components/auth/AuthLayout', () => ({
 }));
 
 vi.mock('../components/ui/TextField', () => ({
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   TextField: ({ label, error, ...props }: any) => (
     <div>
       <label>{label}</label>
@@ -184,6 +185,7 @@ describe('ResetPasswordPage', () => {
     });
 
     it('shows Resetting... while loading', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let resolvePromise: (value: any) => void;
       vi.mocked(apiClient.post).mockReturnValueOnce(
         new Promise((resolve) => {

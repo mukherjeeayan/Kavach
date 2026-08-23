@@ -30,6 +30,7 @@ vi.mock('../components/auth/AuthLayout', () => ({
 }));
 
 vi.mock('../components/ui/TextField', () => ({
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   TextField: ({ label, error, optional, ...props }: any) => (
     <div>
       <label>
