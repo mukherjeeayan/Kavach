@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import * as screentimeService from './screentime.service';
+import { respond } from '../../utils/response';
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -11,13 +12,7 @@ export const upload = async (req: Request, res: Response, next: NextFunction) =>
       req.body.entries,
       req.body.batch_id
     );
-    res.status(201).json({
-      success: true,
-      data: { uploaded: req.body.entries.length, duplicate_batch: result.duplicate },
-      error: null,
-      timestamp: new Date().toISOString(),
-      request_id: req.headers['x-request-id'],
-    });
+    respond(res, 201, { uploaded: req.body.entries.length, duplicate_batch: result.duplicate }, req);
   } catch (err) {
     next(err);
   }
@@ -31,13 +26,7 @@ export const getDaily = async (req: Request, res: Response, next: NextFunction) 
       req.params.childId,
       date
     );
-    res.status(200).json({
-      success: true,
-      data,
-      error: null,
-      timestamp: new Date().toISOString(),
-      request_id: req.headers['x-request-id'],
-    });
+    respond(res, 200, data, req);
   } catch (err) {
     next(err);
   }
@@ -51,13 +40,7 @@ export const getSummary = async (req: Request, res: Response, next: NextFunction
       req.params.childId,
       range
     );
-    res.status(200).json({
-      success: true,
-      data,
-      error: null,
-      timestamp: new Date().toISOString(),
-      request_id: req.headers['x-request-id'],
-    });
+    respond(res, 200, data, req);
   } catch (err) {
     next(err);
   }

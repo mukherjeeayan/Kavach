@@ -8,7 +8,7 @@ import {
   clearSessionCookies,
   extractRefreshToken,
 } from '../shared/cookies';
-import { respond } from '../../utils/response';
+import { respond, respondError } from '../../utils/response';
 
 /**
  * POST /api/v1/auth/login
@@ -59,13 +59,7 @@ export const refreshToken = async (req: Request, res: Response, next: NextFuncti
   try {
     const refreshToken = extractRefreshToken(req, req.body?.refresh_token);
     if (!refreshToken) {
-      return res.status(401).json({
-        success: false,
-        data: {},
-        error: 'No refresh token provided',
-        timestamp: new Date().toISOString(),
-        request_id: req.headers['x-request-id'],
-      });
+      return respondError(res, 401, 'No refresh token provided', req);
     }
     const session = await authService.refreshAccessToken(refreshToken);
     setSessionCookies(res, session);

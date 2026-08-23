@@ -5,6 +5,7 @@
 import { Request, Response, NextFunction } from 'express';
 import * as appBlockingService from './appBlocking.service';
 import { emitRuleChange } from '../../utils/socketHub';
+import { respond } from '../../utils/response';
 
 /**
  * GET /api/v1/children/:childId/apps/blocked?page=1&limit=20
@@ -24,13 +25,7 @@ export const getBlockedApps = async (
 
     const { items } = await appBlockingService.getBlockedApps(parentId, childId, page, limit);
 
-    res.status(200).json({
-      success: true,
-      data: items,
-      error: null,
-      timestamp: new Date().toISOString(),
-      request_id: req.headers['x-request-id'],
-    });
+    respond(res, 200, items, req);
   } catch (err) {
     next(err);
   }
@@ -62,13 +57,7 @@ export const blockApp = async (
 
     emitRuleChange(childId);
 
-    res.status(201).json({
-      success: true,
-      data: rule,
-      error: null,
-      timestamp: new Date().toISOString(),
-      request_id: req.headers['x-request-id'],
-    });
+    respond(res, 201, rule, req);
   } catch (err) {
     next(err);
   }
@@ -91,13 +80,7 @@ export const unblockApp = async (
 
     emitRuleChange(childId);
 
-    res.status(200).json({
-      success: true,
-      data: { message: 'App unblocked successfully' },
-      error: null,
-      timestamp: new Date().toISOString(),
-      request_id: req.headers['x-request-id'],
-    });
+    respond(res, 200, { message: 'App unblocked successfully' }, req);
   } catch (err) {
     next(err);
   }
@@ -127,13 +110,7 @@ export const requestUnblock = async (
 
     emitRuleChange(childId);
 
-    res.status(201).json({
-      success: true,
-      data: updatedRule,
-      error: null,
-      timestamp: new Date().toISOString(),
-      request_id: req.headers['x-request-id'],
-    });
+    respond(res, 201, updatedRule, req);
   } catch (err) {
     next(err);
   }
@@ -156,13 +133,7 @@ export const approveUnblock = async (
 
     emitRuleChange(childId);
 
-    res.status(200).json({
-      success: true,
-      data: rule,
-      error: null,
-      timestamp: new Date().toISOString(),
-      request_id: req.headers['x-request-id'],
-    });
+    respond(res, 200, rule, req);
   } catch (err) {
     next(err);
   }
@@ -185,13 +156,7 @@ export const rejectUnblock = async (
 
     emitRuleChange(childId);
 
-    res.status(200).json({
-      success: true,
-      data: rule,
-      error: null,
-      timestamp: new Date().toISOString(),
-      request_id: req.headers['x-request-id'],
-    });
+    respond(res, 200, rule, req);
   } catch (err) {
     next(err);
   }
@@ -222,13 +187,7 @@ export const setAppDailyLimit = async (
 
     emitRuleChange(childId);
 
-    res.status(200).json({
-      success: true,
-      data: rule,
-      error: null,
-      timestamp: new Date().toISOString(),
-      request_id: req.headers['x-request-id'],
-    });
+    respond(res, 200, rule, req);
   } catch (err) {
     next(err);
   }
@@ -256,13 +215,7 @@ export const getUnblockRequests = async (
       limit
     );
 
-    res.status(200).json({
-      success: true,
-      data: items,
-      error: null,
-      timestamp: new Date().toISOString(),
-      request_id: req.headers['x-request-id'],
-    });
+    respond(res, 200, items, req);
   } catch (err) {
     next(err);
   }

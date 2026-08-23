@@ -3,26 +3,15 @@
 // to be baked into the frontend bundle (Vite inlines VITE_* vars into
 // shipped JS — a publicly extractable token).
 import { NextFunction, Request, Response } from 'express';
+import { respond, respondError } from '../../utils/response';
 
 export const getMapboxToken = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const token = process.env.MAPBOX_PUBLIC_TOKEN;
     if (!token) {
-      return res.status(503).json({
-        success: false,
-        data: {},
-        error: 'Map integration is not configured',
-        timestamp: new Date().toISOString(),
-        request_id: req.headers['x-request-id'],
-      });
+      return respondError(res, 503, 'Map integration is not configured', req);
     }
-    res.status(200).json({
-      success: true,
-      data: { token },
-      error: null,
-      timestamp: new Date().toISOString(),
-      request_id: req.headers['x-request-id'],
-    });
+    respond(res, 200, { token }, req);
   } catch (err) {
     next(err);
   }

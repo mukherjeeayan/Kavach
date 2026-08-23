@@ -52,7 +52,8 @@ describe('Guardians – GET /children/:childId/guardians', () => {
           { parent_id: PARENT_ID, name: 'Owner', email: 'owner@example.com', role: 'owner' },
           { parent_id: GUARDIAN_ID, name: 'Co Parent', email: 'co@example.com', role: 'guardian' },
         ],
-      } as any);
+      } as any) // items query
+      .mockResolvedValueOnce({ rows: [{ total: 2 }] } as any); // count query
 
     const res = await request(app)
       .get(`/api/v1/children/${CHILD_ID}/guardians`)
@@ -61,6 +62,7 @@ describe('Guardians – GET /children/:childId/guardians', () => {
     expect(res.status).toBe(200);
     expect(res.body.data.guardians).toHaveLength(2);
     expect(res.body.data.guardians[0].role).toBe('owner');
+    expect(res.body.data.pagination).toBeDefined();
   });
 
   test('rejects a non-member parent (403)', async () => {

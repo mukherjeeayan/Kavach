@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import * as contactsService from './contacts.service';
 import { buildPaginationMeta } from '../../utils/pagination';
+import { respond } from '../../utils/response';
 
 export const listContacts = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -12,13 +13,7 @@ export const listContacts = async (req: Request, res: Response, next: NextFuncti
       page,
       limit
     );
-    res.status(200).json({
-      success: true,
-      data: { contacts: items, pagination: buildPaginationMeta(page, limit, total) },
-      error: null,
-      timestamp: new Date().toISOString(),
-      request_id: req.headers['x-request-id'],
-    });
+    respond(res, 200, { contacts: items, pagination: buildPaginationMeta(page, limit, total) }, req);
   } catch (err) {
     next(err);
   }
@@ -27,13 +22,7 @@ export const listContacts = async (req: Request, res: Response, next: NextFuncti
 export const createContact = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const data = await contactsService.createContact(req.user!.userId, req.params.childId, req.body);
-    res.status(201).json({
-      success: true,
-      data,
-      error: null,
-      timestamp: new Date().toISOString(),
-      request_id: req.headers['x-request-id'],
-    });
+    respond(res, 201, data, req);
   } catch (err) {
     next(err);
   }
@@ -47,13 +36,7 @@ export const updateContact = async (req: Request, res: Response, next: NextFunct
       req.params.contactId,
       req.body
     );
-    res.status(200).json({
-      success: true,
-      data,
-      error: null,
-      timestamp: new Date().toISOString(),
-      request_id: req.headers['x-request-id'],
-    });
+    respond(res, 200, data, req);
   } catch (err) {
     next(err);
   }
@@ -62,13 +45,7 @@ export const updateContact = async (req: Request, res: Response, next: NextFunct
 export const deleteContact = async (req: Request, res: Response, next: NextFunction) => {
   try {
     await contactsService.deleteContact(req.user!.userId, req.params.childId, req.params.contactId);
-    res.status(200).json({
-      success: true,
-      data: { deleted: true },
-      error: null,
-      timestamp: new Date().toISOString(),
-      request_id: req.headers['x-request-id'],
-    });
+    respond(res, 200, { deleted: true }, req);
   } catch (err) {
     next(err);
   }

@@ -151,8 +151,15 @@ export const deleteChild = async (req: Request, res: Response, next: NextFunctio
  */
 export const listGuardians = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const guardians = await childrenService.listGuardians(req.user!.userId, req.params.childId);
-    respond(res, 200, { guardians }, req);
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 20;
+    const { items, total } = await childrenService.listGuardians(
+      req.user!.userId,
+      req.params.childId,
+      page,
+      limit
+    );
+    respond(res, 200, { guardians: items, pagination: buildPaginationMeta(page, limit, total) }, req);
   } catch (err) {
     next(err);
   }

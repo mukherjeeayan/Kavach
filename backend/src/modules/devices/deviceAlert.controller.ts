@@ -3,6 +3,7 @@
 
 import { Request, Response, NextFunction } from 'express';
 import * as deviceAlertService from './deviceAlert.service';
+import { respond } from '../../utils/response';
 
 /**
  * POST /api/v1/devices/:deviceId/tamper-alert
@@ -21,13 +22,7 @@ export const reportTamper = async (
 
     await deviceAlertService.reportTamperAlert(actorId, deviceId, details);
 
-    res.status(200).json({
-      success: true,
-      data: { message: 'Tamper alert recorded' },
-      error: null,
-      timestamp: new Date().toISOString(),
-      request_id: req.headers['x-request-id'],
-    });
+    respond(res, 200, { message: 'Tamper alert recorded' }, req);
   } catch (err) {
     next(err);
   }

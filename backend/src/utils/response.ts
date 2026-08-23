@@ -24,3 +24,18 @@ export const respond = <T>(
     request_id: req.headers['x-request-id'],
   } as ApiResponse<T>);
 };
+
+export const respondError = (
+  res: Response,
+  status: number,
+  error: string,
+  req: Request
+): void => {
+  res.status(status).json({
+    success: false,
+    data: {},
+    error,
+    timestamp: new Date().toISOString(),
+    request_id: req.headers['x-request-id'],
+  } as ApiResponse);
+};

@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import * as locksService from './locks.service';
 import { buildPaginationMeta } from '../../utils/pagination';
+import { respond } from '../../utils/response';
 
 export const listLocks = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -12,13 +13,7 @@ export const listLocks = async (req: Request, res: Response, next: NextFunction)
       page,
       limit
     );
-    res.status(200).json({
-      success: true,
-      data: { locks: items, pagination: buildPaginationMeta(page, limit, total) },
-      error: null,
-      timestamp: new Date().toISOString(),
-      request_id: req.headers['x-request-id'],
-    });
+    respond(res, 200, { locks: items, pagination: buildPaginationMeta(page, limit, total) }, req);
   } catch (err) {
     next(err);
   }
@@ -27,13 +22,7 @@ export const listLocks = async (req: Request, res: Response, next: NextFunction)
 export const createLock = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const data = await locksService.createLock(req.user!.userId, req.params.childId, req.body);
-    res.status(201).json({
-      success: true,
-      data,
-      error: null,
-      timestamp: new Date().toISOString(),
-      request_id: req.headers['x-request-id'],
-    });
+    respond(res, 201, data, req);
   } catch (err) {
     next(err);
   }
@@ -47,13 +36,7 @@ export const updateLock = async (req: Request, res: Response, next: NextFunction
       req.params.lockId,
       req.body
     );
-    res.status(200).json({
-      success: true,
-      data,
-      error: null,
-      timestamp: new Date().toISOString(),
-      request_id: req.headers['x-request-id'],
-    });
+    respond(res, 200, data, req);
   } catch (err) {
     next(err);
   }
@@ -62,13 +45,7 @@ export const updateLock = async (req: Request, res: Response, next: NextFunction
 export const deleteLock = async (req: Request, res: Response, next: NextFunction) => {
   try {
     await locksService.deleteLock(req.user!.userId, req.params.childId, req.params.lockId);
-    res.status(200).json({
-      success: true,
-      data: { deleted: true },
-      error: null,
-      timestamp: new Date().toISOString(),
-      request_id: req.headers['x-request-id'],
-    });
+    respond(res, 200, { deleted: true }, req);
   } catch (err) {
     next(err);
   }

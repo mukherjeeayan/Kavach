@@ -70,18 +70,35 @@ export interface Guardian {
  */
 export const listGuardians = async (
   parentId: string,
-  childId: string
-): Promise<Guardian[]> => {
+  childId: string,
+  page = 1,
+  limit = 20
+): Promise<{ items: Guardian[]; total: number }> => {
   await verifyChildBelongsToParent(childId, parentId);
-  const result = await query(
-    `SELECT p.id AS parent_id, p.name, p.email, g.role
-     FROM child_guardians g
-     JOIN parents p ON p.id = g.parent_id
-     WHERE g.child_id = $1
-     ORDER BY g.created_at ASC`,
-    [childId]
-  );
-  return result.rows;
+  const offset = (page - 1) * limit;
+
+  const [itemsResult, countResult] = await Promise.all([
+    query(
+      `SELECT p.id AS parent_id, p.name, p.email, g.role
+       FROM child_guardians g
+       JOIN parents p ON p.id = g.parent_id
+       WHERE g.child_id = $1
+       ORDER BY g.created_at ASC
+       LIMIT $2 OFFSET $3`,
+      [childId, limit, offset]
+    ),
+    query(
+      `SELECT COUNT(*)::int AS total
+       FROM child_guardians
+       WHERE child_id = $1`,
+      [childId]
+    ),
+  ]);
+
+  return {
+    items: itemsResult.rows,
+    total: countResult.rows[0].total,
+  };
 };
 
 /**

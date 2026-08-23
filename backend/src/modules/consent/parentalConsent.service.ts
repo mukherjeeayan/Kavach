@@ -95,18 +95,35 @@ export const revokeConsent = async (
  */
 export const listConsents = async (
   parentId: string,
-  childId: string
-): Promise<ParentalConsent[]> => {
+  childId: string,
+  page = 1,
+  limit = 20
+): Promise<{ items: ParentalConsent[]; total: number }> => {
   await verifyChildBelongsToParent(childId, parentId);
 
-  const result = await query(
-    `SELECT id, parent_id, child_id, consent_type, granted_at, revoked_at, ip_address
-     FROM parental_consent
-     WHERE parent_id = $1 AND child_id = $2
-     ORDER BY granted_at DESC`,
-    [parentId, childId]
-  );
-  return result.rows;
+  const offset = (page - 1) * limit;
+
+  const [itemsResult, countResult] = await Promise.all([
+    query(
+      `SELECT id, parent_id, child_id, consent_type, granted_at, revoked_at, ip_address
+       FROM parental_consent
+       WHERE parent_id = $1 AND child_id = $2
+       ORDER BY granted_at DESC
+       LIMIT $3 OFFSET $4`,
+      [parentId, childId, limit, offset]
+    ),
+    query(
+      `SELECT COUNT(*)::int AS total
+       FROM parental_consent
+       WHERE parent_id = $1 AND child_id = $2`,
+      [parentId, childId]
+    ),
+  ]);
+
+  return {
+    items: itemsResult.rows,
+    total: countResult.rows[0].total,
+  };
 };
 
 /**
