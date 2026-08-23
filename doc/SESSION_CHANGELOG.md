@@ -50,6 +50,9 @@ Deep codebase audit across all three tiers identified 97 additional findings (29
 23. **Pagination** (`parentalConsent.service.ts`, `children.service.ts`): Added `page`/`limit` params with `LIMIT`/`OFFSET` and `COUNT(*)` queries to `listConsents` and `listGuardians`. Both now return `{ items, total }`.
 24. **Guardians test** (`guardians.alerts.integration.test.ts`): Updated mock to expect the additional count query for paginated response.
 
+### Changes Made — Frontend (CI fix)
+25. **Lint errors** (7 files): Fixed 16 `@typescript-eslint/no-explicit-any` errors that were causing `npm run lint -- --max-warnings 0` to fail in CI. Production code: typed axios response in LocationMap, typed catch clauses in ResetPasswordPage and SettingsPage. Test files: added eslint-disable comments for intentional mock type casts.
+
 ---
 
 ## Session: 2026-08-23 — Final Gap Closure (54 Issues)
