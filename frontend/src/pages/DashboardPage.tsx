@@ -23,6 +23,20 @@ import AlertsSection from '../components/dashboard/AlertsSection';
 import LocksSection from '../components/dashboard/LocksSection';
 import ContactsSection from '../components/dashboard/ContactsSection';
 import LocationsSection from '../components/dashboard/LocationsSection';
+import WebsiteFilterSection from '../components/dashboard/WebsiteFilterSection';
+import DeviceHealthSection from '../components/dashboard/DeviceHealthSection';
+import CommunicationSection from '../components/dashboard/CommunicationSection';
+import KeywordAlertsSection from '../components/dashboard/KeywordAlertsSection';
+import EmergencySOS from '../components/dashboard/EmergencySOS';
+import AnalyticsSection from '../components/dashboard/AnalyticsSection';
+import GeofenceSection from '../components/dashboard/GeofenceSection';
+import MoodTrackingSection from '../components/dashboard/MoodTrackingSection';
+import RewardSection from '../components/dashboard/RewardSection';
+import BehaviorPredictionSection from '../components/dashboard/BehaviorPredictionSection';
+import SecuritySection from '../components/dashboard/SecuritySection';
+import SelfHarmAlertsSection from '../components/dashboard/SelfHarmAlertsSection';
+import VoiceCommandsSection from '../components/dashboard/VoiceCommandsSection';
+import IntegrationsSection from '../components/dashboard/IntegrationsSection';
 import Toast from '../components/ui/Toast';
 import { SkeletonList } from '../components/ui/Skeleton';
 import type { RootState } from '../store/store';
@@ -282,6 +296,38 @@ export default function DashboardPage() {
                     respondToRequest.mutate({ ruleId, decision: 'reject' })
                   }
                 />
+              </>
+            )}
+
+            {/* Phase 2: Advanced Features */}
+            {pinUnlocked && (
+              <>
+                <EmergencySOS childId={childId} onError={setActionError} />
+                <WebsiteFilterSection childId={childId} onError={setActionError} />
+                <DeviceHealthSection childId={childId} deviceId={selectedDeviceId} />
+                <GeofenceSection childId={childId} onError={setActionError} />
+                <CommunicationSection childId={childId} />
+                <KeywordAlertsSection childId={childId} onError={setActionError} />
+                <AnalyticsSection childId={childId} onError={setActionError} />
+              </>
+            )}
+
+            {/* Phase 3: Wellness Features */}
+            {pinUnlocked && (
+              <>
+                <MoodTrackingSection childId={childId} />
+                <RewardSection childId={childId} onError={setActionError} />
+                <SelfHarmAlertsSection childId={childId} onError={setActionError} />
+                <VoiceCommandsSection childId={childId} />
+              </>
+            )}
+
+            {/* Phase 4: AI & Advanced Features */}
+            {pinUnlocked && (
+              <>
+                <BehaviorPredictionSection childId={childId} />
+                <SecuritySection childId={childId} deviceId={selectedDeviceId} />
+                <IntegrationsSection onError={setActionError} />
               </>
             )}
           </>

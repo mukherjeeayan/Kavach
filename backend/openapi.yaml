@@ -24,6 +24,20 @@ tags:
   - name: Location
   - name: Consent
   - name: Geo
+  - name: URL Filtering
+  - name: Device Health
+  - name: Communications
+  - name: Keyword Dictionary
+  - name: SOS
+  - name: Geofencing
+  - name: Analytics
+  - name: Mood Tracking
+  - name: Self-Harm Alerts
+  - name: Rewards
+  - name: Predictions
+  - name: Security
+  - name: Voice Commands
+  - name: Integrations
 
 paths:
   /health:
@@ -1482,6 +1496,1669 @@ paths:
         "503":
           description: Mapbox not configured
 
+  /children/{childId}/url-filters:
+    parameters:
+      - $ref: "#/components/parameters/ChildId"
+    get:
+      tags: [URL Filtering]
+      summary: List URL filter rules for a child
+      operationId: listUrlFilters
+      responses:
+        "200":
+          description: List of URL filter rules
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Envelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/UrlFilterRule"
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+    post:
+      tags: [URL Filtering]
+      summary: Create a URL filter rule
+      operationId: createUrlFilter
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateUrlFilterInput"
+      responses:
+        "201":
+          description: URL filter rule created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Envelope"
+        "400":
+          description: Validation error
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+
+  /children/{childId}/url-filters/sync:
+    parameters:
+      - $ref: "#/components/parameters/ChildId"
+    get:
+      tags: [URL Filtering]
+      summary: Get active URL filter rules for device sync
+      operationId: syncUrlFilters
+      responses:
+        "200":
+          description: Active URL filter rules
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Envelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          rules:
+                            type: array
+                            items:
+                              $ref: "#/components/schemas/UrlFilterRule"
+        "401":
+          description: Unauthorized
+
+  /children/{childId}/url-filters/{ruleId}:
+    parameters:
+      - $ref: "#/components/parameters/ChildId"
+      - name: ruleId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    put:
+      tags: [URL Filtering]
+      summary: Update a URL filter rule
+      operationId: updateUrlFilter
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateUrlFilterInput"
+      responses:
+        "200":
+          description: URL filter rule updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Envelope"
+        "400":
+          description: Validation error
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Rule not found
+    delete:
+      tags: [URL Filtering]
+      summary: Delete a URL filter rule
+      operationId: deleteUrlFilter
+      responses:
+        "200":
+          description: URL filter rule deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Envelope"
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Rule not found
+
+  /devices/{deviceId}/health:
+    parameters:
+      - $ref: "#/components/parameters/DeviceId"
+    post:
+      tags: [Device Health]
+      summary: Record device health snapshot (device-side)
+      operationId: recordDeviceHealth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RecordHealthInput"
+      responses:
+        "200":
+          description: Health recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Envelope"
+        "400":
+          description: Validation error
+        "401":
+          description: Unauthorized
+        "403":
+          description: Consent required
+
+  /children/{childId}/devices/{deviceId}/health:
+    parameters:
+      - $ref: "#/components/parameters/ChildId"
+      - $ref: "#/components/parameters/DeviceId"
+    get:
+      tags: [Device Health]
+      summary: Get latest device health snapshot
+      operationId: getLatestDeviceHealth
+      responses:
+        "200":
+          description: Latest health data
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Envelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/DeviceHealth"
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Device not found
+
+  /children/{childId}/devices/{deviceId}/health/history:
+    parameters:
+      - $ref: "#/components/parameters/ChildId"
+      - $ref: "#/components/parameters/DeviceId"
+    get:
+      tags: [Device Health]
+      summary: Get device health history
+      operationId: getDeviceHealthHistory
+      responses:
+        "200":
+          description: Health history
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Envelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/DeviceHealth"
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+
+  /devices/{deviceId}/sos:
+    parameters:
+      - $ref: "#/components/parameters/DeviceId"
+    post:
+      tags: [SOS]
+      summary: Trigger emergency SOS event (device-side)
+      operationId: triggerSos
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSosInput"
+      responses:
+        "201":
+          description: SOS event created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Envelope"
+        "400":
+          description: Validation error
+        "401":
+          description: Unauthorized
+        "403":
+          description: Consent required
+
+  /children/{childId}/sos:
+    parameters:
+      - $ref: "#/components/parameters/ChildId"
+    get:
+      tags: [SOS]
+      summary: List SOS events for a child
+      operationId: listSosEvents
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [ACTIVE, ACKNOWLEDGED, RESOLVED]
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: List of SOS events
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Envelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/SosEvent"
+                      pagination:
+                        $ref: "#/components/schemas/Pagination"
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+
+  /children/{childId}/sos/{eventId}/acknowledge:
+    parameters:
+      - $ref: "#/components/parameters/ChildId"
+      - name: eventId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    put:
+      tags: [SOS]
+      summary: Acknowledge an SOS event
+      operationId: acknowledgeSosEvent
+      responses:
+        "200":
+          description: SOS event acknowledged
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Envelope"
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: SOS event not found
+
+  /children/{childId}/sos/{eventId}/resolve:
+    parameters:
+      - $ref: "#/components/parameters/ChildId"
+      - name: eventId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    put:
+      tags: [SOS]
+      summary: Resolve an SOS event
+      operationId: resolveSosEvent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResolveSosInput"
+      responses:
+        "200":
+          description: SOS event resolved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Envelope"
+        "400":
+          description: Validation error
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: SOS event not found
+
+  /devices/{deviceId}/communications:
+    parameters:
+      - $ref: "#/components/parameters/DeviceId"
+    post:
+      tags: [Communications]
+      summary: Upload communication logs (device-side)
+      operationId: uploadCommunications
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UploadCommunicationsInput"
+      responses:
+        "200":
+          description: Communications uploaded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Envelope"
+        "400":
+          description: Validation error
+        "401":
+          description: Unauthorized
+        "403":
+          description: Consent required
+
+  /children/{childId}/communications:
+    parameters:
+      - $ref: "#/components/parameters/ChildId"
+    get:
+      tags: [Communications]
+      summary: List communication logs for a child
+      operationId: listCommunications
+      parameters:
+        - name: flagged
+          in: query
+          schema:
+            type: boolean
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: List of communications
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Envelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/CommunicationLog"
+                      pagination:
+                        $ref: "#/components/schemas/Pagination"
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+
+  /children/{childId}/keyword-alerts:
+    parameters:
+      - $ref: "#/components/parameters/ChildId"
+    get:
+      tags: [Communications]
+      summary: List keyword alerts for a child
+      operationId: listKeywordAlerts
+      parameters:
+        - name: unreviewed
+          in: query
+          schema:
+            type: boolean
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: List of keyword alerts
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Envelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/KeywordAlert"
+                      pagination:
+                        $ref: "#/components/schemas/Pagination"
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+
+  /children/{childId}/keyword-alerts/{alertId}/review:
+    parameters:
+      - $ref: "#/components/parameters/ChildId"
+      - name: alertId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    put:
+      tags: [Communications]
+      summary: Mark keyword alert as reviewed
+      operationId: reviewKeywordAlert
+      responses:
+        "200":
+          description: Keyword alert reviewed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Envelope"
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Alert not found
+
+  /keywords:
+    get:
+      tags: [Keyword Dictionary]
+      summary: List keywords in the detection dictionary
+      operationId: listKeywords
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+            enum: [CYBERBULLYING, SELF_HARM, PROFANITY, DRUGS, CUSTOM]
+        - name: active_only
+          in: query
+          schema:
+            type: boolean
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: List of keywords
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Envelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/KeywordEntry"
+                      pagination:
+                        $ref: "#/components/schemas/Pagination"
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+    post:
+      tags: [Keyword Dictionary]
+      summary: Add a keyword to the dictionary
+      operationId: createKeyword
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateKeywordInput"
+      responses:
+        "201":
+          description: Keyword created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Envelope"
+        "400":
+          description: Validation error
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+
+  /keywords/bulk:
+    post:
+      tags: [Keyword Dictionary]
+      summary: Bulk add keywords to the dictionary
+      operationId: bulkCreateKeywords
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BulkCreateKeywordsInput"
+      responses:
+        "201":
+          description: Keywords created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Envelope"
+        "400":
+          description: Validation error
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+
+  /keywords/{keywordId}:
+    parameters:
+      - name: keywordId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    put:
+      tags: [Keyword Dictionary]
+      summary: Update a keyword entry
+      operationId: updateKeyword
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateKeywordInput"
+      responses:
+        "200":
+          description: Keyword updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Envelope"
+        "400":
+          description: Validation error
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Keyword not found
+    delete:
+      tags: [Keyword Dictionary]
+      summary: Delete a keyword entry
+      operationId: deleteKeyword
+      responses:
+        "200":
+          description: Keyword deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Envelope"
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Keyword not found
+
+  /children/{childId}/reports/generate:
+    parameters:
+      - $ref: "#/components/parameters/ChildId"
+    post:
+      tags: [Analytics]
+      summary: Generate an analytics report
+      operationId: generateReport
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GenerateReportInput"
+      responses:
+        "201":
+          description: Report generation started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Envelope"
+        "400":
+          description: Validation error
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+
+  /children/{childId}/reports/latest:
+    parameters:
+      - $ref: "#/components/parameters/ChildId"
+    get:
+      tags: [Analytics]
+      summary: Get cached report (latest by type)
+      operationId: getLatestReport
+      parameters:
+        - name: type
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [WEEKLY, MONTHLY]
+      responses:
+        "200":
+          description: Cached report
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Envelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/AnalyticsReport"
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: No report found
+
+  /children/{childId}/reports:
+    parameters:
+      - $ref: "#/components/parameters/ChildId"
+    get:
+      tags: [Analytics]
+      summary: List all reports for a child
+      operationId: listReports
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: List of reports
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Envelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/AnalyticsReport"
+                      pagination:
+                        $ref: "#/components/schemas/Pagination"
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+
+  /children/{childId}/geofences:
+    parameters:
+      - $ref: "#/components/parameters/ChildId"
+    get:
+      tags: [Geofencing]
+      summary: List geofences for a child
+      operationId: listGeofences
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: List of geofences
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Envelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Geofence"
+                      pagination:
+                        $ref: "#/components/schemas/Pagination"
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+    post:
+      tags: [Geofencing]
+      summary: Create a geofence
+      operationId: createGeofence
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateGeofenceInput"
+      responses:
+        "201":
+          description: Geofence created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Envelope"
+        "400":
+          description: Validation error
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+
+  /children/{childId}/geofences/{geofenceId}:
+    parameters:
+      - $ref: "#/components/parameters/ChildId"
+      - name: geofenceId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    put:
+      tags: [Geofencing]
+      summary: Update a geofence
+      operationId: updateGeofence
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateGeofenceInput"
+      responses:
+        "200":
+          description: Geofence updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Envelope"
+        "400":
+          description: Validation error
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Geofence not found
+    delete:
+      tags: [Geofencing]
+      summary: Delete a geofence
+      operationId: deleteGeofence
+      responses:
+        "200":
+          description: Geofence deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Envelope"
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Geofence not found
+
+  /devices/{deviceId}/geofences/check:
+    parameters:
+      - $ref: "#/components/parameters/DeviceId"
+    post:
+      tags: [Geofencing]
+      summary: Check device location against all active geofences (device-side)
+      operationId: checkGeofences
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [latitude, longitude]
+              properties:
+                latitude:
+                  type: number
+                  format: double
+                longitude:
+                  type: number
+                  format: double
+      responses:
+        "200":
+          description: Geofence check results
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Envelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          violations:
+                            type: array
+                            items:
+                              $ref: "#/components/schemas/GeofenceViolation"
+        "401":
+          description: Unauthorized
+
+  /devices/{deviceId}/mood:
+    parameters:
+      - $ref: "#/components/parameters/DeviceId"
+    post:
+      tags: [Mood Tracking]
+      summary: Record mood log (child self-report)
+      operationId: createMoodLog
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateMoodLogInput"
+      responses:
+        "201":
+          description: Mood log recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Envelope"
+        "400":
+          description: Validation error
+        "401":
+          description: Unauthorized
+        "403":
+          description: Consent required
+
+  /children/{childId}/mood:
+    parameters:
+      - $ref: "#/components/parameters/ChildId"
+    get:
+      tags: [Mood Tracking]
+      summary: List mood logs for a child
+      operationId: listMoodLogs
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: List of mood logs
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Envelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/MoodLog"
+                      pagination:
+                        $ref: "#/components/schemas/Pagination"
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+
+  /children/{childId}/mood/summary:
+    parameters:
+      - $ref: "#/components/parameters/ChildId"
+    get:
+      tags: [Mood Tracking]
+      summary: Get mood summary for a child
+      operationId: getMoodSummary
+      responses:
+        "200":
+          description: Mood summary
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Envelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/MoodSummary"
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+
+  /children/{childId}/self-harm-alerts:
+    parameters:
+      - $ref: "#/components/parameters/ChildId"
+    get:
+      tags: [Self-Harm Alerts]
+      summary: List self-harm alerts for a child
+      operationId: listSelfHarmAlerts
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: List of self-harm alerts
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Envelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/SelfHarmAlert"
+                      pagination:
+                        $ref: "#/components/schemas/Pagination"
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+
+  /children/{childId}/self-harm-alerts/{alertId}/acknowledge:
+    parameters:
+      - $ref: "#/components/parameters/ChildId"
+      - name: alertId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    put:
+      tags: [Self-Harm Alerts]
+      summary: Acknowledge a self-harm alert
+      operationId: acknowledgeSelfHarmAlert
+      responses:
+        "200":
+          description: Alert acknowledged
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Envelope"
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Alert not found
+
+  /children/{childId}/self-harm-alerts/count:
+    parameters:
+      - $ref: "#/components/parameters/ChildId"
+    get:
+      tags: [Self-Harm Alerts]
+      summary: Get unacknowledged self-harm alert count
+      operationId: getUnacknowledgedSelfHarmCount
+      responses:
+        "200":
+          description: Unacknowledged count
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Envelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          count:
+                            type: integer
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+
+  /rewards/catalog:
+    get:
+      tags: [Rewards]
+      summary: List reward catalog items
+      operationId: listRewardCatalog
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: List of catalog items
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Envelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/RewardCatalogItem"
+                      pagination:
+                        $ref: "#/components/schemas/Pagination"
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+    post:
+      tags: [Rewards]
+      summary: Create a reward catalog item
+      operationId: createRewardCatalogItem
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCatalogInput"
+      responses:
+        "201":
+          description: Catalog item created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Envelope"
+        "400":
+          description: Validation error
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+
+  /rewards/catalog/{rewardId}:
+    parameters:
+      - name: rewardId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    put:
+      tags: [Rewards]
+      summary: Update a reward catalog item
+      operationId: updateRewardCatalogItem
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCatalogInput"
+      responses:
+        "200":
+          description: Catalog item updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Envelope"
+        "400":
+          description: Validation error
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Catalog item not found
+    delete:
+      tags: [Rewards]
+      summary: Delete a reward catalog item
+      operationId: deleteRewardCatalogItem
+      responses:
+        "200":
+          description: Catalog item deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Envelope"
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Catalog item not found
+
+  /children/{childId}/rewards/points:
+    parameters:
+      - $ref: "#/components/parameters/ChildId"
+    get:
+      tags: [Rewards]
+      summary: List points ledger for a child
+      operationId: listPointsLedger
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Points ledger
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Envelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/PointsLedgerEntry"
+                      pagination:
+                        $ref: "#/components/schemas/Pagination"
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+    post:
+      tags: [Rewards]
+      summary: Award points to a child
+      operationId: awardPoints
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AwardPointsInput"
+      responses:
+        "201":
+          description: Points awarded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Envelope"
+        "400":
+          description: Validation error
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+
+  /children/{childId}/rewards/points/balance:
+    parameters:
+      - $ref: "#/components/parameters/ChildId"
+    get:
+      tags: [Rewards]
+      summary: Get points balance for a child
+      operationId: getPointsBalance
+      responses:
+        "200":
+          description: Points balance
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Envelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          balance:
+                            type: integer
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+
+  /children/{childId}/rewards/redemptions:
+    parameters:
+      - $ref: "#/components/parameters/ChildId"
+    get:
+      tags: [Rewards]
+      summary: List reward redemptions
+      operationId: listRedemptions
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: List of redemptions
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Envelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Redemption"
+                      pagination:
+                        $ref: "#/components/schemas/Pagination"
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+
+  /children/{childId}/rewards/redemptions/{redemptionId}:
+    parameters:
+      - $ref: "#/components/parameters/ChildId"
+      - name: redemptionId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    put:
+      tags: [Rewards]
+      summary: Resolve a reward redemption
+      operationId: resolveRedemption
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResolveRedemptionInput"
+      responses:
+        "200":
+          description: Redemption resolved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Envelope"
+        "400":
+          description: Validation error
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Redemption not found
+
+  /children/{childId}/rewards/browse:
+    parameters:
+      - $ref: "#/components/parameters/ChildId"
+    get:
+      tags: [Rewards]
+      summary: Browse reward catalog (child-side)
+      operationId: browseRewardCatalog
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Catalog items
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Envelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/RewardCatalogItem"
+                      pagination:
+                        $ref: "#/components/schemas/Pagination"
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+
+  /children/{childId}/rewards/redeem:
+    parameters:
+      - $ref: "#/components/parameters/ChildId"
+    post:
+      tags: [Rewards]
+      summary: Redeem a reward (child-side)
+      operationId: redeemReward
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RedeemRewardInput"
+      responses:
+        "201":
+          description: Redemption request created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Envelope"
+        "400":
+          description: Validation error or insufficient points
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+
+  /children/{childId}/predictions:
+    parameters:
+      - $ref: "#/components/parameters/ChildId"
+    get:
+      tags: [Predictions]
+      summary: List behavior predictions for a child
+      operationId: listPredictions
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: List of predictions
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Envelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Prediction"
+                      pagination:
+                        $ref: "#/components/schemas/Pagination"
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+
+  /children/{childId}/predictions/generate:
+    parameters:
+      - $ref: "#/components/parameters/ChildId"
+    post:
+      tags: [Predictions]
+      summary: Trigger prediction generation for a child
+      operationId: generatePredictions
+      responses:
+        "200":
+          description: Predictions generated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Envelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Prediction"
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+
+  /devices/{deviceId}/security-scans:
+    parameters:
+      - $ref: "#/components/parameters/DeviceId"
+    post:
+      tags: [Security]
+      summary: Record a security scan result (device-side)
+      operationId: recordSecurityScan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSecurityScanInput"
+      responses:
+        "201":
+          description: Security scan recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Envelope"
+        "400":
+          description: Validation error
+        "401":
+          description: Unauthorized
+        "403":
+          description: Consent required
+
+  /devices/{deviceId}/wifi-logs:
+    parameters:
+      - $ref: "#/components/parameters/DeviceId"
+    post:
+      tags: [Security]
+      summary: Record a WiFi connection log (device-side)
+      operationId: recordWifiLog
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateWifiLogInput"
+      responses:
+        "201":
+          description: WiFi log recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Envelope"
+        "400":
+          description: Validation error
+        "401":
+          description: Unauthorized
+        "403":
+          description: Consent required
+
+  /children/{childId}/devices/{deviceId}/security-scans:
+    parameters:
+      - $ref: "#/components/parameters/ChildId"
+      - $ref: "#/components/parameters/DeviceId"
+    get:
+      tags: [Security]
+      summary: List security scans for a device
+      operationId: listSecurityScans
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: List of security scans
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Envelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/SecurityScan"
+                      pagination:
+                        $ref: "#/components/schemas/Pagination"
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+
+  /children/{childId}/devices/{deviceId}/wifi-logs:
+    parameters:
+      - $ref: "#/components/parameters/ChildId"
+      - $ref: "#/components/parameters/DeviceId"
+    get:
+      tags: [Security]
+      summary: List WiFi logs for a device
+      operationId: listWifiLogs
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: List of WiFi logs
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Envelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/WifiLog"
+                      pagination:
+                        $ref: "#/components/schemas/Pagination"
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+
+  /devices/{deviceId}/voice-commands:
+    parameters:
+      - $ref: "#/components/parameters/DeviceId"
+    post:
+      tags: [Voice Commands]
+      summary: Record a voice command (device-side)
+      operationId: recordVoiceCommand
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RecordCommandInput"
+      responses:
+        "201":
+          description: Voice command recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Envelope"
+        "400":
+          description: Validation error
+        "401":
+          description: Unauthorized
+
+  /children/{childId}/voice-commands:
+    parameters:
+      - $ref: "#/components/parameters/ChildId"
+    get:
+      tags: [Voice Commands]
+      summary: List voice commands for a child
+      operationId: listVoiceCommands
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: List of voice commands
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Envelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/VoiceCommand"
+                      pagination:
+                        $ref: "#/components/schemas/Pagination"
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+
+  /integrations:
+    get:
+      tags: [Integrations]
+      summary: List all integrations
+      operationId: listIntegrations
+      responses:
+        "200":
+          description: List of integrations
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Envelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Integration"
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+    post:
+      tags: [Integrations]
+      summary: Create a new integration
+      operationId: createIntegration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateIntegrationInput"
+      responses:
+        "201":
+          description: Integration created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Envelope"
+        "400":
+          description: Validation error
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+
+  /integrations/{integrationId}:
+    parameters:
+      - name: integrationId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    put:
+      tags: [Integrations]
+      summary: Update an integration
+      operationId: updateIntegration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateIntegrationInput"
+      responses:
+        "200":
+          description: Integration updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Envelope"
+        "400":
+          description: Validation error
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Integration not found
+    delete:
+      tags: [Integrations]
+      summary: Delete an integration
+      operationId: deleteIntegration
+      responses:
+        "200":
+          description: Integration deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Envelope"
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Integration not found
+
+  /integrations/{integrationId}/sync:
+    parameters:
+      - name: integrationId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      tags: [Integrations]
+      summary: Trigger integration sync
+      operationId: syncIntegration
+      responses:
+        "200":
+          description: Integration synced
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Envelope"
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Integration not found
+
 components:
   securitySchemes:
     bearerAuth:
@@ -1745,3 +3422,964 @@ components:
         status:
           type: string
           enum: [active, pending_unblock, blocked]
+
+    UrlFilterRule:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        url_pattern:
+          type: string
+        rule_type:
+          type: string
+          enum: [ALLOW, BLOCK]
+        category:
+          type: string
+          nullable: true
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+
+    CreateUrlFilterInput:
+      type: object
+      required: [url_pattern]
+      properties:
+        url_pattern:
+          type: string
+          minLength: 1
+          maxLength: 2048
+        rule_type:
+          type: string
+          enum: [ALLOW, BLOCK]
+          default: BLOCK
+        category:
+          type: string
+          maxLength: 100
+        is_active:
+          type: boolean
+          default: true
+
+    UpdateUrlFilterInput:
+      type: object
+      properties:
+        url_pattern:
+          type: string
+          minLength: 1
+          maxLength: 2048
+        rule_type:
+          type: string
+          enum: [ALLOW, BLOCK]
+        category:
+          type: string
+          maxLength: 100
+        is_active:
+          type: boolean
+
+    DeviceHealth:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        device_id:
+          type: string
+          format: uuid
+        battery_level:
+          type: integer
+          minimum: 0
+          maximum: 100
+          nullable: true
+        is_charging:
+          type: boolean
+          nullable: true
+        storage_total_mb:
+          type: integer
+          nullable: true
+        storage_free_mb:
+          type: integer
+          nullable: true
+        is_rooted:
+          type: boolean
+        is_developer_options:
+          type: boolean
+        is_usb_debugging:
+          type: boolean
+        os_version:
+          type: string
+          nullable: true
+        app_version:
+          type: string
+          nullable: true
+        recorded_at:
+          type: string
+          format: date-time
+
+    RecordHealthInput:
+      type: object
+      properties:
+        battery_level:
+          type: integer
+          minimum: 0
+          maximum: 100
+        is_charging:
+          type: boolean
+        storage_total_mb:
+          type: integer
+          exclusiveMinimum: 0
+        storage_free_mb:
+          type: integer
+          minimum: 0
+        is_rooted:
+          type: boolean
+          default: false
+        is_developer_options:
+          type: boolean
+          default: false
+        is_usb_debugging:
+          type: boolean
+          default: false
+        os_version:
+          type: string
+          maxLength: 50
+        app_version:
+          type: string
+          maxLength: 50
+
+    SosEvent:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        device_id:
+          type: string
+          format: uuid
+        child_id:
+          type: string
+          format: uuid
+        latitude:
+          type: number
+          format: double
+          nullable: true
+        longitude:
+          type: number
+          format: double
+          nullable: true
+        battery_level:
+          type: integer
+          nullable: true
+        trigger_method:
+          type: string
+          enum: [BUTTON, WIDGET, VOICE, HARDWARE_KEY]
+        status:
+          type: string
+          enum: [ACTIVE, ACKNOWLEDGED, RESOLVED]
+        notes:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        acknowledged_at:
+          type: string
+          format: date-time
+          nullable: true
+        resolved_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    CreateSosInput:
+      type: object
+      properties:
+        latitude:
+          type: number
+          minimum: -90
+          maximum: 90
+        longitude:
+          type: number
+          minimum: -180
+          maximum: 180
+        battery_level:
+          type: integer
+          minimum: 0
+          maximum: 100
+        trigger_method:
+          type: string
+          enum: [BUTTON, WIDGET, VOICE, HARDWARE_KEY]
+          default: BUTTON
+
+    ResolveSosInput:
+      type: object
+      properties:
+        notes:
+          type: string
+          maxLength: 500
+
+    CommunicationLog:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        device_id:
+          type: string
+          format: uuid
+        comm_type:
+          type: string
+          enum: [SMS_IN, SMS_OUT, CALL_IN, CALL_OUT, CALL_MISSED]
+        contact_number:
+          type: string
+          nullable: true
+        contact_name:
+          type: string
+          nullable: true
+        content_snippet:
+          type: string
+          nullable: true
+        duration_seconds:
+          type: integer
+          nullable: true
+        is_flagged:
+          type: boolean
+        recorded_at:
+          type: string
+          format: date-time
+
+    UploadCommunicationsInput:
+      type: object
+      required: [entries]
+      properties:
+        entries:
+          type: array
+          minItems: 1
+          maxItems: 200
+          items:
+            type: object
+            required: [comm_type]
+            properties:
+              comm_type:
+                type: string
+                enum: [SMS_IN, SMS_OUT, CALL_IN, CALL_OUT, CALL_MISSED]
+              contact_number:
+                type: string
+                maxLength: 32
+              contact_name:
+                type: string
+                maxLength: 255
+              content_snippet:
+                type: string
+                maxLength: 500
+              duration_seconds:
+                type: integer
+                minimum: 0
+              recorded_at:
+                type: string
+                format: date-time
+
+    KeywordAlert:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        child_id:
+          type: string
+          format: uuid
+        communication_id:
+          type: string
+          format: uuid
+        matched_keyword:
+          type: string
+        category:
+          type: string
+        severity:
+          type: string
+        reviewed:
+          type: boolean
+        reviewed_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    KeywordEntry:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        category:
+          type: string
+          enum: [CYBERBULLYING, SELF_HARM, PROFANITY, DRUGS, CUSTOM]
+        keyword:
+          type: string
+        severity:
+          type: string
+          enum: [LOW, MEDIUM, HIGH, CRITICAL]
+        language:
+          type: string
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+
+    CreateKeywordInput:
+      type: object
+      required: [category, keyword]
+      properties:
+        category:
+          type: string
+          enum: [CYBERBULLYING, SELF_HARM, PROFANITY, DRUGS, CUSTOM]
+        keyword:
+          type: string
+          minLength: 1
+          maxLength: 255
+        severity:
+          type: string
+          enum: [LOW, MEDIUM, HIGH, CRITICAL]
+          default: MEDIUM
+        language:
+          type: string
+          maxLength: 10
+          default: en
+        is_active:
+          type: boolean
+          default: true
+
+    UpdateKeywordInput:
+      type: object
+      properties:
+        severity:
+          type: string
+          enum: [LOW, MEDIUM, HIGH, CRITICAL]
+        is_active:
+          type: boolean
+
+    BulkCreateKeywordsInput:
+      type: object
+      required: [keywords]
+      properties:
+        keywords:
+          type: array
+          minItems: 1
+          maxItems: 100
+          items:
+            type: object
+            required: [category, keyword]
+            properties:
+              category:
+                type: string
+                enum: [CYBERBULLYING, SELF_HARM, PROFANITY, DRUGS, CUSTOM]
+              keyword:
+                type: string
+                minLength: 1
+                maxLength: 255
+              severity:
+                type: string
+                enum: [LOW, MEDIUM, HIGH, CRITICAL]
+                default: MEDIUM
+              language:
+                type: string
+                maxLength: 10
+                default: en
+
+    GenerateReportInput:
+      type: object
+      required: [report_type]
+      properties:
+        report_type:
+          type: string
+          enum: [WEEKLY, MONTHLY]
+
+    AnalyticsReport:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        child_id:
+          type: string
+          format: uuid
+        report_type:
+          type: string
+          enum: [WEEKLY, MONTHLY]
+        summary:
+          type: object
+          nullable: true
+        generated_at:
+          type: string
+          format: date-time
+        period_start:
+          type: string
+          format: date-time
+        period_end:
+          type: string
+          format: date-time
+
+    Geofence:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        child_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        latitude:
+          type: number
+          format: double
+        longitude:
+          type: number
+          format: double
+        radius_meters:
+          type: number
+        zone_type:
+          type: string
+          enum: [HOME, SCHOOL, FRIEND, CUSTOM]
+        alert_on_entry:
+          type: boolean
+        alert_on_exit:
+          type: boolean
+        device_id:
+          type: string
+          format: uuid
+          nullable: true
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+
+    CreateGeofenceInput:
+      type: object
+      required: [name, latitude, longitude, radius_meters]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        latitude:
+          type: number
+          minimum: -90
+          maximum: 90
+        longitude:
+          type: number
+          minimum: -180
+          maximum: 180
+        radius_meters:
+          type: number
+          minimum: 50
+          maximum: 50000
+        zone_type:
+          type: string
+          enum: [HOME, SCHOOL, FRIEND, CUSTOM]
+          default: CUSTOM
+        alert_on_entry:
+          type: boolean
+          default: false
+        alert_on_exit:
+          type: boolean
+          default: true
+        device_id:
+          type: string
+          format: uuid
+        is_active:
+          type: boolean
+          default: true
+
+    UpdateGeofenceInput:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        latitude:
+          type: number
+          minimum: -90
+          maximum: 90
+        longitude:
+          type: number
+          minimum: -180
+          maximum: 180
+        radius_meters:
+          type: number
+          minimum: 50
+          maximum: 50000
+        zone_type:
+          type: string
+          enum: [HOME, SCHOOL, FRIEND, CUSTOM]
+        alert_on_entry:
+          type: boolean
+        alert_on_exit:
+          type: boolean
+        is_active:
+          type: boolean
+
+    GeofenceViolation:
+      type: object
+      properties:
+        geofence_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        zone_type:
+          type: string
+        event_type:
+          type: string
+          enum: [ENTRY, EXIT]
+        latitude:
+          type: number
+          format: double
+        longitude:
+          type: number
+          format: double
+        recorded_at:
+          type: string
+          format: date-time
+
+    MoodLog:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        device_id:
+          type: string
+          format: uuid
+        mood_score:
+          type: integer
+          minimum: 1
+          maximum: 5
+        note:
+          type: string
+          nullable: true
+        activities:
+          type: array
+          items:
+            type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    CreateMoodLogInput:
+      type: object
+      required: [mood_score]
+      properties:
+        mood_score:
+          type: integer
+          minimum: 1
+          maximum: 5
+        note:
+          type: string
+          maxLength: 500
+        activities:
+          type: array
+          maxItems: 20
+          items:
+            type: string
+            maxLength: 100
+
+    MoodSummary:
+      type: object
+      properties:
+        average_score:
+          type: number
+          format: float
+        total_logs:
+          type: integer
+        period_days:
+          type: integer
+        score_distribution:
+          type: object
+          properties:
+            "1":
+              type: integer
+            "2":
+              type: integer
+            "3":
+              type: integer
+            "4":
+              type: integer
+            "5":
+              type: integer
+
+    SelfHarmAlert:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        child_id:
+          type: string
+          format: uuid
+        source:
+          type: string
+        matched_content:
+          type: string
+          nullable: true
+        severity:
+          type: string
+        acknowledged:
+          type: boolean
+        acknowledged_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    RewardCatalogItem:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        cost_points:
+          type: integer
+        icon:
+          type: string
+          nullable: true
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+
+    CreateCatalogInput:
+      type: object
+      required: [name, cost_points]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        description:
+          type: string
+          maxLength: 500
+        cost_points:
+          type: integer
+          minimum: 1
+        icon:
+          type: string
+          maxLength: 50
+
+    UpdateCatalogInput:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        description:
+          type: string
+          maxLength: 500
+        cost_points:
+          type: integer
+          minimum: 1
+        icon:
+          type: string
+          maxLength: 50
+        is_active:
+          type: boolean
+
+    PointsLedgerEntry:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        child_id:
+          type: string
+          format: uuid
+        points:
+          type: integer
+        reason:
+          type: string
+          nullable: true
+        source:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    AwardPointsInput:
+      type: object
+      required: [child_id, points]
+      properties:
+        child_id:
+          type: string
+          format: uuid
+        points:
+          type: integer
+          minimum: 1
+        reason:
+          type: string
+          maxLength: 255
+        source:
+          type: string
+          maxLength: 100
+
+    Redemption:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        child_id:
+          type: string
+          format: uuid
+        reward_id:
+          type: string
+          format: uuid
+        reward_name:
+          type: string
+        points_spent:
+          type: integer
+        status:
+          type: string
+          enum: [PENDING, APPROVED, REJECTED, FULFILLED]
+        parent_notes:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        resolved_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    ResolveRedemptionInput:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [APPROVED, REJECTED, FULFILLED]
+        parent_notes:
+          type: string
+          maxLength: 500
+
+    RedeemRewardInput:
+      type: object
+      required: [reward_id]
+      properties:
+        reward_id:
+          type: string
+          format: uuid
+
+    Prediction:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        child_id:
+          type: string
+          format: uuid
+        prediction_type:
+          type: string
+        risk_level:
+          type: string
+        confidence:
+          type: number
+          format: float
+        factors:
+          type: array
+          items:
+            type: string
+          nullable: true
+        recommendation:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    SecurityScan:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        device_id:
+          type: string
+          format: uuid
+        scan_type:
+          type: string
+          enum: [ROOT, KEYLOGGER, WIFI, APP_INTEGRITY, FULL]
+        result:
+          type: object
+        threats_found:
+          type: integer
+        scanned_at:
+          type: string
+          format: date-time
+
+    CreateSecurityScanInput:
+      type: object
+      required: [scan_type]
+      properties:
+        scan_type:
+          type: string
+          enum: [ROOT, KEYLOGGER, WIFI, APP_INTEGRITY, FULL]
+        result:
+          type: object
+        threats_found:
+          type: integer
+          minimum: 0
+          default: 0
+
+    WifiLog:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        device_id:
+          type: string
+          format: uuid
+        ssid:
+          type: string
+          nullable: true
+        bssid:
+          type: string
+          nullable: true
+        security_type:
+          type: string
+          nullable: true
+        is_open:
+          type: boolean
+        is_known:
+          type: boolean
+        ip_address:
+          type: string
+          nullable: true
+        connected_at:
+          type: string
+          format: date-time
+
+    CreateWifiLogInput:
+      type: object
+      properties:
+        ssid:
+          type: string
+          maxLength: 255
+        bssid:
+          type: string
+          pattern: "^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$"
+        security_type:
+          type: string
+          maxLength: 50
+        is_open:
+          type: boolean
+          default: false
+        is_known:
+          type: boolean
+          default: true
+        ip_address:
+          type: string
+          maxLength: 45
+
+    VoiceCommand:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        device_id:
+          type: string
+          format: uuid
+        command_text:
+          type: string
+        intent:
+          type: string
+          nullable: true
+        was_executed:
+          type: boolean
+        recorded_at:
+          type: string
+          format: date-time
+
+    RecordCommandInput:
+      type: object
+      required: [command_text]
+      properties:
+        command_text:
+          type: string
+          minLength: 1
+          maxLength: 500
+        intent:
+          type: string
+          maxLength: 255
+        was_executed:
+          type: boolean
+          default: false
+
+    Integration:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        integration_type:
+          type: string
+          enum: [SCHOOL_PORTAL, CALENDAR, HEALTH_APP, CUSTOM]
+        name:
+          type: string
+        config:
+          type: object
+        is_active:
+          type: boolean
+        last_synced_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    CreateIntegrationInput:
+      type: object
+      required: [integration_type, name]
+      properties:
+        integration_type:
+          type: string
+          enum: [SCHOOL_PORTAL, CALENDAR, HEALTH_APP, CUSTOM]
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        config:
+          type: object
+
+    UpdateIntegrationInput:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        config:
+          type: object
+        is_active:
+          type: boolean

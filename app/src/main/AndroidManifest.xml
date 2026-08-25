@@ -20,6 +20,16 @@
     <!-- Required by ActivityManager.appTasks in AppBlockingService -->
     <uses-permission android:name="android.permission.GET_TASKS" />
     
+    <!-- Communication Sync Permissions -->
+    <uses-permission android:name="android.permission.READ_SMS" />
+    <uses-permission android:name="android.permission.READ_CALL_LOG" />
+    
+    <!-- WiFi & Security Scan Permissions -->
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    
+    <!-- Voice Command Permissions -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    
     <!-- Boot & Background Consistency -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
@@ -78,6 +88,18 @@
             android:name=".service.location.LocationService"
             android:exported="false"
             android:foregroundServiceType="location" />
+
+        <!-- Geofence monitoring service -->
+        <service
+            android:name=".service.geofencing.GeofenceService"
+            android:exported="false"
+            android:foregroundServiceType="location" />
+
+        <!-- Voice command listening service -->
+        <service
+            android:name=".service.voice.VoiceCommandService"
+            android:exported="false"
+            android:foregroundServiceType="microphone" />
 
         <!-- Rejects calls matching parent-defined BLOCK rules -->
         <service

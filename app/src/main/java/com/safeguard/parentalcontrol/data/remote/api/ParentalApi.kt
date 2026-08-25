@@ -109,6 +109,12 @@ interface ParentalApi {
         @Body request: LocationUploadRequest
     ): Response<ApiResponse<Unit>>
 
+    @POST("api/v1/devices/{deviceId}/location/batch")
+    suspend fun uploadLocationBatch(
+        @Path("deviceId") deviceId: String,
+        @Body request: List<LocationUploadRequest>
+    ): Response<ApiResponse<Unit>>
+
     // ── Device admin status ─────────────────────────────────────────
 
     @PUT("api/v1/devices/{deviceId}/admin-status")

@@ -1,56 +1,15 @@
-package com.safeguard.parentalcontrol.work
+val CoroutineScope.backgroundJobs = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-import android.content.Context
-import android.content.Intent
-import androidx.core.content.ContextCompat
-import androidx.work.BackoffPolicy
-import androidx.work.Constraints
-import androidx.work.ExistingPeriodicWorkPolicy
-import androidx.work.NetworkType
-import androidx.work.PeriodicWorkRequestBuilder
-import androidx.work.WorkManager
-import com.safeguard.parentalcontrol.service.appblock.AppBlockingService
-import com.safeguard.parentalcontrol.service.location.LocationService
-import java.util.concurrent.TimeUnit
-
-/**
- * Central entry points for starting the enforcement services and the
- * periodic rules sync. Called on app launch, right after onboarding
- * completes, and on BOOT_COMPLETED.
- */
-object SyncScheduler {
-
-    private const val SYNC_WORK_NAME = "rules_sync_worker"
-    // WorkManager platform minimum for periodic work is 15 minutes;
-    // the MVP spec asked for 5 minutes, which the platform disallows
-    // for PeriodicWorkRequest.
-    private const val SYNC_INTERVAL_MINUTES = 15L
-
-    fun startEnforcementService(context: Context) {
-        val intent = Intent(context, AppBlockingService::class.java)
-        ContextCompat.startForegroundService(context, intent)
-    }
-
-    fun startLocationService(context: Context) {
-        val intent = Intent(context, LocationService::class.java)
-        ContextCompat.startForegroundService(context, intent)
-    }
-
-    fun schedule(context: Context) {
-        // Only run when there is a network: an offline sync wastes
-        // battery and would just retry anyway. Exponential backoff
-        // prevents hammering a flaky backend.
-        val constraints = Constraints.Builder()
-            .setRequiredNetworkType(NetworkType.CONNECTED)
-            .build()
-        val request = PeriodicWorkRequestBuilder<SyncRulesWorker>(SYNC_INTERVAL_MINUTES, TimeUnit.MINUTES)
-            .setConstraints(constraints)
-            .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
-            .build()
-        WorkManager.getInstance(context).enqueueUniquePeriodicWork(
-            SYNC_WORK_NAME,
-            ExistingPeriodicWorkPolicy.KEEP,
-            request
+fun SyncScheduler.scheduleSyncQueue() {
+    val workRequest = PeriodicWorkRequestBuilder<SyncQueueWorker>(5, TimeUnit.MINUTES)
+        .setConstraints(
+            Constraints.Builder()
+                .setRequiredNetworkType(NetworkType.CONNECTED)
+                .build()
         )
-    }
+    enqueueUniquePeriodicWork(
+        "sync_queue_work",
+        ExistingPeriodicWorkPolicy.KEEP,
+        workRequest
+    )
 }

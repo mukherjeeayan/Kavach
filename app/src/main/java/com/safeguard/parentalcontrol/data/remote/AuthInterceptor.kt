@@ -11,6 +11,7 @@ import okhttp3.Interceptor
 import okhttp3.Response
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import okhttp3.OkHttpClient
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
@@ -85,8 +86,7 @@ class AuthInterceptor @Inject constructor(
         refreshMutex.withLock {
             val currentToken = tokenStore.refreshToken ?: return@withLock false
             return@withLock try {
-                val call = authApi.refreshToken(RefreshTokenRequest(currentToken))
-                val response = call.execute()
+                val response = authApi.refreshToken(RefreshTokenRequest(currentToken))
                 val data = response.body()?.data
                 if (response.isSuccessful && data != null) {
                     tokenStore.token = data.token

@@ -121,6 +121,24 @@ import locationDeviceRoutes from './modules/location/locationDevice.routes';
 import contactsRoutes from './modules/contacts/contacts.routes';
 import consentRoutes from './modules/consent/parentalConsent.routes';
 import geoRoutes from './modules/geo/geo.routes';
+// ── Phase 2 Feature Routes ───────────────────────────────────────
+import urlFilterRoutes from './modules/urlfilter/urlFilter.routes';
+import { deviceHealthDeviceRouter, deviceHealthParentRouter } from './modules/devicehealth/deviceHealth.routes';
+import { sosDeviceRouter, sosParentRouter } from './modules/sos/sos.routes';
+import { communicationDeviceRouter, communicationParentRouter } from './modules/communication/communication.routes';
+import analyticsRoutes from './modules/analytics/analytics.routes';
+import keywordDictRoutes from './modules/communication/keywordDict.routes';
+// ── Phase 3 Feature Routes ───────────────────────────────────────
+import geofenceRoutes from './modules/geo/geofence.routes';
+import { geofenceDeviceRouter } from './modules/geo/geofenceDevice.routes';
+import { moodDeviceRouter, moodParentRouter } from './modules/mood/mood.routes';
+import { rewardCatalogRouter, rewardParentRouter, rewardChildRouter } from './modules/rewards/reward.routes';
+import { predictionParentRouter } from './modules/predictions/prediction.routes';
+import { securityDeviceRouter, securityParentRouter } from './modules/security/security.routes';
+import selfHarmRoutes from './modules/selfharm/selfHarm.routes';
+import { voiceCommandDeviceRouter, voiceCommandParentRouter } from './modules/voicecommands/voiceCommand.routes';
+import integrationRoutes from './modules/integrations/integration.routes';
+
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/children/:childId/apps', appBlockingRoutes);
 app.use('/api/v1/children', childrenRoutes);
@@ -134,6 +152,33 @@ app.use('/api/v1/devices', deviceRoutes);
 app.use('/api/v1/devices', screentimeDeviceRoutes);
 app.use('/api/v1/devices', locationDeviceRoutes);
 app.use('/api/v1/geo', geoRoutes);
+// Phase 2
+app.use('/api/v1/children', urlFilterRoutes);
+app.use('/api/v1/children', deviceHealthParentRouter);
+app.use('/api/v1/children', sosParentRouter);
+app.use('/api/v1/children', communicationParentRouter);
+app.use('/api/v1/children', analyticsRoutes);
+app.use('/api/v1/devices', deviceHealthDeviceRouter);
+app.use('/api/v1/devices', sosDeviceRouter);
+app.use('/api/v1/devices', communicationDeviceRouter);
+app.use('/api/v1/devices', geofenceDeviceRouter);
+app.use('/api/v1/keywords', keywordDictRoutes);
+// Phase 3
+app.use('/api/v1/children', geofenceRoutes);
+app.use('/api/v1/children', moodParentRouter);
+app.use('/api/v1/children', rewardParentRouter);
+app.use('/api/v1/children', rewardChildRouter);
+app.use('/api/v1/children', predictionParentRouter);
+app.use('/api/v1/children', securityParentRouter);
+app.use('/api/v1/devices', moodDeviceRouter);
+app.use('/api/v1/devices', securityDeviceRouter);
+app.use('/api/v1/rewards', rewardCatalogRouter);
+// Phase 4
+app.use('/api/v1/children', selfHarmRoutes);
+app.use('/api/v1/devices', voiceCommandDeviceRouter);
+app.use('/api/v1/children', voiceCommandParentRouter);
+app.use('/api/v1/integrations', integrationRoutes);
+
 
 // Global Error Handler (must be last)
 app.use(errorHandler);

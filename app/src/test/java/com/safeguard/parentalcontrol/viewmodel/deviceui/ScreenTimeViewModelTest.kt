@@ -20,23 +20,21 @@ import org.junit.runner.RunWith
 import org.mockito.Mock
 import org.mockito.MockitoAnnotations
 import org.mockito.kotlin.whenever
-import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
+
 
 /**
  * Unit tests for ScreenTimeViewModel: the local-first dashboard must
  * render whatever the Room flow emits (including an empty day) and
- * surface a typed error when the flow fails. Runs under Robolectric
- * so the (final) OnboardingStore can be constructed with a real app
- * context instead of being mocked.
+ * surface a typed error when the flow fails.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
-@RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34])
 class ScreenTimeViewModelTest {
 
     @Mock
     private lateinit var screenTimeDao: ScreenTimeDao
+
+    @Mock
+    private lateinit var onboardingStore: OnboardingStore
 
     private val dispatcher = StandardTestDispatcher()
 
@@ -52,9 +50,7 @@ class ScreenTimeViewModelTest {
     }
 
     private fun newViewModel(): ScreenTimeViewModel {
-        val context = androidx.test.core.app.ApplicationProvider.getApplicationContext<android.content.Context>()
-        val onboardingStore = OnboardingStore(context)
-        onboardingStore.childId = "child-1"
+        whenever(onboardingStore.childId).thenReturn("child-1")
         return ScreenTimeViewModel(screenTimeDao, onboardingStore)
     }
 
