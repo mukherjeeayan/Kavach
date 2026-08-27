@@ -1,0 +1,10 @@
+appId: com.safeguard.parentalcontrol
+name: Location
+tags:
+  - location
+  - feature
+---
+- launchApp
+- tapOn: "Location"
+- assertVisible: ".*Location.*|.*Map.*|.*Current.*"
+- waitForAnimationToEnd

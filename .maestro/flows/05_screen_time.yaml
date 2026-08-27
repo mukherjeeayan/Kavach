@@ -1,0 +1,10 @@
+appId: com.safeguard.parentalcontrol
+name: Screen Time
+tags:
+  - screen-time
+  - feature
+---
+- launchApp
+- tapOn: "Screen time"
+- assertVisible: ".*Screen Time.*|.*Usage.*|.*Limit.*"
+- waitForAnimationToEnd

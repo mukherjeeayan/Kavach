@@ -1,0 +1,26 @@
+appId: com.safeguard.parentalcontrol
+name: Dashboard Tab Navigation
+tags:
+  - dashboard
+  - navigation
+---
+- launchApp
+# Navigate through tabs
+- tapOn: "Apps"
+- assertVisible: ".*App Blocking.*|.*Blocked.*"
+- tapOn: "Screen time"
+- assertVisible: ".*Screen Time.*|.*Usage.*"
+- tapOn: "Locks"
+- assertVisible: ".*Locks.*|.*Schedule.*"
+- tapOn: "Location"
+- assertVisible: ".*Location.*|.*Map.*"
+- tapOn: "Contacts"
+- assertVisible: ".*Contacts.*|.*Whitelist.*"
+- tapOn: "SOS"
+- assertVisible: ".*SOS.*|.*Emergency.*"
+- tapOn: "Mood"
+- assertVisible: ".*Mood.*|.*Tracking.*"
+- tapOn: "Rewards"
+- assertVisible: ".*Rewards.*|.*Points.*"
+- tapOn: "Security"
+- assertVisible: ".*Security.*|.*Scan.*"

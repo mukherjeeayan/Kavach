@@ -1,0 +1,17 @@
+appId: com.safeguard.parentalcontrol
+name: Onboarding Flow
+tags:
+  - onboarding
+  - smoke
+---
+- launchApp
+- tapOn: ".*Get Started.*|.*Login.*|.*Sign In.*"
+- tapOn:
+    id: ".*email.*|.*Email.*"
+- inputText: "parent@test.com"
+- tapOn:
+    id: ".*password.*|.*Password.*"
+- inputText: "Test1234!"
+- tapOn: ".*Sign In.*|.*Login.*|.*Submit.*"
+# Wait for next step or dashboard
+- waitForAnimationToEnd

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   useUrlFilters,
-  usecreateUrlFilter,
+  useCreateUrlFilter,
   useDeleteUrlFilter,
 } from '../../hooks/useUrlFilters';
 import { SkeletonTable } from '../ui/Skeleton';
@@ -21,7 +21,7 @@ export default function WebsiteFilterSection({ childId, onError }: Props) {
   const [showDeleteId, setShowDeleteId] = useState<string | null>(null);
 
   const { data: rules, isLoading } = useUrlFilters(childId);
-  const createRule = usecreateUrlFilter(childId);
+  const createRule = useCreateUrlFilter(childId);
   const deleteRule = useDeleteUrlFilter(childId);
 
   const handleAdd = async (e: React.FormEvent) => {

@@ -1,0 +1,14 @@
+appId: com.safeguard.parentalcontrol
+name: App Blocking
+tags:
+  - app-blocking
+  - feature
+---
+- launchApp
+# Navigate to Apps tab
+- tapOn: "Apps"
+# Add a block rule
+- tapOn: ".*Add.*|.*Block.*|.*+.*"
+- inputText: "com.example.testapp"
+- tapOn: ".*Block.*|.*Save.*|.*Confirm.*"
+- waitForAnimationToEnd

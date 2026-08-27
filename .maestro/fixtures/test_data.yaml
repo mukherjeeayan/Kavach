@@ -1,0 +1,8 @@
+# Test data for Maestro flows
+testUser:
+  email: "parent@test.com"
+  password: "Test1234!"
+testChild:
+  name: "Test Child"
+  birthDate: "2015-06-01"
+testPin: "1234"

@@ -1,0 +1,11 @@
+appId: com.safeguard.parentalcontrol
+name: Logout
+tags:
+  - logout
+  - auth
+---
+- launchApp
+# Look for settings or profile menu
+- tapOn: ".*Settings.*|.*Profile.*|.*Menu.*"
+- tapOn: ".*Logout.*|.*Sign Out.*|.*Log Out.*"
+- assertVisible: ".*Login.*|.*Sign In.*|.*Get Started.*"

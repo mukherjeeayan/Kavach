@@ -11,8 +11,8 @@ import { getErrorMessage } from '../utils/apiError';
 // ── Login ─────────────────────────────────────────────────────────
 
 const loginSchema = yup.object({
-  email: yup.string().email('Invalid email').required('Email is required'),
-  password: yup.string().required('Password is required'),
+  email: yup.string().email('Invalid email format').required('Email is required'),
+  password: yup.string().min(8, 'Password must be at least 8 characters').required('Password is required'),
 });
 
 type LoginFormData = { email: string; password: string };
@@ -64,16 +64,19 @@ export const useLogin = () => {
 // ── Register ──────────────────────────────────────────────────────
 
 const registerSchema = yup.object({
-  name: yup.string().required('Name is required'),
-  email: yup.string().email('Invalid email').required('Email is required'),
+  name: yup.string().min(2, 'Name must be at least 2 characters').max(50, 'Name must be at most 50 characters').required('Name is required'),
+  email: yup.string().email('Invalid email format').required('Email is required'),
   password: yup
     .string()
     .min(8, 'Password must be at least 8 characters')
+    .max(128, 'Password must be at most 128 characters')
     .required('Password is required'),
-  child_name: yup.string().optional(),
+  child_name: yup.string().max(50, 'Child name must be at most 50 characters').optional(),
   birth_date: yup
     .string()
-    .matches(/^\d{4}-\d{2}-\d{2}$/, 'Birth date must be YYYY-MM-DD')
+    .test('birth_date', 'Birth date must be YYYY-MM-DD format', (value) =>
+      !value || /^\d{4}-\d{2}-\d{2}$/.test(value)
+    )
     .optional(),
 });
 

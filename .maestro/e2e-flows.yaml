@@ -1,0 +1,31 @@
+appId: com.safeguard.parentalcontrol
+name: Critical Path - Full User Journey
+tags:
+  - critical
+  - e2e
+---
+- launchApp
+# Step 1: Onboarding
+- tapOn: ".*Get Started.*|.*Login.*"
+- tapOn:
+    id: ".*email.*"
+- inputText: "e2e-${OUTPUT.timestamp}@test.com"
+- tapOn:
+    id: ".*password.*"
+- inputText: "Test1234!"
+- tapOn: ".*Sign In.*|.*Login.*"
+- waitForAnimationToEnd
+
+# Step 2: PIN Gate (if shown)
+- tapOn:
+    id: ".*pin.*|.*PIN.*"
+- inputText: "1234"
+- tapOn: ".*Unlock.*|.*Verify.*"
+- waitForAnimationToEnd
+
+# Step 3: Dashboard tabs
+- tapOn: "Apps"
+- tapOn: "Screen time"
+- tapOn: "Location"
+- tapOn: "Contacts"
+- tapOn: "Security"

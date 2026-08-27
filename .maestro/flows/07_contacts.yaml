@@ -1,0 +1,10 @@
+appId: com.safeguard.parentalcontrol
+name: Contacts
+tags:
+  - contacts
+  - feature
+---
+- launchApp
+- tapOn: "Contacts"
+- assertVisible: ".*Contacts.*|.*Whitelist.*|.*Add.*"
+- waitForAnimationToEnd

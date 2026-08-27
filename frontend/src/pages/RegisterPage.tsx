@@ -22,7 +22,9 @@ const registerSchema = yup.object({
     .max(128, 'Password must be at most 128 characters')
     .required('Password is required'),
   child_name: yup.string().max(50, 'Child name must be at most 50 characters'),
-  birth_date: yup.string().matches(/^\d{4}-\d{2}-\d{2}$/, 'Birth date must be YYYY-MM-DD format'),
+  birth_date: yup.string().test('birth_date', 'Birth date must be YYYY-MM-DD format', (value) =>
+    !value || /^\d{4}-\d{2}-\d{2}$/.test(value)
+  ),
 });
 
 export default function RegisterPage() {
@@ -39,19 +41,19 @@ export default function RegisterPage() {
       >
         <TextField
           label="Name"
-          error={errors.name}
+          error={errors.name?.message}
           {...register('name')}
         />
         <TextField
           label="Email"
           type="email"
-          error={errors.email}
+          error={errors.email?.message}
           {...register('email')}
         />
         <TextField
           label="Password"
           type={showPassword ? 'text' : 'password'}
-          error={errors.password}
+          error={errors.password?.message}
           {...register('password')}
         />
         <button
@@ -70,7 +72,7 @@ export default function RegisterPage() {
           label="Birth Date"
           optional
           placeholder="2015-06-01"
-          error={errors.birth_date}
+          error={errors.birth_date?.message}
           {...register('birth_date')}
         />
 

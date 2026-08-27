@@ -1,0 +1,13 @@
+appId: com.safeguard.parentalcontrol
+name: PIN Gate
+tags:
+  - pin
+  - security
+---
+- launchApp
+# If PIN gate is shown
+- tapOn:
+    id: ".*pin.*|.*PIN.*"
+- inputText: "1234"
+- tapOn: ".*Unlock.*|.*Verify.*|.*Submit.*"
+- waitForAnimationToEnd

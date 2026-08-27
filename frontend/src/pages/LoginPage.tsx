@@ -31,13 +31,13 @@ export default function LoginPage() {
         <TextField
           label="Email"
           type="email"
-          error={errors.email}
+          error={errors.email?.message}
           {...register('email')}
         />
         <TextField
           label="Password"
           type={showPassword ? 'text' : 'password'}
-          error={errors.password}
+          error={errors.password?.message}
           {...register('password')}
         />
         <button
