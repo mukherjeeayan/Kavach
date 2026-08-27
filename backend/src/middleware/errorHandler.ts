@@ -14,16 +14,21 @@ export const errorHandler = (
   const statusCode = err.statusCode || 500;
   const isProduction = process.env.NODE_ENV === 'production';
 
-  logger.error(`[${req.method}] ${req.path} >> StatusCode:: ${statusCode}, Message:: ${err.message}`);
-  
-  if (!isProduction) {
-    logger.error(err.stack);
-  }
+  // Always log the error (message + stack help debugging in dev, masked in prod)
+  logger.error(
+    `[${req.method}] ${req.path} >> StatusCode:: ${statusCode}, Message:: ${err.message}`
+  );
+
+  // In production, mask the error message; in development include the message
+  // but never the stack trace in the HTTP response (security best practice).
+  const errorResponse = isProduction
+    ? 'Internal Server Error'
+    : err.message;
 
   res.status(statusCode).json({
     success: false,
     data: {},
-    error: isProduction && statusCode === 500 ? 'Internal Server Error' : err.message,
+    error: errorResponse,
     timestamp: new Date().toISOString(),
     request_id: req.headers['x-request-id'] || 'unknown',
   });

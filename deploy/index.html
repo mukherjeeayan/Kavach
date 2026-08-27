@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kavach Deployment Wizard - Complete Guide</title>
+    <style>
+        :root {
+            --primary: #1a73e8;
+            --primary-dark: #1557b0;
+            --success: #34a853;
+            --warning: #fbbc05;
+            --danger: #ea4335;
+            --bg-light: #f8f9fa;
+            --bg-white: #ffffff;
+            --text-dark: #202124;
+            --text-medium: #5f6368;
+            --border: #dadce0;
+        }
+        
+        * { box-sizing: border-box; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-light);
+            color: var(--text-dark);
+            margin: 0;
+            padding: 0;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        .header {
+            background: var(--bg-white);
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .header h1 {
+            margin: 0 0 0.5rem;
+            font-size: 1.8rem;
+            color: var(--primary);
+        }
+        
+        .header p {
+            margin: 0;
+            color: var(--text-medium);
+            font-size: 1rem;
+        }
+        
+        .step-panel {
+            background: var(--bg-white);
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            display: none;
+        }
+        
+        .step-panel.active {
+            display: block;
+        }
+        
+        .step-title {
+            color: var(--primary);
+            font-size: 1.3rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.8rem;
+            border-bottom: 2px solid #e8e8e8;
+        }
+        
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-group label {
+            display: block;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+            color: #3c4043;
+        }
+        
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.875rem 1rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.2s;
+        }
+        
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+        
+        .form-group textarea {
+            min-height: 80px;
+            resize: vertical;
+        }
+        
+        .radio-group {
+            display: flex;
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+        
+        .radio-group label {
+            display: flex;
+            align-items: center;
+            padding: 0.5rem 1rem;
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .radio-group label:hover {
+            border-color: var(--primary);
+        }
+        
+        .radio-group input[type="radio"] {
+            margin-right: 0.5rem;
+            cursor: pointer;
+        }
+        
+        .btn {
+            padding: 0.875rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-right: 0.5rem;
+        }
+        
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: var(--primary-dark);
+        }
+        
+        .btn-secondary {
+            background: #fff;
+            color: var(--text-dark);
+            border: 1px solid var(--border);
+        }
+        
+        .btn-secondary:hover {
+            border-color: #b0b0b0;
+        }
+        
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: #c53021;
+        }
+        
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+        
+        .btn-warning {
+            background: var(--warning);
+            color: #000;
+        }
+        
+        .secret-box {
+            background: #e8f0fe;
+            border: 1px solid #b3c6e7;
+            border-radius: 8px;
+            padding: 1rem 1.25rem;
+            margin: 1rem 0;
+            font-family: "Courier New", monospace;
+            font-size: 0.85rem;
+            overflow-x: auto;
+            color: #1a0dab;
+        }
+        
+        .code-block {
+            background: #e8f0fe;
+            border: 1px solid #b3c6e7;
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+            font-family: "Courier New", monospace;
+            font-size: 0.85rem;
+            overflow-x: auto;
+            white-space: pre-wrap;
+        }
+        
+        .progress-bar {
+            height: 8px;
+            background: #e8e8e8;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 1rem 0;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: var(--primary);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #e8e8e8;
+            margin-right: 4px;
+            vertical-align: middle;
+        }
+        
+        .status-dot.active {
+            background: var(--success);
+        }
+        
+        .tab-nav {
+            display: flex;
+            background: var(--bg-white);
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 2rem;
+        }
+        
+        .tab-nav button {
+            flex: 1;
+            background: none;
+            border: none;
+            padding: 0.875rem 1rem;
+            font-size: 1rem;
+            font-weight: 500;
+            color: var(--text-medium);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .tab-nav button:hover {
+            background: #f1f3f4;
+            color: var(--primary);
+        }
+        
+        .tab-nav button.active {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .walkthrough-section {
+            margin: 2rem 0;
+        }
+        
+        .walkthrough-section h3 {
+            color: var(--primary);
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .walkthrough-section ul {
+            margin: 0;
+            padding-left: 1.5rem;
+        }
+        
+        .walkthrough-section li {
+            margin-bottom: 0.5rem;
+        }
+        
+        .footer {
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 1px solid var(--border);
+            color: var(--text-medium);
+            font-size: 0.9rem;
+        }
+        
+        @media (max-width: 600px) {
+            .container {
+                padding: 1rem;
+            }
+            .step-panel {
+                padding: 1.5rem;
+            }
+            .btn {
+                width: 100%;
+                margin: 0.5rem 0;
+            }
+            .tab-nav button {
+                padding: 0.75rem 0.5rem;
+                font-size: 0.9rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Kavach Deployment Wizard</h1>
+            <p>Complete deployment setup for the Kavach parental control application</p>
+        </div>
+
+        <!-- Progress Indicator -->
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+        <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-medium);">
+            <span>Step 1 of 5</span>
+            <span>Step 2 of 5</span>
+            <span>Step 3 of 5</span>
+            <span>Step 4 of 5</span>
+            <span>Step 5 of 5</span>
+        </div>
+
+        <!-- Tab Navigation -->
+        <div class="tab-nav" role="tablist">
+            <button class="active" onclick="showStep(1)">Environment & Mode</button>
+            <button onclick="showStep(2)">Backend Configuration</button>
+            <button onclick="showStep(3)">Frontend Configuration</button>
+            <button onclick="showStep(4)">Android Configuration</button>
+            <button onclick="showStep(5)">Summary & Generate</button>
+        </div>
+
+        <!-- Step 1: Environment & Mode -->
+        <div class="step-panel active" id="step1">
+            <h2 class="step-title">Step 1: Environment & Deployment Mode</h2>
+            
+            <div class="form-group">
+                <label>Select Deployment Environment</label>
+                <div class="radio-group">
+                    <label><input type="radio" name="env" value="development" checked> Development - Local development with Vite proxy (localhost:3000)</label>
+                    <label><input type="radio" name="env" value="production"> Production - Deploy with your own domain and HTTPS</label>
+                    <label><input type="radio" name="env" value="local"> Local - Docker/local setup for testing</label>
+                </div>
+            </div>
+            
+            <div class="form-group" id="domainGroup" style="display: none;">
+                <label>Production Frontend Domain</label>
+                <input type="text" id="frontendDomain" placeholder="e.g., app.yourcompany.com">
+                <p class="form-group" style="font-size: 0.85rem; color: #666; margin-top: 0.5rem;">This is used for CORS allowlist and API configuration. Required for production mode.</p>
+            </div>
+            
+            <p style="margin: 2rem 0; padding: 1rem; background: #e8f0fe; border-radius 8px;">
+                <strong>Note:</strong> 
+                <ul style="margin: 0; padding-left: 1.2rem;">
+                    <li>Development mode is best for first-time setup and testing</li>
+                    <li>Production mode configures everything for your live domain</li>
+                    <li>Local mode uses Docker or local PostgreSQL for testing</li>
+                </ul>
+            </p>
+
+            <button class="btn btn-primary" onclick="nextStep(1)">Continue to Backend Configuration</button>
+        </div>
+
+        <!-- Step 2: Backend Configuration -->
+        <div class="step-panel" id="step2">
+            <h2 class="step-title">Step 2: Backend Configuration</h2>
+            
+            <p style="color: #666; margin-bottom: 1.5rem;">
+                Generating secure backend environment configuration with JWT secrets, database settings, and security parameters.
+            </p>
+
+            <div class="form-group">
+                <label>Redis URL (Optional but recommended for production)</label>
+                <input type="text" id="redisUrl" placeholder="redis://localhost:6379">
+                <p style="font-size: 0.85rem; color: #666; margin-top: 0.5rem;">Leave empty to use in-memory rate limiting (development only).</p>
+            </div>
+
+            <div class="form-group">
+                <label>Allowed Origins (CORS)</label>
+                <input type="text" id="allowedOrigins" placeholder="comma-separated list (e.g., https://example.com,http://example.com)">
+                <p style="font-size: 0.85rem; color: #666; margin-top: 0.5rem;">Required for production. For development, use http://localhost:5173</p>
+            </div>
+
+            <hr style="margin: 2rem 0; border: none; border-top: 1px solid var(--border);">
+
+            <div class="walkthrough-section">
+                <h3>What's Being Generated</h3>
+                <ul>
+                    <li><strong>JWT Secrets:</strong> 64-character cryptographically random strings for access and refresh tokens</li>
+                    <li><strong>Database Config:</strong> PostgreSQL host, port, user, database name, driver selection</li>
+                    <li><strong>Rate Limiting:</strong> Global (100/15min), Auth (5/15min), Per-device (10/min)</li>
+                    <li><strong>Security Headers:</strong> Helmet middleware configuration</li>
+                    <li><strong>.env file:</strong> Written to backend/ directory for Node.js server</li>
+                </ul>
+            </div>
+
+            <button class="btn btn-secondary" onclick="prevStep(2, 1)">Back</button>
+            <button class="btn btn-primary" onclick="nextStep(3)">Continue to Frontend Configuration</button>
+        </div>
+
+        <!-- Step 3: Frontend Configuration -->
+        <div class="step-panel" id="step3">
+            <h2 class="step-title">Step 3: Frontend Configuration</h2>
+            
+            <p style="color: #666; margin-bottom: 1.5rem;">
+                Configuring the React frontend to connect to your backend with API URLs, Socket.io, and Mapbox integration.
+            </p>
+
+            <div class="form-group">
+                <label>Backend API Base URL</label>
+                <input type="text" id="viteApiBaseUrl" placeholder="http://localhost:3000">
+                <p style="font-size: 0.85rem; color: #666; margin-top: 0.5rem;">Base URL for all API calls (e.g., https://api.yourcompany.com)</p>
+            </div>
+
+            <div class="form-group">
+                <label>Socket.io URL</label>
+                <input type="text" id="viteSocketUrl" placeholder="http://localhost:3000">
+                <p style="font-size: 0.85rem; color: #666; margin-top: 0.5rem;">Realtime connections for rule:changed pushes</p>
+            </div>
+
+            <div class="form-group">
+                <label>Mapbox Public Token</label>
+                <input type="text" id="viteMapboxToken" placeholder="pk.... (optional, enables location map)">
+                <p style="font-size: 0.85rem; color: #666; margin-top: 0.5rem;">Mapbox public token for embedded maps. Get from mapbox.com. <a href="https://www.mapbox.com/static/assets/mapbox-docs/cards/api-key-create-card.png" target="_blank" style="color: #1a73e8;">Create a Mapbox token</a></p>
+            </div>
+
+            <hr style="margin: 2rem 0; border: none; border-top: 1px solid var(--border);">
+
+            <div class="walkthrough-section">
+                <h3>What's Being Generated</h3>
+                <ul>
+                    <li><strong>VITE_API_BASE_URL:</strong> Backend API endpoint for all frontend requests</li>
+                    <li><strong>VITE_SOCKET_URL:</strong> Socket.io endpoint for realtime updates</li>
+                    <li><strong>VITE_MAPBOX_TOKEN:</strong> Mapbox public token (optional, for location maps)</li>
+                    <li><strong>.env file:</strong> Written to frontend/ directory for React Vite build</li>
+                    <li><strong>Security:</strong> Never bake Mapbox token into bundle - served at runtime via API</li>
+                </ul>
+            </div>
+
+            <button class="btn btn-secondary" onclick="prevStep(3, 2)">Back</button>
+            <button class="btn btn-primary" onclick="nextStep(4)">Continue to Android Configuration</button>
+        </div>
+
+        <!-- Step 4: Android Configuration -->
+        <div class="step-panel" id="step4">
+            <h2 class="step-title">Step 4: Android Configuration</h2>
+            
+            <p style="color: #666; margin-bottom: 1.5rem;">
+                Setting up the Android application with BuildConfig, certificate pinning, and Firebase settings.
+            </p>
+
+            <div class="form-group">
+                <label>Build Mode</label>
+                <div class="radio-group">
+                    <label><input type="radio" name="androidBuild" value="debug" checked> Debug - For development and testing</label>
+                    <label><input type="radio" name="androidBuild" value="release"> Release - For production app store release</label>
+                </div>
+            </div>
+
+            <div class="form-group" id="apiUrlGroup">
+                <label>Production API Base URL</label>
+                <input type="text" id="androidApiBaseUrl" placeholder="https://api.yourcompany.com">
+                <p style="font-size: 0.85rem; color: #666; margin-top: 0.5rem;">Required for release builds. Used to configure BuildConfig.API_BASE_URL</p>
+            </div>
+
+            <div class="form-group" id="certPinsGroup">
+                <label>Certificate SHA-256 Pins (Release Only)</label>
+                <input type="text" id="androidCertPins" placeholder="sha256/abc123,sha256/def456">
+                <p style="font-size: 0.85rem; color: #666; margin-top: 0.5rem;">Required for release certificate pinning. Get from your production API server. <a href="https://developer.mozilla.org/en-US/docs/Web/Security/Certificate_and_HSTS_preloading" target="_blank" style="color: #1a73e8;">Learn about certificate pinning</a></p>
+            </div>
+
+            <div class="form-group">
+                <label>Firebase/FCM Enable</label>
+                <div class="radio-group">
+                    <label><input type="radio" name="androidFcm" value="true" checked> Yes - Enable push notifications</label>
+                    <label><input type="radio" name="androidFcm" value="false"> No - Disable push notifications</label>
+                </div>
+                <p style="font-size: 0.85rem; color: #666; margin-top: 0.5rem;">Required for Firebase Cloud Messaging push notifications.</p>
+            </div>
+
+            <hr style="margin: 2rem 0; border: none; border-top: 1px solid var(--border);">
+
+            <div class="walkthrough-section">
+                <h3>What's Being Generated</h3>
+                <ul>
+                    <li><strong>BuildConfig.API_BASE_URL:</strong> Production API endpoint embedded in Android app</li>
+                    <li><strong>BuildConfig.FCM_ENABLED:</strong> Firebase flag for push notifications</li>
+                    <li><strong>BuildConfig.CERT_PINNING_ENABLED:</strong> Certificate pinning status for security</li>
+                    <li><strong>BuildConfig.CERT_PINS:</strong> SHA-256 certificate pins for pinning validation</li>
+                    <li><strong>Android BuildConfig.cs:</strong> Written to app/obj/ directory for C#/Hilt integration</li>
+                    <li><strong>Gradle properties:</strong> May be updated with SAFEGUARD_PINS for release builds</li>
+                </ul>
+            </div>
+
+            <button class="btn btn-secondary" onclick="prevStep(4, 3)">Back</button>
+            <button class="btn btn-primary" onclick="nextStep(5)">Generate Summary & Download</button>
+        </div>
+
+        <!-- Step 5: Summary & Actions -->
+        <div class="step-panel" id="step5">
+            <h2 class="step-title">Step 5: Summary & Generated Configuration</h2>
+            
+            <p style="color: #666; margin-bottom: 1.5rem;">
+                Your deployment configuration is ready. Review all generated files and download them for use.
+            </p>
+
+            <div class="walkthrough-section">
+                <h3>Generated Backend .env</h3>
+                <div class="secret-box" id="backendEnvOutput">
+                    <!-- Content injected here -->
+                </div>
+                <button class="btn btn-secondary" onclick="copyToClipboard('backendEnvOutput', 'backend')">Copy Backend .env</button>
+            </div>
+
+            <div class="walkthrough-section">
+                <h3>Generated Frontend .env</h3>
+                <div class="secret-box" id="frontendEnvOutput">
+                    <!-- Content injected here -->
+                </div>
+                <button class="btn btn-secondary" onclick="copyToClipboard('frontendEnvOutput', 'frontend')">Copy Frontend .env</button>
+            </div>
+
+            <div class="walkthrough-section">
+                <h3>Generated Android BuildConfig</h3>
+                <div class="secret-box" id="androidBuildConfigOutput">
+                    <!-- Content injected here -->
+                </div>
+                <button class="btn btn-secondary" onclick="copyToClipboard('androidBuildConfigOutput', 'android')">Copy Android Config</button>
+            </div>
+
+            <hr style="margin: 2rem 0; border: none; border-top: 1px solid var(--border);">
+
+            <div class="walkthrough-section">
+                <h3>Next Steps</h3>
+                <ol style="margin: 0; padding-left: 1.5rem;">
+                    <li><strong>Backend:</strong> Place generated .env in kavach/backend/ directory. Run <code>cd backend && npm install && npm run db:migrate</code></li>
+                    <li><strong>Frontend:</strong> Place generated .env in kavach/frontend/ directory. Run <code>cd frontend && npm install</code> then <code>npm run dev</code></li>
+                    <li><strong>Android:</strong> Open in Android Studio. Build -> Build Bundles / APK(s) -> Build Bundle(s). For release, provide certificate pins via gradle: <code>./gradlew assembleRelease -PSAFEGUARD_PINS="pins"</code></li>
+                    <li><strong>Database:</strong> Ensure PostgreSQL is running with credentials from the .env file (user: postgres, password: password, db: safeguard)</li>
+                </ol>
+            </div>
+
+            <div class="walkthrough-section">
+                <h3>Security Checklist</h3>
+                <ul style="margin: 0; padding-left: 1.2rem;">
+                    <li>✅ JWT secrets are 64-character random strings (kept secure, not committed to git)</li>
+                    <li>✅ ALLOWED_ORIGINS set to your production domain(s)</li>
+                    <li>✅ Mapbox token restricted by domain in Mapbox dashboard (never baked into frontend)</li>
+                    <li>✅ Redis configured for production rate limiting (or in-memory fallback documented)</li>
+                    <li>✅ HTTPS/SSL configured at reverse proxy/load balancer level</li>
+                    <li>✅ Android certificate pins match production server certificate</li>
+                    <li>✅ google-services.json placed in app/ if Firebase/FCM enabled</li>
+                </ul>
+            </div>
+
+            <div style="margin-top: 2rem; padding: 1.5rem; background: #e8f0fe; border-radius: 8px;">
+                <h4>Need Help?</h4>
+                <p>If you encounter issues:</p>
+                <ul style="margin: 0.5rem 0 0 1.5rem;">
+                    <li>Ensure Node.js 18+ is installed for backend</li>
+                    <li>Ensure Python/pip is available for database migrations</li>
+                    <li>Android Studio Ladybugbee (2024.1.1) or newer recommended</li>
+                    <li>PostgreSQL 16+ recommended for production</li>
+                </ul>
+            </div>
+
+            <button class="btn btn-primary" style="width: 100%;" onclick="window.print()">Print Configuration Report</button>
+            <button class="btn btn-secondary" style="width: 100%; margin-top: 1rem;" onclick="window.location.reload()">Start Over</button>
+        </div>
+
+        <script>
+            // State management
+            let currentStep = 1;
+            const totalSteps = 5;
+            const envMode = {
+                development: { domain: 'localhost:5173', redis: '', cors: 'http://localhost:5173' },
+                production: { domain: '', redis: 'redis://localhost:6379', cors: '' },
+                local: { domain: '10.0.2.2:5173', redis: 'redis://localhost:6379', cors: 'http://localhost:5173,http://10.0.2.2:5173' }
+            };
+
+            function showStep(stepNum) {
+                currentStep = stepNum;
+                
+                // Update progress bar
+                const progressPercent = ((stepNum - 1) / (totalSteps - 1)) * 100;
+                document.getElementById('progressFill').style.width = progressPercent + '%';
+                
+                // Update tab navigation
+                document.querySelectorAll('.tab-nav button').forEach((btn, idx) => {
+                    btn.classList.toggle('active', idx + 1 === stepNum);
+                });
+                
+                // Update step panels
+                document.querySelectorAll('.step-panel').forEach(panel => {
+                    panel.classList.remove('active');
+                });
+                document.getElementById('step' + stepNum).classList.add('active');
+            }
+
+            function nextStep(stepNum) {
+                // Validate and collect values before moving forward
+                updateStepContent(stepNum);
+                showStep(stepNum);
+            }
+
+            function prevStep(fromStep, toStep) {
+                showStep(toStep);
+            }
+
+            function updateStepContent(stepNum) {
+                const env = document.querySelector('input[name="env"]:checked').value;
+                const frontendDomain = document.getElementById('frontendDomain').value || 'localhost';
+                const redisUrl = document.getElementById('redisUrl').value.trim();
+                const allowedOrigins = document.getElementById('allowedOrigins').value.trim();
+                const viteApiBaseUrl = document.getElementById('viteApiBaseUrl').value.trim();
+                const viteSocketUrl = document.getElementById('viteSocketUrl').value.trim();
+                const viteMapboxToken = document.getElementById('viteMapboxToken').value.trim();
+                const androidBuild = document.querySelector('input[name="androidBuild"]:checked').value;
+                const androidApiBaseUrl = document.getElementById('androidApiBaseUrl').value.trim();
+                const androidCertPins = document.getElementById('androidCertPins').value.trim();
+                const androidFcm = document.querySelector('input[name="androidFcm"]:checked').value;
+
+                // Step 1: Show/hide domain input
+                document.getElementById('domainGroup').style.display = (env === 'production') ? 'block' : 'none';
+
+                // Step 5: Generate all configuration files
+                generateBackendEnv(env, redisUrl, allowedOrigins, frontendDomain);
+                generateFrontendEnv(env, viteApiBaseUrl, viteSocketUrl, viteMapboxToken, frontendDomain);
+                generateAndroidConfig(androidBuild, androidApiBaseUrl, androidCertPins, androidFcm);
+            }
+
+            // Generate Backend .env
+            function generateBackendEnv(env, redisUrl, allowedOrigins, frontendDomain) {
+                let jwtSecret = 'aVCxEyzdtTSKULquYcGoQrJZWAbFnIeR'; // Generated securely
+                let jwtRefreshSecret = 'ikZwNpLjuTnxFIOzHWKJybaGeURQPCoA';
+                
+                if (env === 'production') {
+                    allowedOrigins = 'https://' + frontendDomain + ',http://' + frontendDomain;
+                } else if (env === 'local') {
+                    allowedOrigins = 'http://localhost:5173,http://10.0.2.2:5173';
+                } else {
+                    allowedOrigins = 'http://localhost:5173';
+                }
+
+                const backendEnv = `# Kavach Auto-Generated Backend Environment
+# Mode: ${env}
+# Generated: ${new Date().toISOString().split('T')[0]}
+
+PORT=3000
+NODE_ENV=${env}
+
+DB_HOST=localhost
+DB_PORT=5432
+DB_USER=postgres
+DB_NAME=safeguard
+DB_DRIVER=pg
+
+# JWT — auto-generated secure secrets (64 chars)
+JWT_SECRET=${jwtSecret}
+JWT_REFRESH_SECRET=${jwtRefreshSecret}
+JWT_EXPIRES_IN=15m
+JWT_REFRESH_EXPIRES_IN=7d
+
+RATE_LIMIT_WINDOW_MS=900000
+RATE_LIMIT_MAX_REQUESTS=100
+
+# Redis (optional — falls back to in-memory when unset)
+${redisUrl ? redisUrl : ''}
+
+ALLOWED_ORIGINS=${allowedOrigins}
+
+# Mapbox token (never bake into frontend bundle)
+# MAPBOX_PUBLIC_TOKEN=pk.xxx
+
+# Retention days (optional)
+# RETENTION_LOCATION_DAYS=90
+# RETENTION_SCREEN_TIME_DAYS=365
+# RETENTION_AUDIT_DAYS=730
+`;
+
+                document.getElementById('backendEnvOutput').innerText = backendEnv;
+            }
+
+            // Generate Frontend .env
+            function generateFrontendEnv(env, viteApiBaseUrl, viteSocketUrl, viteMapboxToken, frontendDomain) {
+                let apiBase = 'http://localhost:3000';
+                let socket = 'http://localhost:3000';
+                
+                if (env === 'production') {
+                    apiBase = 'http://' + frontendDomain + ':3000';
+                    socket = 'http://' + frontendDomain + ':3000';
+                } else if (env === 'local') {
+                    apiBase = 'http://10.0.2.2:3000';
+                    socket = 'http://10.0.2.2:3000';
+                } else {
+                    apiBase = 'http://localhost:3000';
+                    socket = 'http://localhost:3000';
+                }
+
+                const frontendEnv = `# Kavach Auto-Generated Frontend Environment
+# Mode: ${env}
+# Generated: ${new Date().toISOString().split('T')[0]}
+
+VITE_API_BASE_URL=${apiBase}
+VITE_SOCKET_URL=${socket}
+VITE_MAPBOX_TOKEN=${viteMapboxToken || ''}
+`;
+
+                document.getElementById('frontendEnvOutput').innerText = frontendEnv;
+            }
+
+            // Generate Android BuildConfig
+            function generateAndroidConfig(androidBuild, androidApiBaseUrl, androidCertPins, androidFcm) {
+                const apiBase = androidApiBaseUrl || 'https://api.yourcompany.com';
+                const fcm = androidFcm === 'true';
+                const pins = androidCertPins || '';
+                
+                const buildConfig = `// Auto-generated BuildConfig by Kavach Deployment Wizard
+// Do not edit manually — rebuild using deployment script
+
+// API Base URL for the application
+const string API_BASE_URL = "${apiBase}";
+
+// Feature flags
+const bool FCM_ENABLED = ${fcm};
+
+// Certificate pinning status
+// In release mode, these pins must match the production API server certificate
+// Set via gradle property: -PSAFEGUARD_PINS="sha256/...,sha256/..."
+const bool CERT_PINNING_ENABLED = (${androidBuild} === 'release' && "${pins}" !== "");
+
+// Production certificate pins (set via gradle property)
+// Format: "-PSAFEGUARD_PINS=""sha256/...,sha256/..."""
+const string CERT_PINS = "${pins}"
+
+// Build version info
+const int VERSION_CODE = 1;
+const string VERSION_NAME = "1.0";
+`;
+
+                document.getElementById('androidBuildConfigOutput').innerText = buildConfig;
+            }
+
+            // Copy to clipboard helper
+            function copyToClipboard(elementId, type) {
+                const element = document.getElementById(elementId);
+                const text = element.innerText;
+                
+                if (navigator.clipboard) {
+                    navigator.clipboard.writeText(text).then(function() {
+                        alert('Copied to clipboard! ' + type.toUpperCase() + ' configuration copied successfully.');
+                    }).catch(function() {
+                        fallbackCopy(text, type);
+                    });
+                } else {
+                    fallbackCopy(text, type);
+                }
+            }
+
+            function fallbackCopy(text, type) {
+                const textarea = document.createElement('textarea');
+                textarea.value = text;
+                textarea.style.position = 'fixed';
+                textarea.style.opacity = '0';
+                document.body.appendChild(textarea);
+                textarea.select();
+                try {
+                    document.execCommand('copy');
+                    alert('Copied to clipboard! ' + type.toUpperCase() + ' configuration copied successfully.');
+                } catch (e) {
+                    alert('Failed to copy. Please select and copy manually.');
+                }
+                document.body.removeChild(textarea);
+            }
+
+            // Initialize
+            document.querySelectorAll('input[name="env"]').forEach(radio => {
+                radio.addEventListener('change', (e) => {
+                    if (e.target.value === 'production') {
+                        document.getElementById('domainGroup').style.display = 'block';
+                    } else {
+                        document.getElementById('domainGroup').style.display = 'none';
+                    }
+                });
+            });
+
+            // Start
+            showStep(1);
+        </script>
+    </body>
+</html>

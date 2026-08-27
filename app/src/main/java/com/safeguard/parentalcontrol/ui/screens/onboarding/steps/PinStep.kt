@@ -19,12 +19,15 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
+import kotlin.random.Random
 
 /**
- * Step 4 — the parent picks the unlock PIN (4-6 digits) used to open
- * the parental control sections. The raw PIN is never stored on the
- * device; the repository keeps only a salted digest (and mirrors the
- * hash to the backend for the web dashboard).
+ * Step 4 — the parent picks the unlock PIN used to open
+ * the parental control sections.
+ * - PIN: 6–16 digits (far more entropy than 4–6 digits).
+ * - Wrong-attempt lockout is handled by the backend (5 failures → 15 min).
+ * - The raw PIN is never stored on the device; the repository keeps only
+ *   a salted digest (and mirrors the hash to the web dashboard).
  */
 @Composable
 fun PinStep(
@@ -33,7 +36,10 @@ fun PinStep(
 ) {
     var pin by remember { mutableStateOf("") }
     var confirm by remember { mutableStateOf("") }
-    val validLength = pin.length in 4..6
+
+    // 6–16 digits only; backend enforces lockout after 5 failed attempts.
+    val validLength = pin.length in 6..16
+    val onlyDigits = pin.all { it.isDigit() }
 
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -41,8 +47,8 @@ fun PinStep(
     ) {
         OutlinedTextField(
             value = pin,
-            onValueChange = { pin = it.filter(Char::isDigit).take(6) },
-            label = { Text("4-6 digit PIN") },
+            onValueChange = { pin = it.filter(Char::isDigit).take(16) },
+            label = { Text("6–16 digit PIN") },
             singleLine = true,
             visualTransformation = PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
@@ -51,7 +57,7 @@ fun PinStep(
         Spacer(Modifier.height(12.dp))
         OutlinedTextField(
             value = confirm,
-            onValueChange = { confirm = it.filter(Char::isDigit).take(6) },
+            onValueChange = { confirm = it.filter(Char::isDigit).take(16) },
             label = { Text("Confirm PIN") },
             singleLine = true,
             visualTransformation = PasswordVisualTransformation(),
@@ -62,6 +68,22 @@ fun PinStep(
         if (confirm.isNotEmpty() && pin != confirm) {
             Text(
                 "PINs do not match",
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall
+            )
+            Spacer(Modifier.height(8.dp))
+        }
+        if (pin.isNotEmpty() && !onlyDigits) {
+            Text(
+                "PIN must contain digits only",
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall
+            )
+            Spacer(Modifier.height(8.dp))
+        }
+        if (pin.isNotEmpty() && pin.length < 6) {
+            Text(
+                "PIN must be at least 6 digits",
                 color = MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.bodySmall
             )

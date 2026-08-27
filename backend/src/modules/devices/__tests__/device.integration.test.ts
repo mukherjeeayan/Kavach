@@ -94,7 +94,8 @@ describe('Device integration – POST /devices/:deviceId/heartbeat', () => {
 
     const res = await request(app)
       .post(`/api/v1/devices/${DEVICE_ID}/heartbeat`)
-      .set('Authorization', `Bearer ${token}`);
+      .set('Authorization', `Bearer ${token}`)
+      .send({ heartbeat: new Date().toISOString() });
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
@@ -105,7 +106,8 @@ describe('Device integration – POST /devices/:deviceId/heartbeat', () => {
 
     const res = await request(app)
       .post(`/api/v1/devices/${DEVICE_ID}/heartbeat`)
-      .set('Authorization', `Bearer ${token}`);
+      .set('Authorization', `Bearer ${token}`)
+      .send({ heartbeat: new Date().toISOString() });
 
     expect(res.status).toBe(404);
   });

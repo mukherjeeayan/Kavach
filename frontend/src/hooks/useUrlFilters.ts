@@ -14,7 +14,7 @@ export const useUrlFilters = (childId: string | null) =>
     enabled: !!childId,
   });
 
-export const usecreateUrlFilter = (childId: string | null) => {
+export const useCreateUrlFilter = (childId: string | null) => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (input: UrlFilterInput) => createUrlFilter(childId as string, input),

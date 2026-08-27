@@ -5,7 +5,8 @@
 import { Router } from 'express';
 import { authenticateJWT, requireRole } from '../../middleware/auth';
 import { validateParams, validateQuery } from '../../middleware/validate';
-import { uuidParams, locationHistoryQuery } from '../../middleware/params';
+import { uuidParams } from '../../middleware/params';
+import { locationUploadSchema, locationHistoryQuery as locHistoryQuery, currentLocationQuery as currQuery } from './location.dto';
 import * as locationController from './location.controller';
 
 const router = Router({ mergeParams: true });
@@ -17,6 +18,7 @@ router.use(requireRole('parent'));
 router.get(
   '/:childId/locations/current',
   validateParams(uuidParams('childId')),
+  validateQuery(currQuery),
   locationController.getCurrent
 );
 
@@ -24,7 +26,7 @@ router.get(
 router.get(
   '/:childId/locations/history',
   validateParams(uuidParams('childId')),
-  validateQuery(locationHistoryQuery),
+  validateQuery(locHistoryQuery),
   locationController.getHistory
 );
 

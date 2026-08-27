@@ -6,6 +6,7 @@ import { authenticateJWT, requireRole } from '../../middleware/auth';
 import { validate, validateParams } from '../../middleware/validate';
 import { uuidParams, childAndUuidParams } from '../../middleware/params';
 import { requireConsent } from '../../middleware/consent';
+import { standardLimiter } from '../../middleware/rateLimiter';
 import { uploadCommunicationsSchema } from './communication.dto';
 import * as commController from './communication.controller';
 
@@ -15,11 +16,13 @@ export const communicationDeviceRouter = (() => {
   router.use(authenticateJWT);
 
   // POST /api/v1/devices/:deviceId/communications
+  // Rate-limited to prevent communications flooding — 20 attempts per 15min per device.
   router.post(
     '/:deviceId/communications',
     validateParams(uuidParams('deviceId')),
     requireConsent('communications'),
     validate(uploadCommunicationsSchema),
+    standardLimiter,
     commController.uploadCommunications
   );
 

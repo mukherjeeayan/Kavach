@@ -30,6 +30,12 @@ export const fcmTokenSchema = z.object({
   fcm_token: z.string().max(255).nullable(),
 });
 
+/** POST /devices/:deviceId/heartbeat body. */
+export const heartbeatSchema = z.object({
+  heartbeat: z.string().datetime({ offset: true })
+});
+
 export type RegisterDeviceInput = z.infer<typeof registerDeviceSchema>;
 export type AdminStatusInput = z.infer<typeof adminStatusSchema>;
 export type FcmTokenInput = z.infer<typeof fcmTokenSchema>;
+export type HeartbeatInput = z.infer<typeof heartbeatSchema>;

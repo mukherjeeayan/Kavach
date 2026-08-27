@@ -147,6 +147,8 @@ dependencies {
     implementation("androidx.room:room-runtime:$roomVersion")
     implementation("androidx.room:room-ktx:$roomVersion")
     ksp("androidx.room:room-compiler:$roomVersion")
+    implementation("net.zetetic:android-database-sqlcipher:4.5.4")
+    implementation("androidx.sqlite:sqlite-ktx:2.4.0")
 
     // Retrofit & OkHttp (Networking)
     implementation("com.squareup.retrofit2:retrofit:$retrofitVersion")
@@ -168,7 +170,7 @@ dependencies {
     // Biometric Authentication
     implementation("androidx.biometric:biometric:1.2.0-alpha05")
 
-    // Security (EncryptedSharedPreferences)
+    // Security (EncryptedSharedPreferences + encrypted Room database)
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
 
     // Firebase

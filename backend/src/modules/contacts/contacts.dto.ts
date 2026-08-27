@@ -1,4 +1,4 @@
-// contacts.dto.ts
+﻿// contacts.dto.ts
 // Validation schemas for contact allow/block rules.
 
 import { z } from 'zod';
@@ -27,5 +27,9 @@ export const updateContactSchema = z.object({
   is_active: z.boolean().optional(),
 });
 
+/** DELETE /children/:childId/contacts/:contactId body (empty). */
+export const deleteContactSchema = z.object({});
+
 export type CreateContactInput = z.infer<typeof createContactSchema>;
 export type UpdateContactInput = z.infer<typeof updateContactSchema>;
+export type DeleteContactInput = z.infer<typeof deleteContactSchema>;

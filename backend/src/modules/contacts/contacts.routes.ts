@@ -1,3 +1,4 @@
+﻿// contacts.routes.ts
 // contacts.routes.ts
 // Mounted at: /api/v1/children (mergeParams exposes :childId)
 // All routes require a parent JWT.
@@ -6,7 +7,7 @@ import { Router } from 'express';
 import { authenticateJWT, requireRole } from '../../middleware/auth';
 import { validate, validateParams, validateQuery } from '../../middleware/validate';
 import { uuidParams, childAndUuidParams, paginationQuery } from '../../middleware/params';
-import { createContactSchema, updateContactSchema } from './contacts.dto';
+import { createContactSchema, updateContactSchema, deleteContactSchema } from './contacts.dto';
 import * as contactsController from './contacts.controller';
 
 const router = Router({ mergeParams: true });
@@ -42,6 +43,7 @@ router.put(
 router.delete(
   '/:childId/contacts/:contactId',
   validateParams(childAndUuidParams('contactId')),
+  validate(deleteContactSchema),
   contactsController.deleteContact
 );
 

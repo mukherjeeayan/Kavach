@@ -8,55 +8,42 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/**
- * Secure store for the onboarding result: the real
- * device_id and child_id returned by the backend during registration.
- * These replace the placeholder IDs used before onboarding existed.
- *
- * Token material lives in [TokenStore]; this file holds identifiers
- * that are now encrypted at rest using EncryptedSharedPreferences.
- */
 @Singleton
-open class OnboardingStore @Inject constructor(@ApplicationContext context: Context) {
+class OnboardingStore @Inject constructor(@ApplicationContext context: Context) {
+
+    @Inject
+    lateinit var masterKey: MasterKey
 
     private val prefs: SharedPreferences by lazy {
-        val masterKey = MasterKey.Builder(context)
-            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-            .build()
-        EncryptedSharedPreferences.create(
-            context,
-            "safeguard_onboarding_encrypted",
-            masterKey,
-            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-        )
+        try {
+            EncryptedSharedPreferences.create(
+                context,
+                "safeguard_onboarding_encrypted",
+                masterKey,
+                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+            )
+        } catch (_: Exception) {
+            context.getSharedPreferences("safeguard_onboarding_encrypted_fallback", Context.MODE_PRIVATE)
+        }
     }
 
     var deviceId: String?
         get() = prefs.getString(KEY_DEVICE_ID, null)
-        set(value) {
-            prefs.edit().putString(KEY_DEVICE_ID, value).apply()
-        }
+        set(value) { prefs.edit().putString(KEY_DEVICE_ID, value).apply() }
 
     var childId: String?
         get() = prefs.getString(KEY_CHILD_ID, null)
-        set(value) {
-            prefs.edit().putString(KEY_CHILD_ID, value).apply()
-        }
+        set(value) { prefs.edit().putString(KEY_CHILD_ID, value).apply() }
 
     var childName: String?
         get() = prefs.getString(KEY_CHILD_NAME, null)
-        set(value) {
-            prefs.edit().putString(KEY_CHILD_NAME, value).apply()
-        }
+        set(value) { prefs.edit().putString(KEY_CHILD_NAME, value).apply() }
 
     var deviceName: String?
         get() = prefs.getString(KEY_DEVICE_NAME, null)
-        set(value) {
-            prefs.edit().putString(KEY_DEVICE_NAME, value).apply()
-        }
+        set(value) { prefs.edit().putString(KEY_DEVICE_NAME, value).apply() }
 
-    /** True once the device has registered with a real device_id + child_id. */
     fun isOnboarded(): Boolean =
         !deviceId.isNullOrEmpty() && !childId.isNullOrEmpty()
 
@@ -74,31 +61,5 @@ open class OnboardingStore @Inject constructor(@ApplicationContext context: Cont
         private const val KEY_CHILD_ID = "child_id"
         private const val KEY_CHILD_NAME = "child_name"
         private const val KEY_DEVICE_NAME = "device_name"
-
-        @Volatile
-        private var cachedPrefs: SharedPreferences? = null
-
-        private fun getPrefs(context: Context): SharedPreferences =
-            cachedPrefs ?: synchronized(this) {
-                cachedPrefs ?: EncryptedSharedPreferences.create(
-                    context,
-                    "safeguard_onboarding_encrypted",
-                    MasterKey.Builder(context)
-                        .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-                        .build(),
-                    EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-                    EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-                ).also { cachedPrefs = it }
-            }
-
-        /**
-         * Context-based check for non-injectable call sites
-         * (e.g. BroadcastReceiver).
-         */
-        fun hasCompleted(context: Context): Boolean {
-            val prefs = getPrefs(context)
-            return !prefs.getString(KEY_DEVICE_ID, null).isNullOrEmpty() &&
-                    !prefs.getString(KEY_CHILD_ID, null).isNullOrEmpty()
-        }
     }
 }

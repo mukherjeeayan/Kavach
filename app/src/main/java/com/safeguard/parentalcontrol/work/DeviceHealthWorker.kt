@@ -63,9 +63,8 @@ class DeviceHealthWorker @AssistedInject constructor(
             val securityPatch = Build.VERSION.SECURITY_PATCH
 
             val diskEncrypted = try {
-                val dpm = applicationContext.getSystemService(Context.DEVICE_POLICY_SERVICE)
-                    as DevicePolicyManager
-                dpm.isStorageEncrypted
+                val dpm = applicationContext.getSystemService(Context.DEVICE_POLICY_SERVICE) as? DevicePolicyManager
+                dpm?.storageEncryptionStatus == DevicePolicyManager.ENCRYPTION_STATUS_ACTIVE
             } catch (_: Exception) {
                 false
             }

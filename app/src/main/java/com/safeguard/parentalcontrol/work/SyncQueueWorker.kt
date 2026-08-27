@@ -1,19 +1,18 @@
-package work
+package com.safeguard.parentalcontrol.work
 
-import androidx.work.*
+import android.content.Context
+import androidx.hilt.work.HiltWorker
+import androidx.work.CoroutineWorker
+import androidx.work.WorkerParameters
 import com.safeguard.parentalcontrol.data.local.dao.SyncQueueDao
-import dagger.hilt.android.binds.ApplicationContext
-import dagger.hilt.ComponentInjector
-import kotlinx.coroutines.CancelledException
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.asSharedFlow
+import dagger.assisted.Assisted
+import dagger.assisted.AssistedInject
 
+@HiltWorker
 class SyncQueueWorker @AssistedInject constructor(
     @Assisted appContext: Context,
     @Assisted workerParams: WorkerParameters,
-    @ApplicationContext ctx: Context,
-    private val syncQueueDao: SyncQueueDao,
-    private val cancelFlow: MutableSharedFlow<String>
+    private val syncQueueDao: SyncQueueDao
 ) : CoroutineWorker(appContext, workerParams) {
 
     override suspend fun doWork(): Result {
@@ -35,7 +34,6 @@ class SyncQueueWorker @AssistedInject constructor(
                         "CONTACT" -> when (item.action) {
                             "CREATE" -> { /* call contact repository */ }
                         }
-                        // ... other feature types
                     }
                     syncQueueDao.updateStatus(item.id, "COMPLETED")
                 } catch (e: Exception) {
@@ -43,11 +41,10 @@ class SyncQueueWorker @AssistedInject constructor(
                         syncQueueDao.updateStatus(item.id, "FAILED")
                     } else {
                         syncQueueDao.updateStatus(item.id, "PENDING")
-                        // exponential backoff not shown for brevity
                     }
                 }
             }
-            hasMore = false // process one batch per run
+            hasMore = false
         }
         return Result.success()
     }

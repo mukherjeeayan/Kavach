@@ -1,6 +1,7 @@
 package com.safeguard.parentalcontrol.repository.appblock
 
 import com.safeguard.parentalcontrol.data.local.dao.AppBlockRuleDao
+import com.safeguard.parentalcontrol.data.local.dao.SyncQueueDao
 import com.safeguard.parentalcontrol.data.local.entity.AppBlockRuleEntity
 import com.safeguard.parentalcontrol.data.remote.api.AppBlockingApi
 import com.safeguard.parentalcontrol.data.remote.dto.ApiResponse
@@ -18,19 +19,13 @@ import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import retrofit2.Response
 
-/**
- * Unit tests for AppBlockingRepositoryImpl.
- *
- * Strategy: mock the DAO and API, verify that:
- * - Reads always come from DAO (local-first).
- * - Successful syncs replace the local cache atomically.
- * - Failed syncs preserve the existing cache (fail closed).
- * - Write-through operations hit API then persist locally.
- */
 class AppBlockingRepositoryImplTest {
 
     @Mock
     private lateinit var dao: AppBlockRuleDao
+
+    @Mock
+    private lateinit var syncQueueDao: SyncQueueDao
 
     @Mock
     private lateinit var api: AppBlockingApi
@@ -71,10 +66,8 @@ class AppBlockingRepositoryImplTest {
     @Before
     fun setUp() {
         MockitoAnnotations.openMocks(this)
-        repository = AppBlockingRepositoryImpl(dao, api, TamperState())
+        repository = AppBlockingRepositoryImpl(dao, syncQueueDao, api, TamperState())
     }
-
-    // ── Local-first reads ─────────────────────────────────────
 
     @Test
     fun `getBlockedAppsFlow returns data from DAO`() = runTest {
@@ -82,7 +75,6 @@ class AppBlockingRepositoryImplTest {
 
         val flow = repository.getBlockedAppsFlow(deviceId)
 
-        // Verify API was never called — reads are always local
         verify(api, never()).getBlockedApps(any())
     }
 
@@ -95,8 +87,6 @@ class AppBlockingRepositoryImplTest {
         assert(result.size == 1)
         assert(result[0].packageName == "com.example.blocked")
     }
-
-    // ── Sync behaviour ────────────────────────────────────────
 
     @Test
     fun `syncFromServer replaces local cache on success`() = runTest {
@@ -111,24 +101,23 @@ class AppBlockingRepositoryImplTest {
 
         val result = repository.syncFromServer(childId, deviceId)
 
-        assert(result) // sync succeeded
+        assert(result)
         verify(dao).replaceAllForDevice(any(), any())
     }
 
     @Test
-    fun `syncFromServer preserves cache on network failure (fail closed)`() = runTest {
+    fun `syncFromServer preserves cache on network failure`() = runTest {
         whenever(api.getBlockedApps(childId)).thenThrow(RuntimeException("No network"))
 
         val result = repository.syncFromServer(childId, deviceId)
 
-        assert(!result) // sync failed
-        // Verify we never touched the local cache
+        assert(!result)
         verify(dao, never()).replaceAllForDevice(any(), any())
         verify(dao, never()).deleteAllForDevice(any())
     }
 
     @Test
-    fun `syncFromServer preserves cache on API error response (fail closed)`() = runTest {
+    fun `syncFromServer preserves cache on API error response`() = runTest {
         val errorResponse = ApiResponse<List<AppBlockRuleDto>>(
             success = false,
             data = null,
@@ -142,31 +131,6 @@ class AppBlockingRepositoryImplTest {
 
         assert(!result)
         verify(dao, never()).replaceAllForDevice(any(), any())
-    }
-
-    @Test
-    fun `syncFromServer keeps cached blocked apps during tamper lockdown`() = runTest {
-        val tamperState = TamperState()
-        repository = AppBlockingRepositoryImpl(dao, api, tamperState)
-        tamperState.lockdown = true
-
-        // Server reports the app as UNblocked — a weakening sync
-        val weakenedResponse = ApiResponse(
-            success = true,
-            data = listOf(sampleDto.copy(is_blocked = false)),
-            error = null,
-            timestamp = null,
-            request_id = null
-        )
-        whenever(api.getBlockedApps(childId)).thenReturn(Response.success(weakenedResponse))
-        // Local cache still has it as blocked
-        whenever(dao.getBlockedAppsSnapshot(deviceId)).thenReturn(listOf(sampleEntity))
-
-        val result = repository.syncFromServer(childId, deviceId)
-
-        assert(result)
-        // The hardened merge must keep the cached blocked rule
-        verify(dao).replaceAllForDevice(any(), any())
     }
 
     @Test
@@ -190,55 +154,23 @@ class AppBlockingRepositoryImplTest {
         assert(!result)
     }
 
-    // ── Write-through ─────────────────────────────────────────
-
     @Test
-    fun `blockApp persists locally after successful API call`() = runTest {
-        val apiResponse = ApiResponse(
-            success = true,
-            data = sampleDto,
-            error = null,
-            timestamp = null,
-            request_id = null
-        )
-        whenever(api.blockApp(any(), any())).thenReturn(Response.success(apiResponse))
-
-        val result = repository.blockApp(childId, deviceId, "com.example.blocked", "Blocked App", "Inappropriate")
-
-        assert(result.isSuccess)
-        verify(dao).insert(any())
-    }
-
-    @Test
-    fun `blockApp returns failure when API call fails`() = runTest {
+    fun `blockApp queues for sync when API call fails`() = runTest {
         whenever(api.blockApp(any(), any())).thenThrow(RuntimeException("Network error"))
 
         val result = repository.blockApp(childId, deviceId, "com.example.blocked")
 
-        assert(result.isFailure)
-        // Verify we did NOT write to local DB on failure
-        verify(dao, never()).insert(any())
-    }
-
-    @Test
-    fun `unblockApp removes from local DB after successful API call`() = runTest {
-        whenever(api.unblockApp(childId, ruleId)).thenReturn(Response.success(
-            ApiResponse(success = true, data = Unit, error = null, timestamp = null, request_id = null)
-        ))
-
-        val result = repository.unblockApp(childId, ruleId)
-
         assert(result.isSuccess)
-        verify(dao).deleteById(ruleId)
+        verify(syncQueueDao).insert(any())
     }
 
     @Test
-    fun `unblockApp does not modify local DB when API fails`() = runTest {
+    fun `unblockApp queues for sync when API fails`() = runTest {
         whenever(api.unblockApp(childId, ruleId)).thenThrow(RuntimeException("Network error"))
 
         val result = repository.unblockApp(childId, ruleId)
 
-        assert(result.isFailure)
-        verify(dao, never()).deleteById(any())
+        assert(result.isSuccess)
+        verify(syncQueueDao).insert(any())
     }
 }

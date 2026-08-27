@@ -1,4 +1,6 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { useSelector } from 'react-redux';
+import { RootState } from '../store/store';
 import {
   clearStoredSession,
   getAccessToken,
@@ -11,12 +13,10 @@ export interface AuthUser {
   id: string;
   name: string;
   email: string;
+  role: 'parent' | 'child' | null;
 }
 
 interface AuthState {
-  // Presence of the in-memory token (or a restorable cookie session)
-  // decides route protection. The token value itself is never kept in
-  // the Redux store / localStorage.
   hasToken: boolean;
   user: AuthUser | null;
 }
@@ -45,3 +45,16 @@ const authSlice = createSlice({
 
 export const { setSession, clearSession } = authSlice.actions;
 export default authSlice.reducer;
+
+// Use selector to get auth state
+export const useAuth = () => {
+  const hasToken = useSelector((state: RootState) => state.auth.hasToken);
+  const user = useSelector((state: RootState) => state.auth.user);
+  return { hasToken, user };
+};
+
+// Role-based access control hook
+export const useRole = (role: 'parent' | 'child') => {
+  const { user } = useAuth();
+  return user?.role === role;
+};

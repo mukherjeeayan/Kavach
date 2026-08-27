@@ -151,7 +151,8 @@ class SecurityScanWorker @AssistedInject constructor(
                     applicationContext.packageName,
                     PackageManager.GET_SIGNING_CERTIFICATES
                 )
-            } @Suppress("DEPRECATION") else {
+            } else {
+                @Suppress("DEPRECATION")
                 applicationContext.packageManager.getPackageInfo(
                     applicationContext.packageName,
                     PackageManager.GET_SIGNATURES

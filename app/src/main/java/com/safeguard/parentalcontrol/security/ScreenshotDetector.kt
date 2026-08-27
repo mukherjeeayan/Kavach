@@ -3,7 +3,6 @@ package com.safeguard.parentalcontrol.security
 import android.content.Context
 import android.database.ContentObserver
 import android.os.Build
-import android.os.Environment
 import android.os.FileObserver
 import android.os.Handler
 import android.os.Looper
@@ -22,41 +21,53 @@ class ScreenshotDetector(private val context: Context) {
     data class ScreenshotEvent(val timestamp: Long, val path: String?)
 
     fun start() {
-        fileObserver?.stop()
-        contentObserver?.stop()
+        stop()
 
         if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.Q) {
-            fileObserver = FileObserver(context.getExternalFilesDir(null)?.absolutePath ?: "") { event ->
-                if (event == FileObserver.MOVED_FROM || event == FileObserver.CLOSE_WRITE) {
-                    handler.postDelayed { _screenshotEvents.emit(ScreenshotEvent(System.currentTimeMillis(), it) }, 200)
+            val dir = context.getExternalFilesDir(null) ?: return
+            fileObserver = object : FileObserver(dir, MOVED_FROM or CLOSE_WRITE) {
+                override fun onEvent(event: Int, path: String?) {
+                    if (event == MOVED_FROM || event == CLOSE_WRITE) {
+                        handler.postDelayed({
+                            path?.let {
+                                _screenshotEvents.tryEmit(ScreenshotEvent(System.currentTimeMillis(), it))
+                            }
+                        }, 200)
+                    }
                 }
             }
-            fileObserver?.start(FileObserver.MOVED_FROM or FileObserver.CLOSE_WRITE)
+            fileObserver?.startWatching()
         } else {
             contentObserver = object : ContentObserver(handler) {
                 override fun onChange(selfChange: Boolean) {
                     super.onChange(selfChange)
                     val cursor = context.contentResolver.query(
                         MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-                        null,
-                        null,
-                        null,
-                        null
+                        null, null, null, null
                     )
                     if (cursor != null && cursor.moveToLast()) {
                         val path = cursor.getString(cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DISPLAY_NAME))
-                        _screenshotEvents.emit(ScreenshotEvent(System.currentTimeMillis(), path))
+                        _screenshotEvents.tryEmit(ScreenshotEvent(System.currentTimeMillis(), path))
                         cursor.close()
                     }
                 }
             }
-            context.contentResolver.registerContentObserver(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, false, contentObserver)
+            contentObserver?.let {
+                context.contentResolver.registerContentObserver(
+                    MediaStore.Images.Media.EXTERNAL_CONTENT_URI, false, it
+                )
+            }
         }
     }
 
     fun stop() {
-        fileObserver?.stop()
-        contentObserver?.stop()
-        context.contentResolver.unregisterContentObserver(contentObserver)
+        try {
+            fileObserver?.stopWatching()
+        } catch (_: Exception) {}
+        fileObserver = null
+        try {
+            contentObserver?.let { context.contentResolver.unregisterContentObserver(it) }
+        } catch (_: Exception) {}
+        contentObserver = null
     }
 }

@@ -6,6 +6,7 @@ import { authenticateJWT, requireRole } from '../../middleware/auth';
 import { validate, validateParams } from '../../middleware/validate';
 import { uuidParams, childAndUuidParams } from '../../middleware/params';
 import { requireConsent } from '../../middleware/consent';
+import { authLimiter } from '../../middleware/rateLimiter';
 import { createSosSchema, resolveSosSchema } from './sos.dto';
 import * as sosController from './sos.controller';
 
@@ -15,11 +16,13 @@ export const sosDeviceRouter = (() => {
   router.use(authenticateJWT);
 
   // POST /api/v1/devices/:deviceId/sos
+  // Rate-limited to prevent SOS spam — 5 attempts per 15min per device.
   router.post(
     '/:deviceId/sos',
     validateParams(uuidParams('deviceId')),
     requireConsent('location'),
     validate(createSosSchema),
+    authLimiter,
     sosController.createSosEvent
   );
 

@@ -30,10 +30,11 @@ object AppBlockingModule {
     @Provides
     @Singleton
     fun provideAppBlockingRepository(
-        dao: AppBlockRuleDao,
+        appBlockRuleDao: AppBlockRuleDao,
+        syncQueueDao: com.safeguard.parentalcontrol.data.local.dao.SyncQueueDao,
         api: AppBlockingApi,
         tamperState: TamperState
     ): AppBlockingRepository {
-        return AppBlockingRepositoryImpl(dao, api, tamperState)
+        return AppBlockingRepositoryImpl(appBlockRuleDao, syncQueueDao, api, tamperState)
     }
 }

@@ -11,6 +11,10 @@ import swaggerUi from 'swagger-ui-express';
 import { errorHandler } from './middleware/errorHandler';
 import { standardLimiter } from './middleware/rateLimiter';
 import { requestLogger } from './middleware/requestLogger';
+import { validateEnv } from './config/validateEnv';
+
+// ── Central config validation (fail-fast at startup) ──────────────────
+validateEnv();
 
 // Shared origin config (used by both Express and Socket.IO in server.ts)
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || '')
@@ -51,6 +55,12 @@ app.use((req, res, next) => {
 
 // Request logging (method, path, status, duration)
 app.use(requestLogger);
+
+// Unhandled rejection logger to prevent silent crashes
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  // Application does not exit on unhandled rejection in production
+});
 
 // Health check endpoint — verifies real DB connectivity so
 // load balancers / k8s probes don't report healthy while broken.

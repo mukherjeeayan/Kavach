@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Provider, useSelector } from 'react-redux';
 import { store, RootState } from './store/store';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
+import { useRole } from './store/authSlice';
 import { Skeleton } from './components/ui/Skeleton';
 
 // Lazy load page components for code splitting
@@ -47,6 +48,16 @@ const ProtectedRoute = ({ children }: { children: ReactElement }) => {
   return children;
 };
 
+// Role-protected route — only users with the required role can access
+const RoleProtectedRoute = ({ role, children }: { role: 'parent' | 'child'; children: ReactElement }) => {
+  const hasMatchingRole = useRole(role);
+
+  if (!hasMatchingRole) {
+    return <Navigate to="/login" replace />;
+  }
+  return children;
+};
+
 function App() {
   return (
     <Provider store={store}>
@@ -62,17 +73,17 @@ function App() {
                 <Route
                   path="/dashboard"
                   element={
-                    <ProtectedRoute>
+                    <RoleProtectedRoute role="parent">
                       <DashboardPage />
-                    </ProtectedRoute>
+                    </RoleProtectedRoute>
                   }
                 />
                 <Route
                   path="/settings"
                   element={
-                    <ProtectedRoute>
+                    <RoleProtectedRoute role="parent">
                       <SettingsPage />
-                    </ProtectedRoute>
+                    </RoleProtectedRoute>
                   }
                 />
                 <Route path="*" element={<NotFoundPage />} />

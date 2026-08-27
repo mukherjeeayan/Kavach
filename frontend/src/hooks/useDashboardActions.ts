@@ -9,7 +9,7 @@ export const useBlockAppAction = (
   onError: (message: string) => void
 ) =>
   useMutation({
-    mutationFn: (input: BlockAppInput) => blockAppApi(childId as string, input),
+    mutationFn: (input: BlockAppInput) => blockAppApi(childId ?? '', input),
     onSuccess,
     onError: (error) => onError(getErrorMessage(error, 'Failed to block app')),
   });
@@ -21,7 +21,7 @@ export const useRespondToUnblockRequest = (
 ) =>
   useMutation({
     mutationFn: ({ ruleId, decision }: { ruleId: string; decision: 'approve' | 'reject' }) =>
-      respondToUnblockRequest(childId as string, ruleId, decision),
+      respondToUnblockRequest(childId ?? '', ruleId, decision),
     onSuccess,
     onError: (error) =>
       onError(getErrorMessage(error, 'Failed to update the unblock request. Please retry.')),

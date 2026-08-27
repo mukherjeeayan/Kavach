@@ -17,3 +17,80 @@
     @apply bg-gray-900 text-gray-100;
   }
 }
+
+/* Print styles */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  .print-block {
+    display: block !important;
+  }
+
+  .bg-white,
+  .dark\:bg-gray-800 {
+    background-color: white !important;
+    color: black !important;
+  }
+
+  .dark .bg-white,
+  .dark .bg-gray-800 {
+    background-color: #18181b !important;
+    color: #f9fafb !important;
+  }
+
+  .shadow-none {
+    box-shadow: none !important;
+  }
+
+  .border,
+  .border-gray-200,
+  .dark\:border-gray-700 {
+    border-color: #e5e7eb !important;
+  }
+
+  .dark .border,
+  .dark .border-gray-200,
+  .dark .dark\:border-gray-700 {
+    border-color: #3f3f4f !important;
+  }
+
+  .max-w-6xl,
+   .mx-auto {
+    width: 100% !important;
+    max-width: none !important;
+  }
+
+  .px-4,
+  .px-6 {
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+  }
+
+  .py-6 {
+    padding-top: 1rem !important;
+    padding-bottom: 1rem !important;
+  }
+
+  .space-y-6 > * + * {
+    margin-top: 1rem !important;
+  }
+
+  .text-gray-900,
+  .dark\:text-white {
+    color: white !important;
+  }
+
+  .dark .text-gray-900 {
+    color: #f9fafb !important;
+  }
+
+  .text-gray-500 {
+    color: #6b7280 !important;
+  }
+
+  .dark .text-gray-500 {
+    color: #9ca3af !important;
+  }
+}

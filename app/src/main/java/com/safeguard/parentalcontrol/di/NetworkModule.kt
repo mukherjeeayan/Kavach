@@ -1,10 +1,13 @@
 package com.safeguard.parentalcontrol.di
 
+import android.content.Context
 import com.safeguard.parentalcontrol.BuildConfig
 import com.safeguard.parentalcontrol.data.remote.AuthInterceptor
+import androidx.security.crypto.MasterKey
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import okhttp3.CertificatePinner
 import okhttp3.HttpUrl.Companion.toHttpUrl
@@ -17,6 +20,14 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
+
+    @Provides
+    @Singleton
+    fun provideMasterKey(@ApplicationContext context: Context): MasterKey {
+        return MasterKey.Builder(context)
+            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+            .build()
+    }
 
     @Provides
     @Singleton

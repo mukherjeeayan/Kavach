@@ -58,7 +58,9 @@ function createWrapper(queryClient = createQueryClient()) {
 }
 
 describe('useLocks', () => {
-  beforeEach(() => { vi.clearAllMocks(); });
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
   it('does not fetch when childId is null', () => {
     const { result } = renderHook(() => useLocks(null), { wrapper: createWrapper() });
@@ -79,7 +81,9 @@ describe('useLocks', () => {
 });
 
 describe('useContacts', () => {
-  beforeEach(() => { vi.clearAllMocks(); });
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
   it('does not fetch when childId is null', () => {
     const { result } = renderHook(() => useContacts(null), { wrapper: createWrapper() });
@@ -100,7 +104,9 @@ describe('useContacts', () => {
 });
 
 describe('useLockActions', () => {
-  beforeEach(() => { vi.clearAllMocks(); });
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
   it('returns create, update, remove mutations', () => {
     const { result } = renderHook(() => useLockActions('child-1'), { wrapper: createWrapper() });
@@ -124,7 +130,9 @@ describe('useLockActions', () => {
 });
 
 describe('useContactActions', () => {
-  beforeEach(() => { vi.clearAllMocks(); });
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
   it('returns create, update, remove mutations', () => {
     const { result } = renderHook(() => useContactActions('child-1'), { wrapper: createWrapper() });
@@ -135,7 +143,9 @@ describe('useContactActions', () => {
 });
 
 describe('useScreenTimeSummary', () => {
-  beforeEach(() => { vi.clearAllMocks(); });
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
   it('fetches screen time summary', async () => {
     const mockSummary = {
@@ -154,7 +164,9 @@ describe('useScreenTimeSummary', () => {
 });
 
 describe('useChildAlerts', () => {
-  beforeEach(() => { vi.clearAllMocks(); });
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
   it('fetches alerts for a child', async () => {
     const mockAlerts: ChildAlert[] = [
@@ -177,7 +189,9 @@ describe('useChildAlerts', () => {
 });
 
 describe('useCurrentLocations', () => {
-  beforeEach(() => { vi.clearAllMocks(); });
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
   it('fetches current locations', async () => {
     const mockLocations: LocationPoint[] = [
@@ -193,7 +207,9 @@ describe('useCurrentLocations', () => {
 });
 
 describe('useLocationHistory', () => {
-  beforeEach(() => { vi.clearAllMocks(); });
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
   it('fetches location history', async () => {
     const mockHistory: LocationPoint[] = [
@@ -209,7 +225,9 @@ describe('useLocationHistory', () => {
 });
 
 describe('useActionsError', () => {
-  beforeEach(() => { vi.clearAllMocks(); });
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
   it('calls onError with error message when a mutation has error', () => {
     const onError = vi.fn();
@@ -235,7 +253,9 @@ describe('useActionsError', () => {
 });
 
 describe('useVerifyParentPin', () => {
-  beforeEach(() => { vi.clearAllMocks(); });
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
   it('returns mutation interface', () => {
     const { result } = renderHook(() => useVerifyParentPin(), { wrapper: createWrapper() });
@@ -244,7 +264,9 @@ describe('useVerifyParentPin', () => {
 });
 
 describe('useSetParentPin', () => {
-  beforeEach(() => { vi.clearAllMocks(); });
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
   it('returns mutation interface', () => {
     const { result } = renderHook(() => useSetParentPin(), { wrapper: createWrapper() });

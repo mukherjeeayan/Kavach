@@ -13,21 +13,21 @@ export const useCommunicationLogs = (
 ) =>
   useQuery({
     queryKey: ['communications', childId, flaggedOnly, page],
-    queryFn: () => fetchCommunicationLogs(childId as string, flaggedOnly, page, limit),
+    queryFn: () => fetchCommunicationLogs(childId ?? '', flaggedOnly, page, limit),
     enabled: !!childId,
   });
 
 export const useKeywordAlerts = (childId: string | null, unreviewedOnly = false) =>
   useQuery({
     queryKey: ['keywordAlerts', childId, unreviewedOnly],
-    queryFn: () => fetchKeywordAlerts(childId as string, unreviewedOnly),
+    queryFn: () => fetchKeywordAlerts(childId ?? '', unreviewedOnly),
     enabled: !!childId,
   });
 
 export const useReviewKeywordAlert = (childId: string | null) => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (alertId: string) => reviewKeywordAlert(childId as string, alertId),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['keywordAlerts', childId] }),
+    mutationFn: (alertId: string) => reviewKeywordAlert(childId ?? '', alertId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['keywordAlerts', childId ?? ''] }),
   });
 };

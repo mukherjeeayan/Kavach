@@ -38,7 +38,7 @@ vi.mock('../components/ui/TextField', () => ({
         {optional && <span> (optional)</span>}
       </label>
       <input aria-label={label} {...props} />
-      {error && <span className="text-red-500">{error}</span>}
+      {error && <span className="text-red-500">{error.message ?? String(error)}</span>}
     </div>
   ),
 }));
@@ -117,7 +117,7 @@ describe('RegisterPage', () => {
     renderWithProviders(<RegisterPage />);
 
     expect(screen.getByRole('button', { name: /creating account/i })).toBeInTheDocument();
-    expect(screen.getByRole('button')).toBeDisabled();
+    expect(screen.getByRole('button', { name: /creating account/i })).toBeDisabled();
   });
 
   it('displays server error', () => {

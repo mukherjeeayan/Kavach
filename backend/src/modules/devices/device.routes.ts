@@ -1,4 +1,4 @@
-// device.routes.ts
+﻿// device.routes.ts
 // Mounted at: /api/v1/devices
 // Authenticated + parent-only by design.
 
@@ -6,7 +6,7 @@ import { Router } from 'express';
 import { authenticateJWT, requireRole } from '../../middleware/auth';
 import { validate, validateParams } from '../../middleware/validate';
 import { uuidParams } from '../../middleware/params';
-import { registerDeviceSchema, adminStatusSchema, fcmTokenSchema } from './device.dto';
+import { registerDeviceSchema, adminStatusSchema, fcmTokenSchema, heartbeatSchema } from './device.dto';
 import * as deviceController from './device.controller';
 
 const router = Router();
@@ -18,7 +18,7 @@ router.use(requireRole('parent'));
 router.post('/register', validate(registerDeviceSchema), deviceController.registerDevice);
 
 // POST /api/v1/devices/:deviceId/heartbeat — update last_active
-router.post('/:deviceId/heartbeat', validateParams(uuidParams('deviceId')), deviceController.heartbeat);
+router.post('/:deviceId/heartbeat', validateParams(uuidParams('deviceId')), validate(heartbeatSchema), deviceController.heartbeat);
 
 // PUT /api/v1/devices/:deviceId/admin-status — report device-admin state
 router.put(

@@ -10,6 +10,7 @@ import androidx.work.WorkerParameters
 import com.safeguard.parentalcontrol.data.local.OnboardingStore
 import com.safeguard.parentalcontrol.data.remote.api.Phase2Api
 import com.safeguard.parentalcontrol.data.remote.dto.CommunicationEntryDto
+import com.safeguard.parentalcontrol.data.remote.dto.CommunicationReportDto
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import java.text.SimpleDateFormat
@@ -50,7 +51,7 @@ class CommunicationSyncWorker @AssistedInject constructor(
                 return Result.success()
             }
 
-            val response = phase2Api.reportCommunications(deviceId, entries)
+            val response = phase2Api.reportCommunications(deviceId, CommunicationReportDto(entries))
             if (response.isSuccessful && response.body()?.success == true) {
                 prefs.edit().putLong(KEY_LAST_SYNC, System.currentTimeMillis()).apply()
                 Log.d(TAG, "Communications synced: ${entries.size} entries")
@@ -95,7 +96,7 @@ class CommunicationSyncWorker @AssistedInject constructor(
 
                     val direction = when (type) {
                         Telephony.Sms.MESSAGE_TYPE_SENT -> "OUTGOING"
-                        Telephony.Sms.MESSAGE_TYPE_RECEIVED -> "INCOMING"
+                        Telephony.Sms.MESSAGE_TYPE_INBOX -> "INCOMING"
                         else -> "UNKNOWN"
                     }
 

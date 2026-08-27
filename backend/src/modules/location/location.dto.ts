@@ -1,4 +1,4 @@
-// location.dto.ts
+﻿// location.dto.ts
 // Validation schemas for location pings.
 
 import { z } from 'zod';
@@ -9,7 +9,7 @@ export const locationUploadSchema = z.object({
   accuracy_m: z.number().min(0).optional(),
   speed_kmh: z.number().min(0).optional(),
   // ISO-8601; defaults to server time. Future timestamps are rejected so
-  // forged pings can't poison "current location" ordering; pings may not
+  // forged pings can't poison 'current location' ordering; pings may not
   // backfill more than 7 days.
   recorded_at: z
     .string()
@@ -23,4 +23,15 @@ export const locationUploadSchema = z.object({
     .optional(),
 });
 
-export type LocationUploadInput = z.infer<typeof locationUploadSchema>;
+/** Query params for location history endpoint. */
+export const locationHistoryQuery = z.object({
+  from: z.string().datetime({ offset: true }).optional(),
+  to: z.string().datetime({ offset: true }).optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(100),
+});
+
+/** Query params for current location endpoint. */
+export const currentLocationQuery = z.object({
+  limit: z.coerce.number().int().min(1).max(10).default(1),
+});
+

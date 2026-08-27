@@ -145,6 +145,8 @@ paths:
       tags: [Auth]
       summary: Refresh access token
       operationId: refreshToken
+      security:
+        - bearerAuth: []
       requestBody:
         content:
           application/json:
@@ -222,11 +224,13 @@ paths:
               schema:
                 $ref: "#/components/schemas/Envelope"
 
-  /auth/password:
+/auth/password:
     put:
       tags: [Auth]
-      summary: Change password (revokes all sessions)
+      summary: Change user password
       operationId: changePassword
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -340,12 +344,13 @@ paths:
         "401":
           description: Invalid PIN or lockout
 
-  /auth/biometric-token:
+/auth/biometric-token:
     post:
       tags: [Auth]
       summary: Get short-lived biometric token (15 min, rate-limited)
-      security: []
       operationId: getBiometricToken
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -932,6 +937,8 @@ paths:
       tags: [Screen Time]
       summary: Submit screen time entries (10/min per device)
       operationId: submitScreenTime
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -974,6 +981,8 @@ paths:
       tags: [Screen Time]
       summary: Get screen time for a date
       operationId: getScreenTime
+      security:
+        - bearerAuth: []
       parameters:
         - name: date
           in: query
@@ -996,6 +1005,8 @@ paths:
       tags: [Screen Time]
       summary: Get screen time summary
       operationId: getScreenTimeSummary
+      security:
+        - bearerAuth: []
       parameters:
         - name: range
           in: query
@@ -1018,6 +1029,8 @@ paths:
       tags: [Screen Time]
       summary: Set daily screen time limit (0-1440 minutes, null to remove)
       operationId: setScreenTimeLimit
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -1256,6 +1269,8 @@ paths:
       tags: [Location]
       summary: Report device location (10/min per device)
       operationId: reportLocation
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -1296,6 +1311,8 @@ paths:
       tags: [Location]
       summary: Get current location
       operationId: getCurrentLocation
+      security:
+        - bearerAuth: []
       responses:
         "200":
           description: Current location
@@ -1336,6 +1353,8 @@ paths:
       tags: [Location]
       summary: Get location history (max 500)
       operationId: getLocationHistory
+      security:
+        - bearerAuth: []
       parameters:
         - name: from
           in: query
@@ -1476,11 +1495,11 @@ paths:
   /geo/mapbox-token:
     get:
       tags: [Geo]
-      summary: Get Mapbox public token
+      summary: Get Mapbox public token (rate-limited, does NOT expose secret keys - never bake into frontend bundle per .env.example)
       operationId: getMapboxToken
       responses:
         "200":
-          description: Mapbox token
+          description: Mapbox token (rate-limited endpoint, does not expose secret keys)
           content:
             application/json:
               schema:
@@ -1503,6 +1522,8 @@ paths:
       tags: [URL Filtering]
       summary: List URL filter rules for a child
       operationId: listUrlFilters
+      security:
+        - bearerAuth: []
       responses:
         "200":
           description: List of URL filter rules
@@ -1525,6 +1546,8 @@ paths:
       tags: [URL Filtering]
       summary: Create a URL filter rule
       operationId: createUrlFilter
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -1585,6 +1608,8 @@ paths:
       tags: [URL Filtering]
       summary: Update a URL filter rule
       operationId: updateUrlFilter
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -1712,6 +1737,8 @@ paths:
       tags: [SOS]
       summary: Trigger emergency SOS event (device-side)
       operationId: triggerSos
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -1739,6 +1766,8 @@ paths:
       tags: [SOS]
       summary: List SOS events for a child
       operationId: listSosEvents
+      security:
+        - bearerAuth: []
       parameters:
         - name: status
           in: query
@@ -1781,6 +1810,8 @@ paths:
       tags: [SOS]
       summary: Acknowledge an SOS event
       operationId: acknowledgeSosEvent
+      security:
+        - bearerAuth: []
       responses:
         "200":
           description: SOS event acknowledged
@@ -1808,6 +1839,8 @@ paths:
       tags: [SOS]
       summary: Resolve an SOS event
       operationId: resolveSosEvent
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -4383,3 +4416,5 @@ components:
           type: object
         is_active:
           type: boolean
+
+
