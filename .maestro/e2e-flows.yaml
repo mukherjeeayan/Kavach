@@ -5,22 +5,21 @@ tags:
   - e2e
 ---
 - launchApp
-# Step 1: Onboarding
-- tapOn: ".*Get Started.*|.*Login.*"
+# Step 1: Onboarding - Login
 - tapOn:
-    id: ".*email.*"
+    text: "Email"
 - inputText: "e2e-${OUTPUT.timestamp}@test.com"
 - tapOn:
-    id: ".*password.*"
+    text: "Password"
 - inputText: "Test1234!"
-- tapOn: ".*Sign In.*|.*Login.*"
+- tapOn: "Sign In"
 - waitForAnimationToEnd
 
-# Step 2: PIN Gate (if shown)
+# Step 2: PIN Gate (if shown - ParentLockScreen)
 - tapOn:
-    id: ".*pin.*|.*PIN.*"
-- inputText: "1234"
-- tapOn: ".*Unlock.*|.*Verify.*"
+    text: "Parent PIN"
+- inputText: "123456"
+- tapOn: "Unlock"
 - waitForAnimationToEnd
 
 # Step 3: Dashboard tabs

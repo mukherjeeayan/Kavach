@@ -5,13 +5,12 @@ tags:
   - smoke
 ---
 - launchApp
-- tapOn: ".*Get Started.*|.*Login.*|.*Sign In.*"
+# Step 1: Login - enter credentials
 - tapOn:
-    id: ".*email.*|.*Email.*"
+    text: "Email"
 - inputText: "parent@test.com"
 - tapOn:
-    id: ".*password.*|.*Password.*"
+    text: "Password"
 - inputText: "Test1234!"
-- tapOn: ".*Sign In.*|.*Login.*|.*Submit.*"
-# Wait for next step or dashboard
+- tapOn: "Sign In"
 - waitForAnimationToEnd

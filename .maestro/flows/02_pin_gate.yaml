@@ -5,9 +5,9 @@ tags:
   - security
 ---
 - launchApp
-# If PIN gate is shown
+# If PIN gate is shown (ParentLockScreen)
 - tapOn:
-    id: ".*pin.*|.*PIN.*"
-- inputText: "1234"
-- tapOn: ".*Unlock.*|.*Verify.*|.*Submit.*"
+    text: "Parent PIN"
+- inputText: "123456"
+- tapOn: "Unlock"
 - waitForAnimationToEnd
