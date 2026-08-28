@@ -39,6 +39,7 @@ const PageLoader = () => (
 // Protected Route wrapper — checks the session flag. The access token
 // lives in memory and the refresh token in an httpOnly cookie; a page
 // reload silently restores the token via the cookie-based refresh.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const ProtectedRoute = ({ children }: { children: ReactElement }) => {
   const hasToken = useSelector((state: RootState) => state.auth.hasToken);
 

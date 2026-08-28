@@ -1,5 +1,5 @@
 ﻿import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, waitFor } from '@testing-library/react';
 import { renderHook } from '@testing-library/react';
 import GeofencePage from './GeofencePage';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';

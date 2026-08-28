@@ -35,8 +35,8 @@ jobs:
       DB_USER: testuser
       DB_PASSWORD: testpass
       DB_NAME: testdb
-      JWT_SECRET: test-jwt-secret-for-ci
-      JWT_REFRESH_SECRET: test-jwt-refresh-secret-for-ci
+      JWT_SECRET: test-jwt-secret-for-ci-must-be-at-least-32
+      JWT_REFRESH_SECRET: test-jwt-refresh-secret-for-ci-32plus
     
     steps:
       - uses: actions/checkout@v4

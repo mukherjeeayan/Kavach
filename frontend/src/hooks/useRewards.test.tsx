@@ -24,8 +24,6 @@ const baseRewardCatalogItem = {
   icon: '??',
 };
 
-const baseRewardPoints = { total_points: 500, recent_entries: [] };
-
 describe('useRewardCatalog', () => {
   beforeEach(() => {
     vi.clearAllMocks();

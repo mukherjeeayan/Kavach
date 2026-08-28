@@ -1,10 +1,8 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useRegister } from '../hooks/useAuth';
-import { yupResolver } from '@hookform/resolvers/yup';
 import AuthLayout from '../components/auth/AuthLayout';
 import { TextField } from '../components/ui/TextField';
-import * as yup from 'yup';
 
 export interface RegisterFormValues {
   name: string;
@@ -13,19 +11,6 @@ export interface RegisterFormValues {
   child_name?: string;
   birth_date?: string;
 }
-
-const registerSchema = yup.object({
-  name: yup.string().min(2, 'Name must be at least 2 characters').max(50, 'Name must be at most 50 characters').required('Name is required'),
-  email: yup.string().email('Invalid email format').required('Email is required'),
-  password: yup.string()
-    .min(8, 'Password must be at least 8 characters')
-    .max(128, 'Password must be at most 128 characters')
-    .required('Password is required'),
-  child_name: yup.string().max(50, 'Child name must be at most 50 characters'),
-  birth_date: yup.string().test('birth_date', 'Birth date must be YYYY-MM-DD format', (value) =>
-    !value || /^\d{4}-\d{2}-\d{2}$/.test(value)
-  ),
-});
 
 export default function RegisterPage() {
   const { register, errors, onSubmit, isLoading, serverError } = useRegister();

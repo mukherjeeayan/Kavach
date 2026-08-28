@@ -10,7 +10,7 @@ vi.mock('./apiClient', () => ({
 }));
 
 import apiClient from './apiClient';
-import { login, register, logout, fetchChildren, fetchChildAlerts, setScreenTimeLimit } from './api';
+import { fetchChildren, fetchChildAlerts, setScreenTimeLimit } from './api';
 
 const envelope = <T>(data: T) => ({
   success: true,
@@ -21,7 +21,6 @@ const envelope = <T>(data: T) => ({
 });
 
 const mockedGet = apiClient.get as ReturnType<typeof vi.fn>;
-const mockedPost = apiClient.post as ReturnType<typeof vi.fn>;
 const mockedPut = apiClient.put as ReturnType<typeof vi.fn>;
 
 describe('api layer', () => {

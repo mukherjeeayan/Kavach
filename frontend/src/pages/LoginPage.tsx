@@ -1,20 +1,13 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useLogin } from '../hooks/useAuth';
-import { yupResolver } from '@hookform/resolvers/yup';
 import AuthLayout from '../components/auth/AuthLayout';
 import { TextField } from '../components/ui/TextField';
-import * as yup from 'yup';
 
 export interface LoginFormValues {
   email: string;
   password: string;
 }
-
-const loginSchema = yup.object({
-  email: yup.string().email('Invalid email format').required('Email is required'),
-  password: yup.string().min(8, 'Password must be at least 8 characters').required('Password is required'),
-});
 
 export default function LoginPage() {
   const { register, errors, onSubmit, isLoading, serverError } = useLogin();
