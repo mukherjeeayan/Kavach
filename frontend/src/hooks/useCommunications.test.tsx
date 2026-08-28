@@ -110,18 +110,7 @@ describe('useReviewKeywordAlert', () => {
       await result.current.mutateAsync('alert-1');
     });
 
-    expect(api.reviewKeywordAlert).toHaveBeenCalled();
-  });
-
-  it('invalidates keyword alerts query on success', async () => {
-    vi.mocked(api.reviewKeywordAlert).mockResolvedValue(undefined);
-
-    const { result } = renderHook(() => useReviewKeywordAlert('child-1'), { wrapper: createWrapper() });
-
-    await act(async () => {
-      await result.current.mutateAsync('alert-1');
-    });
-
-    expect(api.reviewKeywordAlert).toHaveBeenCalled();
+    expect(api.reviewKeywordAlert).toHaveBeenCalledWith('child-1', 'alert-1');
+    expect(api.reviewKeywordAlert).toHaveBeenCalledTimes(1);
   });
 });

@@ -28,12 +28,25 @@ if (process.env.NODE_ENV === 'production' && ALLOWED_ORIGINS.length === 0) {
 
 const app: Application = express();
 
+// Trust proxy for rate limiting behind reverse proxies
+if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+}
+
 // Security Middleware
 app.use(helmet());
 // With credentials:true the origin can never be '*' — echo the request
 // origin in development, and require an explicit allowlist in production.
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production' ? ALLOWED_ORIGINS : true,
+  origin: process.env.NODE_ENV === 'production' ? ALLOWED_ORIGINS : (origin, callback) => {
+    // Allow requests with no origin (curl, mobile apps, server-to-server)
+    if (!origin) return callback(null, true);
+    // In development, allow localhost on any port
+    if (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) {
+      return callback(null, true);
+    }
+    callback(new Error('Not allowed by CORS'));
+  },
   credentials: true,
 }));
 
@@ -55,12 +68,6 @@ app.use((req, res, next) => {
 
 // Request logging (method, path, status, duration)
 app.use(requestLogger);
-
-// Unhandled rejection logger to prevent silent crashes
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
-  // Application does not exit on unhandled rejection in production
-});
 
 // Health check endpoint — verifies real DB connectivity so
 // load balancers / k8s probes don't report healthy while broken.
@@ -110,7 +117,7 @@ try {
   }
   
   app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(openapiSpec, {
-    customSiteTitle: 'SafeGuard API Docs',
+    customSiteTitle: 'Kavach API Docs',
   }));
   app.get('/api/docs.json', (_req, res) => res.json(openapiSpec));
 } catch {

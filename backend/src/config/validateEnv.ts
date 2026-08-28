@@ -17,14 +17,18 @@ import { z } from 'zod';
  */
 const envSchema = z.object({
   // ─── Database ──────────────────────────────────────────────────────
-  DATABASE_URL: z
+  DB_HOST: z.string().min(1, 'DB_HOST is required').default('localhost'),
+  DB_PORT: z
     .string()
-    .min(1, 'DATABASE_URL is required (e.g. postgres://user:pass@localhost:5432/kavach)'),
+    .regex(/^\d+$/, 'DB_PORT must be a number')
+    .default('5432'),
+  DB_USER: z.string().min(1, 'DB_USER is required').default('postgres'),
+  DB_PASSWORD: z.string().optional(),
+  DB_NAME: z.string().min(1, 'DB_NAME is required').default('kavach'),
+  DATABASE_URL: z.string().optional(),
 
   // ─── Redis ─────────────────────────────────────────────────────────
-  REDIS_URL: z
-    .string()
-    .min(1, 'REDIS_URL is required for production deployments'),
+  REDIS_URL: z.string().optional(),
 
   // ─── Authentication & JWT ─────────────────────────────────────────
   JWT_SECRET: z
@@ -49,7 +53,7 @@ const envSchema = z.object({
   FRONTEND_URL: z.string().url('FRONTEND_URL must be a valid URL').default('http://localhost:5173'),
 
   // ─── CORS ──────────────────────────────────────────────────────────
-  CORS_ORIGINS: z.string().optional(),
+  ALLOWED_ORIGINS: z.string().optional(),
 
   // ─── Firebase (for push notifications) ─────────────────────────────
   FIREBASE_PROJECT_ID: z.string().optional(),
@@ -57,7 +61,7 @@ const envSchema = z.object({
   FIREBASE_PRIVATE_KEY: z.string().optional(),
 
   // ─── Encryption ────────────────────────────────────────────────────
-  CHAMBER_KEY_ALIAS: z.string().default('safeguard-chamber-key'),
+  CHAMBER_KEY_ALIAS: z.string().default('kavach-chamber-key'),
 });
 
 /**
@@ -107,8 +111,23 @@ export function validateEnv() {
  * Use this instead of process.env.XXX throughout the app.
  */
 export const env = {
-  get DATABASE_URL(): string {
-    return process.env.DATABASE_URL!;
+  get DB_HOST(): string {
+    return process.env.DB_HOST!;
+  },
+  get DB_PORT(): string {
+    return process.env.DB_PORT || '5432';
+  },
+  get DB_USER(): string {
+    return process.env.DB_USER!;
+  },
+  get DB_PASSWORD(): string | undefined {
+    return process.env.DB_PASSWORD;
+  },
+  get DB_NAME(): string {
+    return process.env.DB_NAME!;
+  },
+  get DATABASE_URL(): string | undefined {
+    return process.env.DATABASE_URL;
   },
   get REDIS_URL(): string | undefined {
     return process.env.REDIS_URL;

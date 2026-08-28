@@ -1,4 +1,4 @@
-# SKILL: Backend Development for SafeGuard Parental Control App
+# SKILL: Backend Development for Kavach Parental Control App
 
 **Applies to:** Any AI model (Claude, GPT-4, Llama, Gemini, Mistral, etc.)
 **Purpose:** Guide AI in generating consistent, production-quality backend code
@@ -8,7 +8,7 @@
 
 ## 1. PROJECT CONTEXT
 
-You are helping build the backend for **SafeGuard**, a parental control app. The backend serves an Android app and a React web dashboard, handling 24 features across 5 development phases.
+You are helping build the backend for **Kavach**, a parental control app. The backend serves an Android app and a React web dashboard, handling 24 features across 5 development phases.
 
 ---
 

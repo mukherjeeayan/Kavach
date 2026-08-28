@@ -1,4 +1,4 @@
-# SafeGuard - DPDP Act 2023 Compliance Audit
+# Kavach - DPDP Act 2023 Compliance Audit
 
 **Audit Date:** August 25, 2026  
 **Auditor:** Internal Compliance Review  
@@ -9,7 +9,7 @@
 
 ## Executive Summary
 
-This audit evaluates SafeGuard's compliance with India's Digital Personal Data Protection Act, 2023 (DPDP Act). The assessment is based on a review of the backend source code, API endpoints, data models, and security implementations.
+This audit evaluates Kavach's compliance with India's Digital Personal Data Protection Act, 2023 (DPDP Act). The assessment is based on a review of the backend source code, API endpoints, data models, and security implementations.
 
 | Overall Status | PARTIAL COMPLIANCE |
 |---|---|

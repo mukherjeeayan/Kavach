@@ -123,7 +123,7 @@ This file tells the backend server:
 - `NODE_ENV=development` or `production`
 - `DB_HOST=localhost` - Database location
 - `DB_USER=postgres` - Database username
-- `DB_NAME=safeguard` - Database name
+- `DB_NAME=kavach` - Database name
 - `JWT_SECRET` and `JWT_REFRESH_SECRET` - **Keep these secret!** (like master keys)
 - `ALLOWED_ORIGINS` - Which websites can connect
 
@@ -158,7 +158,7 @@ The application uses **PostgreSQL** - a robust database system. Here's what you 
 ### **Default Credentials (from the setup)**
 - **Username:** `postgres`
 - **Password:** `password`
-- **Database Name:** `safeguard`
+- **Database Name:** `kavach`
 
 ### **Options:**
 
@@ -171,13 +171,13 @@ The application uses **PostgreSQL** - a robust database system. Here's what you 
 #### **Option B: Local PostgreSQL**
 1. Install PostgreSQL on your computer (download from postgresql.org)
 2. During installation, set password to `password`
-3. Create a database named `safeguard`
+3. Create a database named `kavach`
 4. Start the PostgreSQL service
 
 #### **Option C: Cloud PostgreSQL**
 - You can use a cloud PostgreSQL service (like ElephantSQL, Supabase, etc.)
 - Update the `DB_HOST` in the generated `.env` file with your cloud connection string
-- Keep `DB_NAME=safeguard`, `DB_USER=postgres`, and update the password/host
+- Keep `DB_NAME=kavach`, `DB_USER=postgres`, and update the password/host
 
 ---
 
@@ -330,7 +330,7 @@ npm run preview      # Preview production build
 
 #### **"PostgreSQL connection failed"**
 - Ensure PostgreSQL is running
-- Check the default credentials: user=`postgres`, password=`password`, db=`safeguard`
+- Check the default credentials: user=`postgres`, password=`password`, db=`kavach`
 - If using Docker: `docker-compose up -d` in backend directory
 - If using local: Ensure PostgreSQL service is started
 

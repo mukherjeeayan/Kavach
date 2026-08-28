@@ -1,4 +1,4 @@
-# SafeGuard Security Audit Report
+# Kavach Security Audit Report
 
 **Audit Date:** 2026-08-25  
 **Scope:** Backend (Node.js/Express/PostgreSQL) + Android (Kotlin/Hilt/Room)  

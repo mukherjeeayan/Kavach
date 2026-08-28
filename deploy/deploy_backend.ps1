@@ -73,7 +73,7 @@ NODE_ENV=$Mode
 DB_HOST=localhost
 DB_PORT=5432
 DB_USER=postgres
-DB_NAME=safeguard
+DB_NAME=kavach
 DB_DRIVER=pg
 
 # JWT — auto-generated secure secrets (64 chars)
@@ -112,7 +112,7 @@ Write-Host "Generated $envPath" -ForegroundColor Green
 # Docker guidance
 if ($DbType -eq 'docker') {
     Write-Host "Docker: Run 'docker-compose up -d' in the backend directory" -ForegroundColor Yellow
-    Write-Host "DB: postgres/password/safeguard at localhost:5432" -ForegroundColor Gray
+    Write-Host "DB: postgres/password/kavach at localhost:5432" -ForegroundColor Gray
 }
 
 Write-Host ""

@@ -78,7 +78,7 @@ if %mode%==release (
         echo To build release: ./gradlew assembleRelease
         echo WARNING: Certificate pinning will fail without pins
     ) else (
-        echo To build release: ./gradlew assembleRelease -PSAFEGUARD_PINS="%cert_pins%"
+        echo To build release: ./gradlew assembleRelease -PKAVACH_PINS="%cert_pins%"
     )
 )
 echo.

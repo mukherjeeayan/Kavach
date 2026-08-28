@@ -1,33 +1,33 @@
-# SafeGuard - Privacy Policy
+# Kavach - Privacy Policy
 
 **Effective Date:** August 25, 2026  
 **Last Updated:** August 25, 2026  
-**App Name:** SafeGuard - Parental Control
+**App Name:** Kavach - Parental Control
 
 ---
 
 ## 1. Introduction
 
-SafeGuard ("we", "us", "our") is a parental control application designed to help parents and legal guardians monitor and manage their children's digital safety. This Privacy Policy describes how we collect, use, store, and protect personal data in compliance with the **Digital Personal Data Protection Act, 2023 (DPDP Act)** of India and other applicable data protection laws.
+Kavach ("we", "us", "our") is a parental control application designed to help parents and legal guardians monitor and manage their children's digital safety. This Privacy Policy describes how we collect, use, store, and protect personal data in compliance with the **Digital Personal Data Protection Act, 2023 (DPDP Act)** of India and other applicable data protection laws.
 
-By using SafeGuard, you acknowledge that you are a parent or legal guardian and that you have read and understood this Privacy Policy.
+By using Kavach, you acknowledge that you are a parent or legal guardian and that you have read and understood this Privacy Policy.
 
 ---
 
 ## 2. Data Controller
 
-**Entity Name:** SafeGuard Technologies  
+**Entity Name:** Kavach Technologies  
 **Registered Address:** [Registered Address, India]  
-**Email:** privacy@safeguard.app  
-**Data Protection Officer:** [Designated DPO Name], dpo@safeguard.app  
-**Grievance Officer:** [Designated Grievance Officer Name], grievance@safeguard.app  
+**Email:** privacy@kavach.app  
+**Data Protection Officer:** [Designated DPO Name], dpo@kavach.app  
+**Grievance Officer:** [Designated Grievance Officer Name], grievance@kavach.app  
 **Phone:** +91-XXXXXXXXXX
 
 ---
 
 ## 3. Data We Collect
 
-SafeGuard collects the following categories of personal data, limited to what is strictly necessary for providing parental control and child safety services:
+Kavach collects the following categories of personal data, limited to what is strictly necessary for providing parental control and child safety services:
 
 ### 3.1 Parent/Guardian Account Data
 - Full name
@@ -79,7 +79,7 @@ SafeGuard collects the following categories of personal data, limited to what is
 - Root/jailbreak detection status
 - Developer options and USB debugging status
 - Operating system version
-- SafeGuard app version
+- Kavach app version
 
 ### 3.9 Audit & Security Data
 - All actions performed on child data (create, read, update, delete)
@@ -132,7 +132,7 @@ We retain personal data only as long as necessary for the purposes described in 
 ## 6. Data Sharing & Third Parties
 
 ### 6.1 We Do Not Sell Personal Data
-SafeGuard does not sell, rent, or trade personal data to any third party for marketing or commercial purposes.
+Kavach does not sell, rent, or trade personal data to any third party for marketing or commercial purposes.
 
 ### 6.2 Service Providers (Data Processors)
 We share data with the following categories of service providers who assist in delivering our services, under strict data processing agreements:
@@ -151,7 +151,7 @@ All personal data is stored and processed within India. We do not transfer perso
 
 ## 7. Verifiable Parental Consent
 
-In compliance with Section 6 of the DPDP Act, SafeGuard implements the following consent mechanisms:
+In compliance with Section 6 of the DPDP Act, Kavach implements the following consent mechanisms:
 
 ### 7.1 Consent Types
 Before collecting any child data, we obtain explicit consent for each data category:
@@ -203,7 +203,7 @@ As a parent/guardian, you have the following rights regarding your child's perso
 - [PLANNED] Export your child's data in a machine-readable format (JSON/CSV)
 
 ### 8.5 Right to Grievance Redressal
-- Contact our Grievance Officer at grievance@safeguard.app
+- Contact our Grievance Officer at grievance@kavach.app
 - Response within 72 hours for data-related complaints
 - Escalation process available if unresolved within 30 days
 
@@ -211,7 +211,7 @@ As a parent/guardian, you have the following rights regarding your child's perso
 
 ## 9. Security Measures
 
-SafeGuard implements comprehensive technical and organizational security measures:
+Kavach implements comprehensive technical and organizational security measures:
 
 ### 9.1 Encryption
 - **Data in Transit:** All API communication is encrypted via TLS 1.2+
@@ -253,7 +253,7 @@ SafeGuard implements comprehensive technical and organizational security measure
 
 ## 10. Children's Privacy
 
-SafeGuard is designed for parents to monitor their children's digital safety. We are committed to protecting children's privacy:
+Kavach is designed for parents to monitor their children's digital safety. We are committed to protecting children's privacy:
 
 - We do not directly collect data from children without parental consent
 - All data collection is initiated by the parent-owned device
@@ -272,7 +272,7 @@ In compliance with Section 8(6) of the DPDP Act:
   - The Data Protection Board of India (DPBI) within 72 hours
   - Affected data principals (parents) without undue delay
 - Notification will include: nature of breach, data affected, remedial measures taken
-- Our incident response team can be contacted at security@safeguard.app
+- Our incident response team can be contacted at security@kavach.app
 
 ---
 
@@ -290,14 +290,14 @@ In compliance with Section 8(6) of the DPDP Act:
 For any questions, concerns, or requests regarding this Privacy Policy or your personal data:
 
 **General Inquiries:**  
-Email: privacy@safeguard.app
+Email: privacy@kavach.app
 
 **Data Protection Officer:**  
-Email: dpo@safeguard.app
+Email: dpo@kavach.app
 
 **Grievance Officer:**  
 Name: [Designated Grievance Officer Name]  
-Email: grievance@safeguard.app  
+Email: grievance@kavach.app  
 Phone: +91-XXXXXXXXXX  
 Address: [Office Address, India]
 

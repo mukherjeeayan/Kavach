@@ -76,7 +76,7 @@ NODE_ENV=%MODE%
 DB_HOST=localhost
 DB_PORT=5432
 DB_USER=postgres
-DB_NAME=safeguard
+DB_NAME=kavach
 DB_DRIVER=pg
 
 # JWT — auto-generated secure secrets (64 chars)

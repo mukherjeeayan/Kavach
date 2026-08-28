@@ -22,11 +22,9 @@ export default function BlockAppForm({
   showDeviceHint,
   onBlock,
 }: BlockAppFormProps) {
-  const [packageName, setPackageName] = useState('');
-  const [reason, setReason] = useState('');
   const [showSuccess, setShowSuccess] = useState(false);
 
-  const { register, handleSubmit, formState: { errors, isSubmitSuccessful } } = useForm<BlockAppInput>({
+  const { register, handleSubmit, formState: { errors } } = useForm<BlockAppInput>({
     resolver: yupResolver(yup.object({
       packageName: yup.string()
         .required('Package name is required')
@@ -36,8 +34,6 @@ export default function BlockAppForm({
       reason: yup.string().max(200, 'Reason must be at most 200 characters').optional(),
     })),
   });
-
-  const canSubmit = !!isSubmitSuccessful;
 
   const onSubmit = async (data: BlockAppInput) => {
     try {
@@ -75,7 +71,7 @@ export default function BlockAppForm({
         />
         <button
           type="submit"
-          disabled={isPending || !canSubmit}
+          disabled={isPending || disabled}
           className="px-4 py-2 bg-primary text-white text-sm font-semibold rounded-md hover:bg-blue-700 disabled:opacity-50 transition-colors"
         >
           {isPending ? 'Blocking...' : 'Block App'}

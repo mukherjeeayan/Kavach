@@ -1,4 +1,4 @@
-# SafeGuard Performance Optimization Report
+# Kavach Performance Optimization Report
 
 **Date:** 2026-08-25  
 **Scope:** Backend (Node.js/Express) + Android (Kotlin) + Frontend (React)

@@ -1,4 +1,4 @@
-# SKILL: Web Dashboard Development for SafeGuard Parental Control App
+# SKILL: Web Dashboard Development for Kavach Parental Control App
 
 **Applies to:** Any AI model (Claude, GPT-4, Llama, Gemini, Mistral, etc.)
 **Purpose:** Guide AI in generating consistent React/TypeScript dashboard code
@@ -8,7 +8,7 @@
 
 ## 1. PROJECT CONTEXT
 
-You are helping build the **parent-facing web dashboard** for SafeGuard. Parents use this to view analytics, manage rules, and respond to alerts for their children's devices.
+You are helping build the **parent-facing web dashboard** for Kavach. Parents use this to view analytics, manage rules, and respond to alerts for their children's devices.
 
 ---
 

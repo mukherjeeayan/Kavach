@@ -1,24 +1,24 @@
 version: "3.9"
 
-# Local development stack for SafeGuard. Brings up the database the
+# Local development stack for Kavach. Brings up the database the
 # backend depends on; run backend + frontend with their npm scripts so
 # edits hot-reload (ts-node-dev / vite).
 
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: safeguard-postgres
+    container_name: kavach-postgres
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
-      POSTGRES_DB: safeguard
+      POSTGRES_DB: kavach
     ports:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./backend/db/migrations:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d safeguard"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d kavach"]
       interval: 5s
       timeout: 3s
       retries: 10

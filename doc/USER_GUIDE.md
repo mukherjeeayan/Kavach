@@ -1,4 +1,4 @@
-# Kavach (SafeGuard) — Parent User Guide
+# Kavach — Parent User Guide
 
 ## What is Kavach?
 
@@ -206,7 +206,7 @@ A: Yes. Each device is registered separately, but rules (locks, contacts, app bl
 A: All data is encrypted in transit (HTTPS) and at rest. Location data is only visible to you (the parent). The app complies with India's Digital Personal Data Protection (DPDP) Act — parental consent is required and audited.
 
 **Q: What happens if the device is rooted or tampered with?**
-A: SafeGuard detects root/debugger threats and automatically locks the device, notifies the server, and applies maximum restrictions. You'll receive a tamper alert on your dashboard.
+A: Kavach detects root/debugger threats and automatically locks the device, notifies the server, and applies maximum restrictions. You'll receive a tamper alert on your dashboard.
 
 **Q: How do I share management of a child with another parent?**
-A: Go to **Guardians** (in the child's section) and enter the other parent's email. They must already have a SafeGuard account. They'll get co-parent access with the same permissions.
+A: Go to **Guardians** (in the child's section) and enter the other parent's email. They must already have a Kavach account. They'll get co-parent access with the same permissions.

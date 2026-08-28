@@ -497,7 +497,7 @@
                     <li><strong>BuildConfig.CERT_PINNING_ENABLED:</strong> Certificate pinning status for security</li>
                     <li><strong>BuildConfig.CERT_PINS:</strong> SHA-256 certificate pins for pinning validation</li>
                     <li><strong>Android BuildConfig.cs:</strong> Written to app/obj/ directory for C#/Hilt integration</li>
-                    <li><strong>Gradle properties:</strong> May be updated with SAFEGUARD_PINS for release builds</li>
+                    <li><strong>Gradle properties:</strong> May be updated with KAVACH_PINS for release builds</li>
                 </ul>
             </div>
 
@@ -544,8 +544,8 @@
                 <ol style="margin: 0; padding-left: 1.5rem;">
                     <li><strong>Backend:</strong> Place generated .env in kavach/backend/ directory. Run <code>cd backend && npm install && npm run db:migrate</code></li>
                     <li><strong>Frontend:</strong> Place generated .env in kavach/frontend/ directory. Run <code>cd frontend && npm install</code> then <code>npm run dev</code></li>
-                    <li><strong>Android:</strong> Open in Android Studio. Build -> Build Bundles / APK(s) -> Build Bundle(s). For release, provide certificate pins via gradle: <code>./gradlew assembleRelease -PSAFEGUARD_PINS="pins"</code></li>
-                    <li><strong>Database:</strong> Ensure PostgreSQL is running with credentials from the .env file (user: postgres, password: password, db: safeguard)</li>
+                    <li><strong>Android:</strong> Open in Android Studio. Build -> Build Bundles / APK(s) -> Build Bundle(s). For release, provide certificate pins via gradle: <code>./gradlew assembleRelease -PKAVACH_PINS="pins"</code></li>
+                    <li><strong>Database:</strong> Ensure PostgreSQL is running with credentials from the .env file (user: postgres, password: password, db: kavach)</li>
                 </ol>
             </div>
 
@@ -661,7 +661,7 @@ NODE_ENV=${env}
 DB_HOST=localhost
 DB_PORT=5432
 DB_USER=postgres
-DB_NAME=safeguard
+                DB_NAME=kavach
 DB_DRIVER=pg
 
 # JWT — auto-generated secure secrets (64 chars)
@@ -735,11 +735,11 @@ const bool FCM_ENABLED = ${fcm};
 
 // Certificate pinning status
 // In release mode, these pins must match the production API server certificate
-// Set via gradle property: -PSAFEGUARD_PINS="sha256/...,sha256/..."
+// Set via gradle property: -PKAVACH_PINS="sha256/...,sha256/..."
 const bool CERT_PINNING_ENABLED = (${androidBuild} === 'release' && "${pins}" !== "");
 
 // Production certificate pins (set via gradle property)
-// Format: "-PSAFEGUARD_PINS=""sha256/...,sha256/..."""
+// Format: "-PKAVACH_PINS=""sha256/...,sha256/..."""
 const string CERT_PINS = "${pins}"
 
 // Build version info

@@ -1,4 +1,4 @@
-# SKILL: Security & Bypass-Resistance for SafeGuard Parental Control App
+# SKILL: Security & Bypass-Resistance for Kavach Parental Control App
 
 **Applies to:** Any AI model (Claude, GPT-4, Llama, Gemini, Mistral, etc.)
 **Purpose:** Ensure every generated feature considers tamper-resistance and security from the start

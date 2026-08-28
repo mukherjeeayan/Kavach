@@ -1,6 +1,6 @@
-﻿# Developer Guide — SafeGuard (Kavach)
+﻿# Developer Guide — Kavach
 
-Step-by-step guide to run the full SafeGuard stack locally. Covers
+Step-by-step guide to run the full Kavach stack locally. Covers
 backend (Node/Express), frontend (React/Vite), Android (Jetpack Compose),
 and the PostgreSQL database.
 
@@ -53,7 +53,7 @@ This starts **PostgreSQL 16** on localhost:5432 with:
 |-------|-------|
 | User | postgres |
 | Password | password |
-| Database | safeguard |
+| Database | kavach |
 
 The first boot automatically runs every ackend/db/migrations/*.sql
 in filename order (001 through 009). Your data persists in the pgdata
@@ -62,7 +62,7 @@ Docker volume.
 To verify:
 
 `
-docker compose exec postgres psql -U postgres -d safeguard -c '\dt'
+docker compose exec postgres psql -U postgres -d kavach -c '\dt'
 `
 
 You should see tables like users, children, devices, lock_rules,
@@ -91,7 +91,7 @@ DB_HOST=localhost
 DB_PORT=5432
 DB_USER=postgres
 DB_PASSWORD=password
-DB_NAME=safeguard
+DB_NAME=kavach
 
 # CORS -- must match the frontend dev server
 ALLOWED_ORIGINS=http://localhost:5173
@@ -175,7 +175,7 @@ host machine's localhost:3000 from the Android emulator.
 
 ### On-device flow
 
-1. Open SafeGuard
+1. Open Kavach
 2. Login with the same email/password you registered on the web
 3. Follow onboarding: child name > device name > PIN > permissions
 4. Permissions needed: Usage Stats, Device Admin, Notifications,
@@ -186,11 +186,11 @@ host machine's localhost:3000 from the Android emulator.
 `
 ./gradlew :app:assembleRelease \
   -PAPI_BASE_URL=https://your-api-domain.com/ \
-  -PSAFEGUARD_PINS="sha256/...,sha256/..."
+  -PKAVACH_PINS="sha256/...,sha256/..."
 `
 
 Certificate pinning is mandatory in release builds. Supply the
-production SHA-256 pin set via -PSAFEGUARD_PINS.
+production SHA-256 pin set via -PKAVACH_PINS.
 
 ## 7. Testing
 

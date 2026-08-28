@@ -1,16 +1,16 @@
-# SafeGuard - Terms of Service
+# Kavach - Terms of Service
 
 **Effective Date:** August 25, 2026  
 **Last Updated:** August 25, 2026  
-**App Name:** SafeGuard - Parental Control
+**App Name:** Kavach - Parental Control
 
 ---
 
 ## 1. Acceptance of Terms
 
-By downloading, installing, or using SafeGuard ("the App"), you ("User", "you", "your") agree to be bound by these Terms of Service ("Terms"). If you do not agree to these Terms, do not use the App.
+By downloading, installing, or using Kavach ("the App"), you ("User", "you", "your") agree to be bound by these Terms of Service ("Terms"). If you do not agree to these Terms, do not use the App.
 
-These Terms constitute a legally binding agreement between you and SafeGuard Technologies ("we", "us", "our").
+These Terms constitute a legally binding agreement between you and Kavach Technologies ("we", "us", "our").
 
 We reserve the right to modify these Terms at any time. Material changes will be communicated via email and in-app notification. Your continued use of the App after such changes constitutes acceptance of the modified Terms.
 
@@ -19,7 +19,7 @@ We reserve the right to modify these Terms at any time. Material changes will be
 ## 2. Eligibility
 
 ### 2.1 Age Requirement
-SafeGuard is available only to individuals who are:
+Kavach is available only to individuals who are:
 - At least 18 years of age, OR
 - The legal parent or guardian of a minor child
 
@@ -64,7 +64,7 @@ SafeGuard is available only to individuals who are:
 ## 4. Acceptable Use
 
 ### 4.1 Permitted Uses
-You may use SafeGuard to:
+You may use Kavach to:
 - Create and manage child profiles for your own children
 - Set and enforce screen-time limits
 - Block applications on your child's device
@@ -98,7 +98,7 @@ You must NOT:
 ## 5. Service Description
 
 ### 5.1 Core Features
-SafeGuard provides the following parental control features:
+Kavach provides the following parental control features:
 - **App Blocking:** Block specific applications on your child's device
 - **Screen Time Management:** Set daily screen-time limits and per-app usage caps
 - **Location Tracking:** Real-time GPS tracking with location history
@@ -123,7 +123,7 @@ SafeGuard provides the following parental control features:
 ## 6. Intellectual Property
 
 ### 6.1 Ownership
-- SafeGuard and all related technologies, including the App, backend services, APIs, and documentation, are owned by SafeGuard Technologies
+- Kavach and all related technologies, including the App, backend services, APIs, and documentation, are owned by Kavach Technologies
 - All trademarks, logos, and brand names are our exclusive property
 
 ### 6.2 License
@@ -160,7 +160,7 @@ Your use of the App is also governed by our Privacy Policy, which is incorporate
 ## 8. Payment and Subscriptions
 
 ### 8.1 Pricing
-- SafeGuard may offer free and premium subscription tiers
+- Kavach may offer free and premium subscription tiers
 - Pricing is displayed in the App and on our website
 - All prices are in Indian Rupees (INR) unless otherwise stated
 
@@ -171,7 +171,7 @@ Your use of the App is also governed by our Privacy Policy, which is incorporate
 
 ### 8.3 Refunds
 - Refund requests are handled through the Google Play Store refund policy
-- Contact us at support@safeguard.app for billing inquiries
+- Contact us at support@kavach.app for billing inquiries
 
 ### 8.4 Price Changes
 - We may change subscription prices with 30 days' notice
@@ -205,7 +205,7 @@ We are not liable for:
 
 ## 10. Indemnification
 
-You agree to indemnify, defend, and hold harmless SafeGuard Technologies, its officers, directors, employees, and agents from any claims, liabilities, damages, or expenses arising from:
+You agree to indemnify, defend, and hold harmless Kavach Technologies, its officers, directors, employees, and agents from any claims, liabilities, damages, or expenses arising from:
 - Your use of the App
 - Your violation of these Terms
 - Your violation of any applicable law
@@ -245,7 +245,7 @@ Any disputes arising from these Terms shall be subject to the exclusive jurisdic
 
 ### 12.3 Arbitration
 Before initiating litigation, the parties agree to attempt to resolve disputes through:
-1. **Informal Negotiation:** Contact support@safeguard.app
+1. **Informal Negotiation:** Contact support@kavach.app
 2. **Mediation:** Through a mutually agreed mediator in [City], India
 3. **Arbitration:** If unresolved within 60 days, through arbitration under the Arbitration and Conciliation Act, 1996
 
@@ -257,7 +257,7 @@ You agree to resolve disputes on an individual basis and waive any right to part
 ## 13. General Provisions
 
 ### 13.1 Entire Agreement
-These Terms, together with the Privacy Policy, constitute the entire agreement between you and SafeGuard Technologies.
+These Terms, together with the Privacy Policy, constitute the entire agreement between you and Kavach Technologies.
 
 ### 13.2 Severability
 If any provision of these Terms is found to be unenforceable, the remaining provisions shall remain in full force and effect.
@@ -272,7 +272,7 @@ You may not assign these Terms without our written consent. We may assign these 
 We are not liable for delays or failures caused by events beyond our reasonable control, including natural disasters, government actions, or infrastructure failures.
 
 ### 13.6 Notices
-Notices to you may be sent via email, in-app notification, or posted on our website. Notices to us should be sent to legal@safeguard.app.
+Notices to you may be sent via email, in-app notification, or posted on our website. Notices to us should be sent to legal@kavach.app.
 
 ---
 
@@ -280,9 +280,9 @@ Notices to you may be sent via email, in-app notification, or posted on our webs
 
 For questions about these Terms:
 
-**Email:** legal@safeguard.app  
-**Support:** support@safeguard.app  
-**Address:** SafeGuard Technologies, [Office Address, India]
+**Email:** legal@kavach.app  
+**Support:** support@kavach.app  
+**Address:** Kavach Technologies, [Office Address, India]
 
 ---
 
@@ -292,7 +292,7 @@ In accordance with the Information Technology Act, 2000 and the DPDP Act, 2023:
 
 **Grievance Officer:**  
 Name: [Designated Grievance Officer Name]  
-Email: grievance@safeguard.app  
+Email: grievance@kavach.app  
 Phone: +91-XXXXXXXXXX  
 Address: [Office Address, India]
 

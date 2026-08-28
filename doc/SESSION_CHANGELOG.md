@@ -1,4 +1,4 @@
-# Session Change Log — Kavach (SafeGuard)
+# Session Change Log — Kavach
 
 **Purpose:** Track changes made during each session so work can resume seamlessly.
 

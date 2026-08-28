@@ -178,7 +178,7 @@ class VoiceCommandService : Service() {
     private fun handleVoiceCommand(command: String) {
         val lowerCommand = command.lowercase(Locale.ROOT)
         val intent = when {
-            lowerCommand.contains("safe guard") || lowerCommand.contains("safeguard") ->
+            lowerCommand.contains("kavach") || lowerCommand.contains("safe guard") || lowerCommand.contains("safeguard") ->
                 "HOTWORD"
             lowerCommand.contains("sos") || lowerCommand.contains("help") ->
                 "SOS"

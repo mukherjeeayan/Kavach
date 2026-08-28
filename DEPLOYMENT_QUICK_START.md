@@ -97,7 +97,7 @@ npm run dev           # Start the dashboard
 
 | Problem | Quick Fix |
 |---------|-----------|
-| "PostgreSQL connection failed" | Ensure Docker is running OR PostgreSQL service is started. Default: user=postgres, password=password, db=safeguard |
+| "PostgreSQL connection failed" | Ensure Docker is running OR PostgreSQL service is started. Default: user=postgres, password=password, db=kavach |
 | "Module not found" errors | Run `npm install` in the respective directory |
 | "Map not showing" | Get Mapbox token from mapbox.com, restrict by domain |
 | "Android build fails" | Open Android Studio, ensure google-services.json is in app/ |

@@ -11,7 +11,7 @@ export const errorHandler = (
   res: Response,
   next: NextFunction
 ) => {
-  const statusCode = err.statusCode || 500;
+  const statusCode = err.statusCode ?? 500;
   const isProduction = process.env.NODE_ENV === 'production';
 
   // Always log the error (message + stack help debugging in dev, masked in prod)

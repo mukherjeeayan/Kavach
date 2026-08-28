@@ -91,11 +91,11 @@ const bool FCM_ENABLED = $EnableFirebase;
 
 // Certificate pinning status
 // In release mode, these pins must match the production API server certificate
-// Set via gradle property: -PSAFEGUARD_PINS="sha256/...,sha256/..."
+// Set via gradle property: -PKAVACH_PINS="sha256/...,sha256/..."
 const bool CERT_PINNING_ENABLED = ($Mode -eq 'release' -and "$CertPins" != "")
 
 // Production certificate pins (set via gradle property)
-// Format: "-PSAFEGUARD_PINS=""sha256/...,sha256/..."""
+// Format: "-PKAVACH_PINS=""sha256/...,sha256/..."""
 const string CERT_PINS = "$CertPins"
 
 // Build version info
@@ -115,11 +115,11 @@ if ($CertPins) {
         $gradlePropsContent = Get-Content $gradlePropsPath -Raw
     }
     
-    # Add or update SAFEGUARD_PINS
-    if ($gradlePropsContent -match "SAFEGUARD_PINS") {
-        $gradlePropsContent = $gradlePropsContent -replace "SAFEGUARD_PINS=.*", "SAFEGUARD_PINS=$CertPins"
+    # Add or update KAVACH_PINS
+    if ($gradlePropsContent -match "KAVACH_PINS") {
+        $gradlePropsContent = $gradlePropsContent -replace "KAVACH_PINS=.*", "KAVACH_PINS=$CertPins"
     } else {
-        $gradlePropsContent = "$gradlePropsContent`nSAFEGUARD_PINS=$CertPins"
+        $gradlePropsContent = "$gradlePropsContent`nKAVACH_PINS=$CertPins"
     }
     
     $gradlePropsContent | Out-File -Encoding UTF8 $gradlePropsPath
@@ -160,7 +160,7 @@ Write-Host "  CERT_PINS: $CertPins" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "Release build command examples:" -ForegroundColor Yellow
 Write-Host "  # With certificate pins"
-Write-Host "  ./gradlew assembleRelease -PSAFEGUARD_PINS=\"$CertPins\""
+Write-Host "  ./gradlew assembleRelease -PKAVACH_PINS=\"$CertPins\""
 Write-Host ""
 Write-Host "  # Without pins (will fail in release mode)"
 Write-Host "  ./gradlew assembleRelease"

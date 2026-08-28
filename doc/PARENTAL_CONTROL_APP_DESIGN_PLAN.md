@@ -1,6 +1,6 @@
 # Parental Control App - Complete Design Plan
 
-**Project Name:** SafeGuard Parental Control
+**Project Name:** Kavach Parental Control
 **Version:** 1.0
 **Target Release:** 5-6 months (solo development with AI assistance)
 **Platform:** Android (Primary), Web Dashboard
@@ -381,7 +381,7 @@ Logging: ELK Stack / CloudWatch
 
 ### 5.4 Backend API Design
 
-**Base URL:** `https://api.safeguard.app/v1`
+**Base URL:** `https://api.kavach.app/v1`
 
 **Authentication:** JWT + Refresh tokens
 

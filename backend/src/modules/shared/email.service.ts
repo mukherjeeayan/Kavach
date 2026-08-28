@@ -26,12 +26,12 @@ export const sendEmail = async (options: EmailOptions): Promise<void> => {
         secure: process.env.SMTP_SECURE === 'true',
         auth: process.env.SMTP_USER ? {
           user: process.env.SMTP_USER,
-          pass: process.env.SMTP_PASSWORD,
+          pass: process.env.SMTP_PASS,
         } : undefined,
       });
       
       await transporter.sendMail({
-        from: process.env.EMAIL_FROM || 'noreply@safeguard.com',
+        from: process.env.EMAIL_FROM || 'noreply@kavach.com',
         to: options.to,
         subject: options.subject,
         html: options.html,
@@ -59,10 +59,10 @@ export const sendPasswordResetEmail = async (
 
   await sendEmail({
     to: email,
-    subject: 'SafeGuard — Password Reset Request',
+    subject: 'Kavach — Password Reset Request',
     html: `
       <h2>Password Reset</h2>
-      <p>You requested a password reset for your SafeGuard account.</p>
+      <p>You requested a password reset for your Kavach account.</p>
       <p>Click the link below to reset your password. This link expires in 1 hour.</p>
       <p><a href="${resetUrl}">Reset Password</a></p>
       <p>If you didn't request this, you can safely ignore this email.</p>

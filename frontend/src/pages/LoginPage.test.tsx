@@ -76,7 +76,7 @@ describe('LoginPage', () => {
 
   it('renders page title', () => {
     renderWithProviders(<LoginPage />);
-    expect(screen.getByText('SafeGuard Parent Portal')).toBeInTheDocument();
+    expect(screen.getByText('Kavach Parent Portal')).toBeInTheDocument();
   });
 
   it('calls onSubmit when form is submitted', () => {

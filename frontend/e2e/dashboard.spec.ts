@@ -95,7 +95,7 @@ test.describe('Dashboard Page', () => {
   });
 
   test('displays header with user info and logout', async ({ page }) => {
-    await expect(page.getByRole('heading', { name: 'SafeGuard' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Kavach' })).toBeVisible();
     await expect(page.getByText('Test Parent')).toBeVisible();
     await expect(page.getByRole('button', { name: /log out/i })).toBeVisible();
   });
@@ -159,6 +159,6 @@ test.describe('Dashboard Page', () => {
   test('logs out and redirects to login', async ({ page }) => {
     await page.getByRole('button', { name: /log out/i }).click();
     await page.waitForURL(/\/login/);
-    await expect(page.getByRole('heading', { name: 'SafeGuard Parent Portal' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Kavach Parent Portal' })).toBeVisible();
   });
 });

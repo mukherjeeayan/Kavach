@@ -28,7 +28,7 @@ export default function RewardSection({ childId, onError }: Props) {
       await createItem.mutateAsync({
         name: newName,
         description: newDesc || undefined,
-        cost_points: parseInt(newCost) || 100,
+        cost_points: parseInt(newCost, 10) || 100,
       });
       setNewName(''); setNewDesc(''); setNewCost('100');
       setShowAddForm(false);
@@ -41,7 +41,7 @@ export default function RewardSection({ childId, onError }: Props) {
     e.preventDefault();
     try {
       await awardPts.mutateAsync({
-        points: parseInt(awardPoints) || 50,
+        points: parseInt(awardPoints, 10) || 50,
         reason: awardReason || 'Good behavior',
         source: 'parent',
       });

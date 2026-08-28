@@ -1,4 +1,4 @@
-# SKILL: Android Development for SafeGuard Parental Control App
+# SKILL: Android Development for Kavach Parental Control App
 
 **Applies to:** Any AI model (Claude, GPT-4, Llama, Gemini, Mistral, etc.)
 **Purpose:** Guide AI in generating consistent, production-quality Android/Kotlin code for this project
@@ -8,7 +8,7 @@
 
 ## 1. PROJECT CONTEXT
 
-You are helping build **SafeGuard**, a parental control Android app with 24 features across 5 phases. When generating code, you must follow the standards below so that all generated code is consistent, regardless of which AI model produced it.
+You are helping build **Kavach**, a parental control Android app with 24 features across 5 phases. When generating code, you must follow the standards below so that all generated code is consistent, regardless of which AI model produced it.
 
 ---
 

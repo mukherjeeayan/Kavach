@@ -1,7 +1,7 @@
 {
-  "name": "safeguard-backend",
+  "name": "kavach-backend",
   "version": "1.0.0",
-  "description": "Backend for SafeGuard Parental Control App",
+  "description": "Backend for Kavach Parental Control App",
   "main": "dist/server.js",
   "scripts": {
     "start": "node dist/server.js",

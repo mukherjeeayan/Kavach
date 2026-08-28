@@ -123,7 +123,7 @@ The following endpoints now have explicit `security: [bearerAuth]` requirements:
 ### MasterKey Separation Across Data Domains
 
 - **Files:** `TokenStore.kt`, `ParentPinStore.kt`, `OnboardingStore.kt`
-- **Change:** Each EncryptedSharedPreferences store now uses an isolated namespace (`safeguard_token_store`, `safeguard_pin_prefs`, `safeguard_onboarding_encrypted`)
+- **Change:** Each EncryptedSharedPreferences store now uses an isolated namespace (`kavach_token_store`, `kavach_pin_prefs`, `kavach_onboarding_encrypted`)
 - **Security Impact:** Compromise of one data domain no longer exposes the others (defense-in-depth)
 
 ### Runtime Permission Request Flow

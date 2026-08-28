@@ -64,7 +64,7 @@ describe('DashboardPage', () => {
 
   it('renders dashboard header with user name', () => {
     renderWithProviders(<DashboardPage />);
-    expect(screen.getByText('SafeGuard')).toBeInTheDocument();
+    expect(screen.getByText('Kavach')).toBeInTheDocument();
   });
 
   it('renders child selector', () => {

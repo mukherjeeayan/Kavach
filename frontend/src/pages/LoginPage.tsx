@@ -21,7 +21,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
 
   return (
-    <AuthLayout title="SafeGuard Parent Portal">
+    <AuthLayout title="Kavach Parent Portal">
       <form
         onSubmit={onSubmit}
         className="space-y-4"
@@ -69,7 +69,7 @@ export default function LoginPage() {
       </p>
 
       <p className="mt-4 text-center text-sm text-gray-600">
-        New to SafeGuard?{' '}
+        New to Kavach?{' '}
         <Link to="/register" className="text-primary hover:underline">
           Create an account
         </Link>

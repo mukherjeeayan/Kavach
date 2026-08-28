@@ -1,6 +1,6 @@
-# SafeGuard - Play Store Listing
+# Kavach - Play Store Listing
 
-**App Name:** SafeGuard - Parental Control  
+**App Name:** Kavach - Parental Control  
 **Package Name:** com.safeguard.parentalcontrol  
 **Version:** 1.0.0  
 **Listing Date:** [To be filled]
@@ -9,7 +9,7 @@
 
 ## 1. App Name
 
-**SafeGuard - Parental Control**
+**Kavach - Parental Control**
 
 ---
 
@@ -21,7 +21,7 @@ Protect your child with smart parental controls and safety monitoring.
 
 ## 3. Full Description (4000 characters max)
 
-SafeGuard is a comprehensive parental control app designed to help Indian parents protect their children in the digital world. Built with privacy-first principles and fully compliant with India's Digital Personal Data Protection Act (DPDP Act) 2023, SafeGuard gives you the tools to keep your child safe while respecting their growing independence.
+Kavach is a comprehensive parental control app designed to help Indian parents protect their children in the digital world. Built with privacy-first principles and fully compliant with India's Digital Personal Data Protection Act (DPDP Act) 2023, Kavach gives you the tools to keep your child safe while respecting their growing independence.
 
 **APP BLOCKING & SCREEN TIME MANAGEMENT**
 Take control of your child's screen time with powerful app blocking and usage limits. Block distracting or inappropriate apps, set daily screen-time limits, and configure per-app usage caps. When your child exceeds their limits, you'll receive instant alerts. Your child can request app unblocks with a reason, and you can approve or decline with one tap.
@@ -45,13 +45,13 @@ Encourage your child to express their feelings with built-in mood tracking. Dail
 Get detailed reports on your child's digital habits. Understand which apps they use most, when they're most active, and how their screen time patterns change over time. Data-driven insights help you have meaningful conversations about healthy tech habits.
 
 **MULTI-DEVICE SUPPORT**
-Manage multiple devices from a single dashboard. Whether your child has a phone and tablet, or you have multiple children, SafeGuard scales with your family. Each device can have its own rules and limits.
+Manage multiple devices from a single dashboard. Whether your child has a phone and tablet, or you have multiple children, Kavach scales with your family. Each device can have its own rules and limits.
 
 **CO-GUARDIAN SHARING**
 Share monitoring responsibilities with your spouse, family member, or trusted guardian. Each co-guardian gets full access to monitoring features while you retain control over settings and permissions.
 
 **PRIVACY-FIRST APPROACH**
-Your child's data privacy is our top priority. SafeGuard is fully compliant with India's DPDP Act 2023:
+Your child's data privacy is our top priority. Kavach is fully compliant with India's DPDP Act 2023:
 - Verifiable parental consent required before any data collection
 - Data encrypted in transit and at rest
 - All data access is audit-logged
@@ -61,23 +61,23 @@ Your child's data privacy is our top priority. SafeGuard is fully compliant with
 - Automatic data retention policies ensure data is not kept longer than necessary
 
 **TRANSPARENT CAPABILITIES**
-SafeGuard is designed to be a helpful parental tool, not an impenetrable fortress. While we implement strong security measures, we believe in transparency: no parental control app can guarantee 100% bypass prevention. SafeGuard is most effective when combined with open communication and trust between parents and children.
+Kavach is designed to be a helpful parental tool, not an impenetrable fortress. While we implement strong security measures, we believe in transparency: no parental control app can guarantee 100% bypass prevention. Kavach is most effective when combined with open communication and trust between parents and children.
 
 **GETTING STARTED**
-1. Download SafeGuard and create your parent account
+1. Download Kavach and create your parent account
 2. Add your child's profile
-3. Install SafeGuard on your child's Android device
+3. Install Kavach on your child's Android device
 4. Grant necessary permissions for monitoring features
 5. Configure rules, limits, and geofences from your dashboard
 6. Start protecting your child today
 
 **SUPPORT**
-Email: support@safeguard.app  
-Website: https://safeguard.app  
-Privacy Policy: https://safeguard.app/privacy  
-Terms of Service: https://safeguard.app/terms
+Email: support@kavach.app  
+Website: https://kavach.app  
+Privacy Policy: https://kavach.app/privacy  
+Terms of Service: https://kavach.app/terms
 
-SafeGuard - Smart protection for your child's digital journey.
+Kavach - Smart protection for your child's digital journey.
 
 ---
 
@@ -127,7 +127,7 @@ SafeGuard - Smart protection for your child's digital journey.
 
 ## 5. Content Rating Questionnaire (IARC Guidelines)
 
-Based on the International Age Rating Coalition (IARC) guidelines, SafeGuard answers as follows:
+Based on the International Age Rating Coalition (IARC) guidelines, Kavach answers as follows:
 
 ### Violence
 - **Rating:** None
@@ -190,7 +190,7 @@ Based on the International Age Rating Coalition (IARC) guidelines, SafeGuard ans
 
 ## 6. Data Safety Section (Play Store Requirements)
 
-Per Google Play Store Data Safety requirements, SafeGuard discloses:
+Per Google Play Store Data Safety requirements, Kavach discloses:
 
 ### Data Collected
 
@@ -274,8 +274,8 @@ Per Google Play Store Data Safety requirements, SafeGuard discloses:
 - ✅ Target SDK version: [Current Android target SDK]
 - ✅ Minimum SDK version: [Minimum Android version supported]
 - ✅ App permissions declared and justified
-- ✅ Privacy Policy URL: https://safeguard.app/privacy
-- ✅ Terms of Service URL: https://safeguard.app/terms
+- ✅ Privacy Policy URL: https://kavach.app/privacy
+- ✅ Terms of Service URL: https://kavach.app/terms
 
 ### Families Policy Compliance
 - ✅ Designed for parental control use case

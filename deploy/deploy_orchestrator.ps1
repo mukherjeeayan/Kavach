@@ -86,7 +86,7 @@ NODE_ENV=$Environment
 DB_HOST=localhost
 DB_PORT=5432
 DB_USER=postgres
-DB_NAME=safeguard
+DB_NAME=kavach
 DB_DRIVER=pg
 JWT_SECRET=$jwtSecret
 JWT_REFRESH_SECRET=$jwtRefreshSecret
@@ -174,8 +174,8 @@ const string VERSION_NAME = "1.0";
         $gradlePath = Join-Path $projectRoot "gradle.properties"
         $gradleContent = ""
         if (Test-Path $gradlePath) { $gradleContent = Get-Content $gradlePath -Raw }
-        $gradleContent = $gradleContent -replace "SAFEGUARD_PINS=.*", "SAFEGUARD_PINS=$certPins"
-        $gradleContent = $gradleContent + "`nSAFEGUARD_PINS=$certPins"
+        $gradleContent = $gradleContent -replace "KAVACH_PINS=.*", "KAVACH_PINS=$certPins"
+        $gradleContent = $gradleContent + "`nKAVACH_PINS=$certPins"
         $gradleContent | Out-File -Encoding UTF8 $gradlePath
         Write-Host "gradle.properties updated with pins`n" -ForegroundColor Gray
     }

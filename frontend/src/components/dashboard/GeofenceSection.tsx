@@ -40,7 +40,7 @@ export default function GeofenceSection({ childId, onError }: Props) {
     e.preventDefault();
     const latNum = parseFloat(lat);
     const lngNum = parseFloat(lng);
-    const radiusNum = parseInt(radius);
+    const radiusNum = parseInt(radius, 10);
     if (isNaN(latNum) || isNaN(lngNum) || isNaN(radiusNum)) {
       onError('Please enter valid coordinates and radius');
       return;

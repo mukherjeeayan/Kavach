@@ -136,6 +136,8 @@ test.describe('Authenticated Dashboard Access', () => {
     await page.getByLabel('Password').fill('Test1234!');
     await page.getByRole('button', { name: 'Sign In' }).click();
     await page.waitForURL(/\/dashboard/);
-    await expect(page).toHaveURL(/\/dashboard/);
+
+    await page.goto('/settings');
+    await expect(page).toHaveURL(/\/settings/);
   });
 });

@@ -1,7 +1,7 @@
-# SafeGuard: Your Digital Bodyguard 🛡️
+# Kavach: Your Digital Bodyguard 🛡️
 
 ## What is this app?
-SafeGuard is a **parental control app** that helps parents keep kids safe online. Think of it like a digital bodyguard for your phone or tablet!
+Kavach is a **parental control app** that helps parents keep kids safe online. Think of it like a digital bodyguard for your phone or tablet!
 
 ## 👨‍👩‍👧‍👦 For Parents
 As a parent, you can:
@@ -15,7 +15,7 @@ As a parent, you can:
 - **Track mood** — Kids can log how they're feeling each day
 
 ## 👧👦 For Kids (The Safe Part)
-SafeGuard keeps you safe without being mean! You can:
+Kavach keeps you safe without being mean! You can:
 
 - **Log your mood** — Pick an emoji that shows how you feel today
 - **Use SOS button** — If something feels wrong, tap it and tell a parent
@@ -24,7 +24,7 @@ SafeGuard keeps you safe without being mean! You can:
 - ** Earn rewards** — Good behavior gets points toward fun stuff!
 
 ## 🔒 Is it safe?
-Yes! SafeGuard follows strict privacy rules:
+Yes! Kavach follows strict privacy rules:
 - Your data is encrypted (scrambled so only parents can read it)
 - No data is sold to advertisers
 - Parents can only see data about their own kid
@@ -52,7 +52,7 @@ Yes! SafeGuard follows strict privacy rules:
 
 ## 🛠️ Tech Stuff (For the curious)
 
-SafeGuard is built by a team of developers using:
+Kavach is built by a team of developers using:
 - **Android** for the phone app
 - **Node.js + TypeScript** for the backend server
 - **React + TypeScript** for the parent dashboard web app
@@ -76,4 +76,4 @@ If you have questions or issues:
 
 ---
 
-*SafeGuard: Because every kid deserves to explore safely.* 🌟
+*Kavach: Because every kid deserves to explore safely.* 🌟
