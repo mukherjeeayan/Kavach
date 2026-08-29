@@ -69,7 +69,7 @@ class DailyLimitWorker @AssistedInject constructor(
             as NotificationManager
         SafeGuardMessagingService.ensureChannel(applicationContext)
 
-        val notification = NotificationCompat.Builder(applicationContext, SafeGuardMessagingService.CHANNEL_ID)
+        val notification = NotificationCompat.Builder(applicationContext, SafeGuardMessagingService.CHANNEL_ALERT)
             .setSmallIcon(android.R.drawable.ic_dialog_alert)
             .setContentTitle("App time limit reached")
             .setContentText("You've used $packageName for $usedMinutes min (limit: $limitMinutes min).")

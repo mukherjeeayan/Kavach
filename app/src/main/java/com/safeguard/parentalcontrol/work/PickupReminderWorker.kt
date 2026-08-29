@@ -69,7 +69,7 @@ class PickupReminderWorker @AssistedInject constructor(
             "Don't forget to keep your device with you!"
         }
 
-        val notification = NotificationCompat.Builder(applicationContext, SafeGuardMessagingService.CHANNEL_ID)
+        val notification = NotificationCompat.Builder(applicationContext, SafeGuardMessagingService.CHANNEL_GENERAL)
             .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setContentTitle("Pickup reminder")
             .setContentText(text)
