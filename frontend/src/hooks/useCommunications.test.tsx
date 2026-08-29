@@ -16,24 +16,38 @@ function createWrapper() {
   );
 }
 
-const mockCommunicationLogs = [
-  {
-    id: '1',
-    child_id: 'child-1',
-    message_type: 'sms',
-    content: 'Test message',
-    direction: 'incoming',
-    created_at: '2026-08-20T10:00:00Z',
-  },
-];
+const mockCommunicationLogs = {
+  data: [
+    {
+      id: '1',
+      device_id: 'dev-1',
+      child_id: 'child-1',
+      comm_type: 'SMS_IN' as const,
+      contact_number: '+1234567890',
+      contact_name: 'Mom',
+      content_snippet: 'Test message',
+      duration_seconds: null,
+      is_flagged: false,
+      flag_reason: null,
+      recorded_at: '2026-08-20T10:00:00Z',
+      created_at: '2026-08-20T10:00:00Z',
+    },
+  ],
+  meta: { page: 1, limit: 50, total: 1, total_pages: 1 },
+};
 
 const mockKeywordAlerts = [
   {
     id: '1',
+    device_id: 'dev-1',
     child_id: 'child-1',
-    keyword: 'stress',
-    alert_level: 'MEDIUM',
-    is_acknowledged: false,
+    source_type: 'SMS' as const,
+    detected_keywords: ['stress'],
+    severity: 'MEDIUM' as const,
+    content_snippet: null,
+    app_package: null,
+    is_reviewed: false,
+    reviewed_at: null,
     created_at: '2026-08-20T10:00:00Z',
   },
 ];
@@ -102,7 +116,19 @@ describe('useReviewKeywordAlert', () => {
   });
 
   it('reviews keyword alert and invalidates queries', async () => {
-    vi.mocked(api.reviewKeywordAlert).mockResolvedValue(undefined);
+    vi.mocked(api.reviewKeywordAlert).mockResolvedValue({
+      id: 'alert-1',
+      device_id: 'dev-1',
+      child_id: 'child-1',
+      source_type: 'SMS',
+      detected_keywords: ['stress'],
+      severity: 'MEDIUM',
+      content_snippet: null,
+      app_package: null,
+      is_reviewed: true,
+      reviewed_at: '2026-08-20T10:00:00Z',
+      created_at: '2026-08-20T10:00:00Z',
+    });
 
     const { result } = renderHook(() => useReviewKeywordAlert('child-1'), { wrapper: createWrapper() });
 

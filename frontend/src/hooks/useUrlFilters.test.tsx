@@ -19,8 +19,10 @@ function createWrapper() {
 
 const baseUrlFilter = {
   id: 'uf-1',
-  rule_name: 'Block Social Media',
-  pattern: '*.facebook.com',
+  child_id: 'child-1',
+  url_pattern: '*.facebook.com',
+  rule_type: 'BLOCK' as const,
+  category: 'social_media',
   is_active: true,
   created_at: '2026-08-20T00:00:00Z',
   updated_at: '2026-08-20T00:00:00Z',
@@ -68,8 +70,17 @@ describe('useCreateUrlFilter', () => {
   });
 
   it('calls createUrlFilter on mutate', async () => {
-    const input: UrlFilterInput = { rule_name: 'Block Ads', pattern: '*.ads.com' };
-    vi.mocked(api.createUrlFilter).mockResolvedValue({ id: 'uf-2', ...input } as never);
+    const input: UrlFilterInput = { url_pattern: '*.ads.com', rule_type: 'BLOCK' };
+    vi.mocked(api.createUrlFilter).mockResolvedValue({
+      id: 'uf-2',
+      child_id: 'child-1',
+      url_pattern: '*.ads.com',
+      rule_type: 'BLOCK',
+      category: null,
+      is_active: true,
+      created_at: '2026-08-20T00:00:00Z',
+      updated_at: '2026-08-20T00:00:00Z',
+    });
 
     const { result } = renderHook(() => useCreateUrlFilter('child-1'), { wrapper: createWrapper() });
 
@@ -93,8 +104,8 @@ describe('useUpdateUrlFilter', () => {
   });
 
   it('calls updateUrlFilter on mutate', async () => {
-    const input: Partial<UrlFilterInput> = { is_active: false };
-    vi.mocked(api.updateUrlFilter).mockResolvedValue({ id: 'uf-1', ...input } as never);
+    const input: Partial<UrlFilterInput> = { rule_type: 'BLOCK' };
+    vi.mocked(api.updateUrlFilter).mockResolvedValue({ ...baseUrlFilter, ...input });
 
     const { result } = renderHook(() => useUpdateUrlFilter('child-1'), { wrapper: createWrapper() });
 
@@ -102,7 +113,7 @@ describe('useUpdateUrlFilter', () => {
       await result.current.mutateAsync({ ruleId: 'uf-1', input });
     });
 
-    expect(api.updateUrlFilter).toHaveBeenCalledWith('child-1', 'uf-1', input);
+    expect(api.updateUrlFilter).toHaveBeenCalledWith('child-1', 'uf-1', input as Partial<UrlFilterInput>);
   });
 });
 

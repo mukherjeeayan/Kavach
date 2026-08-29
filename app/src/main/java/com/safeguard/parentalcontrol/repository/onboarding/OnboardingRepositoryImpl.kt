@@ -13,6 +13,7 @@ import com.safeguard.parentalcontrol.data.remote.dto.DeviceDto
 import com.safeguard.parentalcontrol.data.remote.dto.LoginRequest
 import com.safeguard.parentalcontrol.data.remote.dto.RegisterDeviceRequest
 import com.safeguard.parentalcontrol.data.remote.dto.SetPinRequest
+import com.safeguard.parentalcontrol.data.remote.dto.UpdatePhoneRequest
 import com.safeguard.parentalcontrol.data.remote.dto.UserDto
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -126,6 +127,21 @@ class OnboardingRepositoryImpl @Inject constructor(
         onboardingStore.clear()
         parentPinStore.clear()
         Log.i(TAG, "Session cleared")
+    }
+
+    override suspend fun updateChildPhone(childId: String, phoneNumber: String): Result<Unit> {
+        return try {
+            val response = api.updateChildPhone(childId, UpdatePhoneRequest(phone_number = phoneNumber))
+            if (response.isSuccessful) {
+                Result.success(Unit)
+            } else {
+                Log.w(TAG, "Server phone update failed (HTTP ${response.code()})")
+                Result.failure(Exception("Failed to update phone number"))
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Server phone update unavailable", e)
+            Result.failure(e)
+        }
     }
 
     private fun <T> errorMessage(response: retrofit2.Response<ApiResponse<T>>): String {

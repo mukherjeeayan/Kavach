@@ -30,12 +30,10 @@ describe('VoiceCommandsPage', () => {
 
   it('displays when voice commands are fetched', async () => {
     vi.mocked(api.fetchVoiceCommands).mockResolvedValue({
-      data: {
-        data: [
-          { id: 'vc-1', child_id: 'child-1', device_id: 'dev-1', command_text: 'Turn on flashlight', intent: 'light', was_executed: false, recorded_at: '2026-08-20T10:00:00Z' },
-        ],
-        meta: { page: 1, limit: 50, total: 1, total_pages: 1 },
-      },
+      data: [
+        { id: 'vc-1', child_id: 'child-1', device_id: 'dev-1', command_text: 'Turn on flashlight', intent: 'light', was_executed: false, recorded_at: '2026-08-20T10:00:00Z' },
+      ],
+      meta: { page: 1, limit: 50, total: 1, total_pages: 1 },
     });
 
     const { result } = renderHook(() => useVoiceCommands('child-1'), {

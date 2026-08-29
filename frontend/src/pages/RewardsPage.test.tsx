@@ -30,7 +30,7 @@ describe('RewardsPage', () => {
 
   it('displays when reward catalog is fetched', async () => {
     vi.mocked(api.fetchRewardCatalog).mockResolvedValue([
-      { id: 'r1', name: 'Extra Playtime', description: '30 minutes of extra screen time', cost_points: 100, icon: '??' },
+      { id: 'r1', parent_id: 'parent-1', name: 'Extra Playtime', description: '30 minutes of extra screen time', cost_points: 100, icon: '🎮', is_active: true, created_at: '2026-01-01T00:00:00Z' },
     ]);
 
     const { result } = renderHook(() => useRewardCatalog(), {

@@ -39,6 +39,9 @@ interface OnboardingRepository {
      */
     suspend fun setParentPin(pin: String): Result<Unit>
 
+    /** Updates the child user's phone number on the server. */
+    suspend fun updateChildPhone(childId: String, phoneNumber: String): Result<Unit>
+
     /** Clear the local session and onboarding state. */
     fun logout()
 }

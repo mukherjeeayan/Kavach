@@ -19,9 +19,12 @@ function createWrapper() {
 const baseMoodLog = {
   id: 'm1',
   child_id: 'child-1',
+  device_id: null,
   mood_score: 3,
   note: null,
+  activities: null,
   recorded_at: '2026-08-20T10:00:00Z',
+  created_at: '2026-08-20T10:00:00Z',
 };
 
 describe('useMoodLogs', () => {

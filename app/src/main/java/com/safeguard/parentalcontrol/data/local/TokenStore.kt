@@ -23,8 +23,8 @@ class TokenStore @Inject constructor(@ApplicationContext context: Context) {
                 EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
                 EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
             )
-        } catch (_: Exception) {
-            context.getSharedPreferences("safeguard_token_store_fallback", Context.MODE_PRIVATE)
+        } catch (e: Exception) {
+            throw RuntimeException("Failed to initialize encrypted storage. App cannot continue.", e)
         }
     }
 

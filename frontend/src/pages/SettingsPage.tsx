@@ -1,10 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
 import type { RootState } from '../store/store';
 import { useLogout } from '../hooks/useAuth';
 import apiClient from '../services/apiClient';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
+import Toast from '../components/ui/Toast';
+import type { UserSettings, UserSettingsInput } from '../types/api';
 
 export default function SettingsPage() {
   const user = useSelector((state: RootState) => state.auth.user);
@@ -25,6 +27,28 @@ export default function SettingsPage() {
   const [pinError, setPinError] = useState<string | null>(null);
   const [logoutAllStatus, setLogoutAllStatus] = useState<'idle' | 'loading'>('idle');
   const [confirmLogoutAll, setConfirmLogoutAll] = useState(false);
+
+  // Settings state
+  const [settings, setSettings] = useState<UserSettings | null>(null);
+  const [settingsLoading, setSettingsLoading] = useState(true);
+  const [settingsSaving, setSettingsSaving] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+  // Load settings on mount
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const response = await apiClient.get<{ settings: UserSettings }>('/settings');
+        setSettings(response.data.settings ?? null);
+      } catch {
+        // Settings might not exist yet, will be created on first save
+        setSettings(null);
+      } finally {
+        setSettingsLoading(false);
+      }
+    };
+    loadSettings();
+  }, []);
 
   const handleUpdateName = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,6 +98,25 @@ export default function SettingsPage() {
       setPinStatus('error');
       setPinError('Failed to set PIN. Please try again.');
     }
+  };
+
+  // Save notification settings
+  const handleSaveSettings = async (input: UserSettingsInput) => {
+    setSettingsSaving(true);
+    try {
+      const response = await apiClient.put<{ settings: UserSettings }>('/settings', input);
+      setSettings(response.data.settings ?? null);
+      setToast({ message: 'Settings saved successfully', type: 'success' });
+    } catch {
+      setToast({ message: 'Failed to save settings', type: 'error' });
+    } finally {
+      setSettingsSaving(false);
+    }
+  };
+
+  // Toggle a setting
+  const handleToggle = async (key: keyof UserSettingsInput, value: boolean) => {
+    await handleSaveSettings({ [key]: value });
   };
 
   // Revokes every refresh token server-side; the local session is then
@@ -244,6 +287,222 @@ export default function SettingsPage() {
           </form>
         </section>
 
+        {/* Notification Settings Section */}
+        <section className="bg-white rounded-lg border p-6">
+          <h2 className="text-lg font-semibold mb-4">Notification Preferences</h2>
+          {settingsLoading ? (
+            <div className="space-y-4">
+              <div className="h-10 bg-gray-100 rounded animate-pulse" />
+              <div className="h-10 bg-gray-100 rounded animate-pulse" />
+              <div className="h-10 bg-gray-100 rounded animate-pulse" />
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-900">Enable Notifications</p>
+                  <p className="text-sm text-gray-500">Receive push notifications for alerts</p>
+                </div>
+                <button
+                  onClick={() => handleToggle('notifications_enabled', !settings?.notifications_enabled)}
+                  disabled={settingsSaving}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    settings?.notifications_enabled ? 'bg-blue-600' : 'bg-gray-200'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      settings?.notifications_enabled ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-900">Screen Time Alerts</p>
+                  <p className="text-sm text-gray-500">Get notified when screen time limits are reached</p>
+                </div>
+                <button
+                  onClick={() => handleToggle('screen_time_alerts', !settings?.screen_time_alerts)}
+                  disabled={settingsSaving || !settings?.notifications_enabled}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    settings?.screen_time_alerts ? 'bg-blue-600' : 'bg-gray-200'
+                  } ${!settings?.notifications_enabled ? 'opacity-50' : ''}`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      settings?.screen_time_alerts ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-900">Location Alerts</p>
+                  <p className="text-sm text-gray-500">Get notified about geofence entries/exits</p>
+                </div>
+                <button
+                  onClick={() => handleToggle('location_alerts', !settings?.location_alerts)}
+                  disabled={settingsSaving || !settings?.notifications_enabled}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    settings?.location_alerts ? 'bg-blue-600' : 'bg-gray-200'
+                  } ${!settings?.notifications_enabled ? 'opacity-50' : ''}`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      settings?.location_alerts ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-900">Communication Alerts</p>
+                  <p className="text-sm text-gray-500">Get notified about flagged communications</p>
+                </div>
+                <button
+                  onClick={() => handleToggle('communication_alerts', !settings?.communication_alerts)}
+                  disabled={settingsSaving || !settings?.notifications_enabled}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    settings?.communication_alerts ? 'bg-blue-600' : 'bg-gray-200'
+                  } ${!settings?.notifications_enabled ? 'opacity-50' : ''}`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      settings?.communication_alerts ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-900">SOS Alerts</p>
+                  <p className="text-sm text-gray-500">Get notified immediately for emergency SOS events</p>
+                </div>
+                <button
+                  onClick={() => handleToggle('sos_alerts', !settings?.sos_alerts)}
+                  disabled={settingsSaving || !settings?.notifications_enabled}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    settings?.sos_alerts ? 'bg-blue-600' : 'bg-gray-200'
+                  } ${!settings?.notifications_enabled ? 'opacity-50' : ''}`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      settings?.sos_alerts ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-900">Self-Harm Alerts</p>
+                  <p className="text-sm text-gray-500">Get notified about potential self-harm content</p>
+                </div>
+                <button
+                  onClick={() => handleToggle('self_harm_alerts', !settings?.self_harm_alerts)}
+                  disabled={settingsSaving || !settings?.notifications_enabled}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    settings?.self_harm_alerts ? 'bg-blue-600' : 'bg-gray-200'
+                  } ${!settings?.notifications_enabled ? 'opacity-50' : ''}`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      settings?.self_harm_alerts ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              <div className="border-t pt-4 mt-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">Email Digest</p>
+                    <p className="text-sm text-gray-500">Receive email summaries of activity</p>
+                  </div>
+                  <button
+                    onClick={() => handleToggle('email_digest_enabled', !settings?.email_digest_enabled)}
+                    disabled={settingsSaving}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                      settings?.email_digest_enabled ? 'bg-blue-600' : 'bg-gray-200'
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        settings?.email_digest_enabled ? 'translate-x-6' : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                </div>
+                {settings?.email_digest_enabled && (
+                  <div className="mt-3 ml-4">
+                    <label className="text-sm text-gray-600">Digest Frequency</label>
+                    <select
+                      value={settings?.digest_frequency || 'DAILY'}
+                      onChange={(e) => handleSaveSettings({ digest_frequency: e.target.value as 'DAILY' | 'WEEKLY' })}
+                      disabled={settingsSaving}
+                      className="ml-2 rounded-md border border-gray-300 p-1 text-sm"
+                    >
+                      <option value="DAILY">Daily</option>
+                      <option value="WEEKLY">Weekly</option>
+                    </select>
+                  </div>
+                )}
+              </div>
+
+              <div className="border-t pt-4 mt-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">Do Not Disturb</p>
+                    <p className="text-sm text-gray-500">Silence notifications during specific hours</p>
+                  </div>
+                  <button
+                    onClick={() => handleToggle('dnd_enabled', !settings?.dnd_enabled)}
+                    disabled={settingsSaving}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                      settings?.dnd_enabled ? 'bg-blue-600' : 'bg-gray-200'
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        settings?.dnd_enabled ? 'translate-x-6' : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                </div>
+                {settings?.dnd_enabled && (
+                  <div className="mt-3 ml-4 flex gap-4">
+                    <div>
+                      <label className="text-sm text-gray-600">Start Time</label>
+                      <input
+                        type="time"
+                        value={settings?.dnd_start_time || '22:00'}
+                        onChange={(e) => handleSaveSettings({ dnd_start_time: e.target.value })}
+                        disabled={settingsSaving}
+                        className="ml-2 rounded-md border border-gray-300 p-1 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm text-gray-600">End Time</label>
+                      <input
+                        type="time"
+                        value={settings?.dnd_end_time || '07:00'}
+                        onChange={(e) => handleSaveSettings({ dnd_end_time: e.target.value })}
+                        disabled={settingsSaving}
+                        className="ml-2 rounded-md border border-gray-300 p-1 text-sm"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </section>
+
         {/* Danger Zone */}
         <section className="bg-white rounded-lg border border-red-200 p-6">
           <h2 className="text-lg font-semibold text-red-700 mb-4">Danger Zone</h2>
@@ -273,6 +532,14 @@ export default function SettingsPage() {
               void handleLogoutAll();
             }}
             onCancel={() => setConfirmLogoutAll(false)}
+          />
+        )}
+
+        {toast && (
+          <Toast
+            message={toast.message}
+            type={toast.type}
+            onClose={() => setToast(null)}
           />
         )}
       </main>

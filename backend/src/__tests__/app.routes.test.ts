@@ -84,7 +84,7 @@ describe('API route surface', () => {
     query.mockResolvedValue({ rows: [] });
     const response = await request(app)
       .post('/api/v1/auth/login')
-      .send({ email: 'parent@example.com', password: 'wrong-password' });
+      .send({ email: 'parent@example.com', password: 'Wrongpass1!' });
     expect(response.status).toBe(401);
   });
 

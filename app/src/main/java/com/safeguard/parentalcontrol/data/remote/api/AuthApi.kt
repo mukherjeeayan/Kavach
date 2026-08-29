@@ -18,6 +18,7 @@ import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.POST
 import retrofit2.http.PUT
+import retrofit2.http.Path
 
 /**
  * Retrofit interface for auth and onboarding endpoints.  Same
@@ -47,4 +48,11 @@ interface AuthApi {
     /** Verifies the PIN against the stored hash (used by the dashboard). */
     @POST("api/v1/auth/pin/verify")
     suspend fun verifyPin(@Body request: VerifyPinRequest): Response<ApiResponse<Unit>>
+
+    /** Updates the child user's phone number. */
+    @PUT("api/v1/child-users/{childId}/phone")
+    suspend fun updateChildPhone(
+        @Path("childId") childId: String,
+        @Body body: UpdatePhoneRequest
+    ): Response<ApiResponse<Unit>>
 }

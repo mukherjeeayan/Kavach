@@ -75,7 +75,7 @@ describe('Auth integration – register', () => {
 
     const res = await request(app)
       .post('/api/v1/auth/register')
-      .send({ name: 'Test', email: 'test@example.com', password: 'password123', child_name: 'Kid', birth_date: '2015-01-01' });
+      .send({ name: 'Test', email: 'test@example.com', password: 'Password1!', child_name: 'Kid', birth_date: '2015-01-01' });
 
     expect(res.status).toBe(201);
     expect(res.body.success).toBe(true);
@@ -92,7 +92,7 @@ describe('Auth integration – register', () => {
 
     const res = await request(app)
       .post('/api/v1/auth/register')
-      .send({ name: 'Test', email: 'existing@example.com', password: 'password123' });
+      .send({ name: 'Test', email: 'existing@example.com', password: 'Password1!' });
 
     expect(res.status).toBe(409);
   });
@@ -121,7 +121,7 @@ describe('Auth integration – login', () => {
 
     const res = await request(app)
       .post('/api/v1/auth/login')
-      .send({ email: 'test@example.com', password: 'password123' });
+      .send({ email: 'test@example.com', password: 'Password1!' });
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
@@ -137,7 +137,7 @@ describe('Auth integration – login', () => {
 
     const res = await request(app)
       .post('/api/v1/auth/login')
-      .send({ email: 'test@example.com', password: 'wrongpass' });
+      .send({ email: 'test@example.com', password: 'Wrongpass1!' });
 
     expect(res.status).toBe(401);
   });
@@ -147,7 +147,7 @@ describe('Auth integration – login', () => {
 
     const res = await request(app)
       .post('/api/v1/auth/login')
-      .send({ email: 'nobody@example.com', password: 'password123' });
+      .send({ email: 'nobody@example.com', password: 'Password1!' });
 
     expect(res.status).toBe(401);
   });
@@ -155,7 +155,7 @@ describe('Auth integration – login', () => {
   test('POST /api/v1/auth/login – rejects invalid body (422)', async () => {
     const res = await request(app)
       .post('/api/v1/auth/login')
-      .send({ email: 'not-an-email', password: 'password123' });
+      .send({ email: 'not-an-email', password: 'Password1!' });
 
     expect(res.status).toBe(422);
   });

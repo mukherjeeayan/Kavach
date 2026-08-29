@@ -18,7 +18,9 @@ CREATE TABLE parents (
     password_hash VARCHAR(255) NOT NULL,
     name VARCHAR(255) NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+    failed_login_attempts INTEGER NOT NULL DEFAULT 0,
+    login_locked_until TIMESTAMPTZ
 );
 
 CREATE TRIGGER update_parents_modtime

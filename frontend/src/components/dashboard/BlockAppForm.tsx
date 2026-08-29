@@ -59,7 +59,7 @@ export default function BlockAppForm({
         />
         {errors.packageName && (
           <p id="package-name-error" className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-            {errors.packageName}
+            {errors.packageName.message}
           </p>
         )}
         <label className="sr-only" htmlFor="block-reason">Reason</label>

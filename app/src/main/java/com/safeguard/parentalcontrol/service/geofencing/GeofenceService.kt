@@ -4,6 +4,7 @@ import android.Manifest
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -12,13 +13,19 @@ import android.os.IBinder
 import android.util.Log
 import androidx.core.content.ContextCompat
 import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.Geofence
+import com.google.android.gms.location.GeofencingClient
+import com.google.android.gms.location.GeofencingRequest
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import com.safeguard.parentalcontrol.data.local.OnboardingStore
+import com.safeguard.parentalcontrol.data.local.dao.GeofenceDao
+import com.safeguard.parentalcontrol.data.local.entity.GeofenceEntity
 import com.safeguard.parentalcontrol.data.remote.api.Phase2Api
+import com.safeguard.parentalcontrol.data.remote.dto.GeofenceCheckDto
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -28,13 +35,13 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /**
- * Foreground service that monitors the device location and checks
- * geofence boundaries on each update. When entry/exit events are
- * detected, they are broadcast via [GEOFENCE_ACTION] intent.
+ * Foreground service that registers geofences with Android's
+ * [GeofencingClient] and monitors the device location. On geofence
+ * enter/exit events, it checks with the backend and broadcasts
+ * the result.
  *
- * Uses FusedLocationProviderClient for efficient location updates.
- * Creates a persistent notification while active.
- * Uses @AndroidEntryPoint for Hilt injection.
+ * Uses FusedLocationProviderClient for efficient location updates
+ * and [GeofencingClient] for geofence boundary detection.
  */
 @AndroidEntryPoint
 class GeofenceService : Service() {
@@ -45,10 +52,15 @@ class GeofenceService : Service() {
     @Inject
     lateinit var onboardingStore: OnboardingStore
 
+    @Inject
+    lateinit var geofenceDao: GeofenceDao
+
     private lateinit var fusedClient: FusedLocationProviderClient
+    private lateinit var geofencingClient: GeofencingClient
     @Volatile
     private var isTracking = false
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private var pendingGeofenceIds = mutableListOf<String>()
 
     private val locationCallback = object : LocationCallback() {
         override fun onLocationResult(result: LocationResult) {
@@ -58,7 +70,7 @@ class GeofenceService : Service() {
                     val deviceId = onboardingStore.deviceId ?: return@launch
                     val response = phase2Api.checkGeofences(
                         deviceId,
-                        com.safeguard.parentalcontrol.data.remote.dto.GeofenceCheckDto(
+                        GeofenceCheckDto(
                             latitude = location.latitude,
                             longitude = location.longitude
                         )
@@ -90,6 +102,7 @@ class GeofenceService : Service() {
         createNotificationChannel()
         startForeground(NOTIFICATION_ID, buildNotification())
         fusedClient = LocationServices.getFusedLocationProviderClient(this)
+        geofencingClient = LocationServices.getGeofencingClient(this)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -108,6 +121,18 @@ class GeofenceService : Service() {
             stopSelf()
             return START_NOT_STICKY
         }
+
+        when (intent?.action) {
+            ACTION_REGISTER_GEOFENCES -> {
+                serviceScope.launch {
+                    registerGeofencesFromDb()
+                }
+            }
+            ACTION_REMOVE_GEOFENCES -> {
+                removeAllGeofences()
+            }
+        }
+
         if (!isTracking) {
             isTracking = true
             val request = LocationRequest.Builder(Priority.PRIORITY_BALANCED_POWER_ACCURACY, INTERVAL_MS)
@@ -132,6 +157,93 @@ class GeofenceService : Service() {
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
+
+    /**
+     * Fetches geofences from the local Room database and registers
+     * them with Android's [GeofencingClient].
+     */
+    private suspend fun registerGeofencesFromDb() {
+        try {
+            val geofences = geofenceDao.getActiveGeofences()
+            geofences.collect { entities ->
+                registerWithGeofencingClient(entities)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to register geofences", e)
+        }
+    }
+
+    /**
+     * Registers a list of [GeofenceEntity] objects with Android's
+     * [GeofencingClient]. Uses a PendingIntent broadcast to receive
+     * enter/exit events.
+     */
+    private fun registerWithGeofencingClient(entities: List<GeofenceEntity>) {
+        if (entities.isEmpty()) return
+
+        // Remove old geofences first
+        if (pendingGeofenceIds.isNotEmpty()) {
+            geofencingClient.removeGeofences(pendingGeofenceIds)
+            pendingGeofenceIds.clear()
+        }
+
+        val geofenceList = entities.map { entity ->
+            val requestId = entity.id
+            pendingGeofenceIds.add(requestId)
+
+            Geofence.Builder()
+                .setRequestId(requestId)
+                .setCircularRegion(
+                    entity.latitude,
+                    entity.longitude,
+                    entity.radiusMeters.toFloat()
+                )
+                .setExpirationDuration(Geofence.NEVER_EXPIRE)
+                .setTransitionTypes(
+                    Geofence.GEOFENCE_TRANSITION_ENTER or Geofence.GEOFENCE_TRANSITION_EXIT
+                )
+                .setLoiteringDelay(30_000) // 30 seconds dwell time
+                .build()
+        }
+
+        val pendingIntent = PendingIntent.getBroadcast(
+            this,
+            GEOFENCE_REQUEST_CODE,
+            Intent(GEOFENCE_ACTION).setPackage(packageName),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE
+        )
+
+        val request = GeofencingRequest.Builder().apply {
+            setInitialTrigger(GeofencingRequest.INITIAL_TRIGGER_ENTER or GeofencingRequest.INITIAL_TRIGGER_EXIT)
+            addGeofences(geofenceList)
+        }.build()
+
+        try {
+            geofencingClient.addGeofences(
+                request,
+                pendingIntent
+            ).addOnSuccessListener {
+                Log.i(TAG, "Geofences registered: ${entities.size} zones")
+            }.addOnFailureListener { e ->
+                Log.e(TAG, "Geofence registration failed", e)
+            }
+        } catch (e: SecurityException) {
+            Log.e(TAG, "Missing permission for geofence registration", e)
+        }
+    }
+
+    private fun removeAllGeofences() {
+        if (pendingGeofenceIds.isNotEmpty()) {
+            geofencingClient.removeGeofences(pendingGeofenceIds)
+                .addOnSuccessListener {
+                    Log.i(TAG, "All geofences removed")
+                }
+                .addOnFailureListener { e ->
+                    Log.e(TAG, "Failed to remove geofences", e)
+                }
+            pendingGeofenceIds.clear()
+        }
+    }
 
     private fun createNotificationChannel() {
         val channel = NotificationChannel(
@@ -159,9 +271,12 @@ class GeofenceService : Service() {
         private const val NOTIFICATION_ID = 1004
         private const val INTERVAL_MS = 30_000L   // every 30 seconds
         private const val MIN_INTERVAL_MS = 15_000L
+        private const val GEOFENCE_REQUEST_CODE = 1005
         const val GEOFENCE_ACTION = "com.safeguard.parentalcontrol.GEOFENCE_EVENT"
         const val EXTRA_EVENT_TYPE = "event_type"
         const val EXTRA_GEOFENCE_ID = "geofence_id"
         const val EXTRA_EVENT_ID = "event_id"
+        const val ACTION_REGISTER_GEOFENCES = "com.safeguard.parentalcontrol.REGISTER_GEOFENCES"
+        const val ACTION_REMOVE_GEOFENCES = "com.safeguard.parentalcontrol.REMOVE_GEOFENCES"
     }
 }

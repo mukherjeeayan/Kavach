@@ -89,3 +89,11 @@ data class VerifyPinRequest(
     val email: String,
     val pin: String
 )
+
+/**
+ * Request body for PUT /child-users/:id/phone — sets the child's
+ * phone number for communication monitoring and SOS features.
+ */
+data class UpdatePhoneRequest(
+    val phone_number: String
+)

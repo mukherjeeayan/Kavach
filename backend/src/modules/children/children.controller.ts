@@ -198,3 +198,21 @@ export const removeGuardian = async (req: Request, res: Response, next: NextFunc
     next(err);
   }
 };
+
+/**
+ * PUT /api/v1/children/:childId/phone
+ * Body: { phone: string | null }
+ * Sets or clears the child's phone number.
+ */
+export const setChildPhone = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const child = await childrenService.setChildPhone(
+      req.user!.userId,
+      req.params.childId,
+      req.body.phone
+    );
+    respond(res, 200, { child }, req);
+  } catch (err) {
+    next(err);
+  }
+};

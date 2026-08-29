@@ -74,14 +74,15 @@ describe('Auth integration – cookie session flow', () => {
   test('login sets httpOnly session cookies', async () => {
     mockedQuery
       .mockResolvedValueOnce({
-        rows: [{ ...parentRow, password_hash: 'hashed-password' }],
+        rows: [{ ...parentRow, password_hash: 'hashed-password', failed_login_attempts: 0, login_locked_until: null }],
       } as any) // SELECT parents
+      .mockResolvedValueOnce({ rows: [], rowCount: 1 } as any) // UPDATE parents (clear lockout)
       .mockResolvedValueOnce({ rows: [] } as any); // SELECT children
     mockedBcrypt.compare.mockResolvedValueOnce(true as never);
 
     const res = await request(app)
       .post('/api/v1/auth/login')
-      .send({ email: 'parent@example.com', password: 'password123' });
+      .send({ email: 'parent@example.com', password: 'Password1!' });
 
     expect(res.status).toBe(200);
 
@@ -207,7 +208,7 @@ describe('Auth integration – PUT /auth/password', () => {
     const res = await request(app)
       .put('/api/v1/auth/password')
       .set('Authorization', `Bearer ${signTestToken(PARENT_ID)}`)
-      .send({ current_password: 'wrongpass1', new_password: 'newpassword1' });
+      .send({ current_password: 'Wrongpass1!', new_password: 'Newpass1!' });
 
     expect(res.status).toBe(401);
   });
@@ -229,7 +230,7 @@ describe('Auth integration – PUT /auth/password', () => {
     const res = await request(app)
       .put('/api/v1/auth/password')
       .set('Authorization', `Bearer ${signTestToken(PARENT_ID)}`)
-      .send({ current_password: 'oldpassword1', new_password: 'newpassword1' });
+      .send({ current_password: 'Oldpass1!', new_password: 'Newpass1!' });
 
     expect(res.status).toBe(200);
 

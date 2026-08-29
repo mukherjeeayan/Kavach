@@ -47,6 +47,8 @@ class OnboardingViewModel @Inject constructor(
     private val _children = MutableStateFlow<List<ChildDto>>(emptyList())
     val children: StateFlow<List<ChildDto>> = _children.asStateFlow()
 
+    private var selectedChildId: String? = null
+
     fun clearError() {
         _error.value = null
     }
@@ -80,6 +82,7 @@ class OnboardingViewModel @Inject constructor(
 
     /** Step 2a — pick an existing child profile. */
     fun selectChild(child: ChildDto) {
+        selectedChildId = child.id
         _step.value = OnboardingStep.Device
     }
 
@@ -91,6 +94,7 @@ class OnboardingViewModel @Inject constructor(
             repository.createChild(name)
                 .onSuccess { child ->
                     _children.value = _children.value + child
+                    selectedChildId = child.id
                     _step.value = OnboardingStep.Device
                 }
                 .onFailure { e ->
@@ -135,6 +139,14 @@ class OnboardingViewModel @Inject constructor(
     /** Step 5 — every permission granted; onboarding complete. */
     fun finishOnboarding() {
         _step.value = OnboardingStep.Done
+    }
+
+    /** Updates the child's phone number on the server (best-effort). */
+    fun updateChildPhone(phoneNumber: String) {
+        val childId = selectedChildId ?: return
+        viewModelScope.launch {
+            repository.updateChildPhone(childId, phoneNumber)
+        }
     }
 
     /** Sign out — returns to the login step and clears stored state. */

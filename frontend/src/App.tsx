@@ -1,8 +1,8 @@
 import { type ReactElement, Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Provider, useSelector } from 'react-redux';
-import { store, RootState } from './store/store';
+import { Provider } from 'react-redux';
+import { store } from './store/store';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
 import { useRole } from './store/authSlice';
 import { Skeleton } from './components/ui/Skeleton';
@@ -14,6 +14,12 @@ const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'));
 const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
+const AlertsPage = lazy(() => import('./pages/AlertsPage'));
+const ManageChildPage = lazy(() => import('./pages/ManageChildPage'));
+const ReportsPage = lazy(() => import('./pages/ReportsPage'));
+const CommunicationsPage = lazy(() => import('./pages/CommunicationsPage'));
+const NotificationsPage = lazy(() => import('./pages/NotificationsPage'));
+const ChildSetupScreen = lazy(() => import('./screens/ChildSetupScreen'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 
 const queryClient = new QueryClient({
@@ -21,6 +27,7 @@ const queryClient = new QueryClient({
     queries: {
       retry: 1,
       refetchOnWindowFocus: false,
+      staleTime: 30_000,
     },
   },
 });
@@ -39,16 +46,6 @@ const PageLoader = () => (
 // Protected Route wrapper — checks the session flag. The access token
 // lives in memory and the refresh token in an httpOnly cookie; a page
 // reload silently restores the token via the cookie-based refresh.
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const ProtectedRoute = ({ children }: { children: ReactElement }) => {
-  const hasToken = useSelector((state: RootState) => state.auth.hasToken);
-
-  if (!hasToken) {
-    return <Navigate to="/login" replace />;
-  }
-  return children;
-};
-
 // Role-protected route — only users with the required role can access
 const RoleProtectedRoute = ({ role, children }: { role: 'parent' | 'child'; children: ReactElement }) => {
   const hasMatchingRole = useRole(role);
@@ -84,6 +81,54 @@ function App() {
                   element={
                     <RoleProtectedRoute role="parent">
                       <SettingsPage />
+                    </RoleProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/alerts"
+                  element={
+                    <RoleProtectedRoute role="parent">
+                      <AlertsPage />
+                    </RoleProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/children"
+                  element={
+                    <RoleProtectedRoute role="parent">
+                      <ManageChildPage />
+                    </RoleProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/reports"
+                  element={
+                    <RoleProtectedRoute role="parent">
+                      <ReportsPage />
+                    </RoleProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/communications"
+                  element={
+                    <RoleProtectedRoute role="parent">
+                      <CommunicationsPage />
+                    </RoleProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/notifications"
+                  element={
+                    <RoleProtectedRoute role="parent">
+                      <NotificationsPage />
+                    </RoleProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/child-setup"
+                  element={
+                    <RoleProtectedRoute role="parent">
+                      <ChildSetupScreen />
                     </RoleProtectedRoute>
                   }
                 />

@@ -23,7 +23,9 @@ const envSchema = z.object({
     .regex(/^\d+$/, 'DB_PORT must be a number')
     .default('5432'),
   DB_USER: z.string().min(1, 'DB_USER is required').default('postgres'),
-  DB_PASSWORD: z.string().optional(),
+  DB_PASSWORD: process.env.NODE_ENV === 'production' 
+    ? z.string().min(1, 'DB_PASSWORD is required in production')
+    : z.string().optional(),
   DB_NAME: z.string().min(1, 'DB_NAME is required').default('kavach'),
   DATABASE_URL: z.string().optional(),
 
@@ -53,7 +55,9 @@ const envSchema = z.object({
   FRONTEND_URL: z.string().url('FRONTEND_URL must be a valid URL').default('http://localhost:5173'),
 
   // ─── CORS ──────────────────────────────────────────────────────────
-  ALLOWED_ORIGINS: z.string().optional(),
+  ALLOWED_ORIGINS: process.env.NODE_ENV === 'production'
+    ? z.string().min(1, 'ALLOWED_ORIGINS is required in production')
+    : z.string().optional(),
 
   // ─── Firebase (for push notifications) ─────────────────────────────
   FIREBASE_PROJECT_ID: z.string().optional(),

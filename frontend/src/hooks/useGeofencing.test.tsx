@@ -19,11 +19,13 @@ function createWrapper() {
 
 const baseGeofence = {
   id: 'gf-1',
+  child_id: 'child-1',
+  device_id: null,
   name: 'Home Zone',
   latitude: 13.0827,
   longitude: 80.2707,
   radius_meters: 500,
-  zone_type: 'HOME',
+  zone_type: 'HOME' as const,
   alert_on_entry: true,
   alert_on_exit: true,
   is_active: true,
@@ -106,8 +108,8 @@ describe('useUpdateGeofence', () => {
   });
 
   it('calls updateGeofence on mutate', async () => {
-    const input: Partial<GeofenceInput> = { is_active: false };
-    vi.mocked(api.updateGeofence).mockResolvedValue({ id: 'gf-1', ...input } as never);
+    const input: Partial<GeofenceInput> = { alert_on_entry: false };
+    vi.mocked(api.updateGeofence).mockResolvedValue({ ...baseGeofence, ...input } as never);
 
     const { result } = renderHook(() => useUpdateGeofence('child-1'), { wrapper: createWrapper() });
 
@@ -115,7 +117,7 @@ describe('useUpdateGeofence', () => {
       await result.current.mutateAsync({ geofenceId: 'gf-1', input });
     });
 
-    expect(api.updateGeofence).toHaveBeenCalledWith('child-1', 'gf-1', input);
+    expect(api.updateGeofence).toHaveBeenCalledWith('child-1', 'gf-1', input as Partial<GeofenceInput>);
   });
 });
 

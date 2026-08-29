@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
+  acknowledgeAlert,
   createContact,
   createLock,
   deleteContact,
@@ -155,3 +156,12 @@ export const useSetParentPin = () =>
   useMutation({
     mutationFn: (pin: string) => setParentPin(pin),
   });
+
+/** Marks a child alert as acknowledged. */
+export const useAcknowledgeAlert = (childId: string | null) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (alertId: string) => acknowledgeAlert(childId as string, alertId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['childAlerts', childId] }),
+  });
+};

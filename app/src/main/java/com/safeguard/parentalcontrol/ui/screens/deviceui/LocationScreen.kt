@@ -63,8 +63,31 @@ fun LocationScreen(
                 Text(text = state.message, color = MaterialTheme.colorScheme.error)
             }
             is LocationUiState.Success -> {
-                Button(onClick = viewModel::refreshFromServer) {
-                    Text("Refresh from server")
+                val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Button(
+                        onClick = viewModel::refreshFromServer,
+                        enabled = !isRefreshing
+                    ) {
+                        if (isRefreshing) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.padding(end = 8.dp),
+                                strokeWidth = 2.dp
+                            )
+                        }
+                        Text("Refresh from server")
+                    }
+                    if (state.serverPings.isNotEmpty()) {
+                        Text(
+                            text = "Last: ${state.serverPings.size} pings",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
                 Spacer(modifier = Modifier.height(16.dp))
 

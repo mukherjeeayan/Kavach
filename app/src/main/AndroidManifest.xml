@@ -30,6 +30,12 @@
     <!-- Voice Command Permissions -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     
+    <!-- Overlay permission for blocked-app overlay -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    
+    <!-- DND policy permission for bedtime enforcement -->
+    <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" />
+    
     <!-- Boot & Background Consistency -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
@@ -128,6 +134,17 @@
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>
         </receiver>
+
+        <!-- Overlay shown when a blocked app is launched -->
+        <activity
+            android:name=".service.appblock.BlockedAppOverlayActivity"
+            android:exported="false"
+            android:theme="@style/Theme.SafeGuard"
+            android:launchMode="singleTask"
+            android:excludeFromRecents="true"
+            android:taskAffinity=""
+            android:documentLaunchMode="never" />
+
 
     </application>
 </manifest>

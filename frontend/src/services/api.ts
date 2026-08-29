@@ -24,6 +24,7 @@ import type {
   LockInput,
   LoginPayload,
   MoodLog,
+  Notification,
   PaginatedResponse,
   RewardCatalogItem,
   RewardPoints,
@@ -36,6 +37,8 @@ import type {
   SosEvent,
   UrlFilterRule,
   UrlFilterInput,
+  UserSettings,
+  UserSettingsInput,
   WifiLog,
 } from '../types/api';
 
@@ -627,6 +630,68 @@ export const deleteIntegration = async (integrationId: string): Promise<void> =>
 export const syncIntegration = async (integrationId: string): Promise<IntegrationConfig> => {
   const response = await apiClient.post<ApiResponse<IntegrationConfig>>(
     `/integrations/${integrationId}/sync`
+  );
+  return response.data.data!;
+};
+
+// ── Settings ──────────────────────────────────────────────────
+
+export const fetchSettings = async (): Promise<UserSettings> => {
+  const response = await apiClient.get<ApiResponse<UserSettings>>('/settings');
+  return response.data.data!;
+};
+
+export const updateSettings = async (input: UserSettingsInput): Promise<UserSettings> => {
+  const response = await apiClient.put<ApiResponse<UserSettings>>('/settings', input);
+  return response.data.data!;
+};
+
+// ── Notifications ─────────────────────────────────────────────
+
+export const fetchNotifications = async (): Promise<Notification[]> => {
+  const response = await apiClient.get<ApiResponse<{ notifications: Notification[] }>>('/notifications');
+  return response.data.data?.notifications ?? [];
+};
+
+export const markNotificationAsRead = async (notificationId: string): Promise<Notification> => {
+  const response = await apiClient.patch<ApiResponse<Notification>>(
+    `/notifications/${notificationId}/read`
+  );
+  return response.data.data!;
+};
+
+export const markAllNotificationsAsRead = async (): Promise<void> => {
+  await apiClient.patch('/notifications/read-all');
+};
+
+// ── Alert acknowledgment ──────────────────────────────────────
+
+export const acknowledgeAlert = async (childId: string, alertId: string): Promise<ChildAlert> => {
+  const response = await apiClient.patch<ApiResponse<ChildAlert>>(
+    `/children/${childId}/alerts/${alertId}/acknowledge`
+  );
+  return response.data.data!;
+};
+
+// ── Child management ──────────────────────────────────────────
+
+export const updateChild = async (
+  childId: string,
+  input: { name?: string; birth_date?: string; daily_screen_time_limit_minutes?: number | null }
+): Promise<ChildProfile> => {
+  const response = await apiClient.put<ApiResponse<ChildProfile>>(
+    `/children/${childId}`, input
+  );
+  return response.data.data!;
+};
+
+export const deleteChild = async (childId: string): Promise<void> => {
+  await apiClient.delete(`/children/${childId}`);
+};
+
+export const updateChildPhone = async (childId: string, phone: string): Promise<ChildProfile> => {
+  const response = await apiClient.put<ApiResponse<ChildProfile>>(
+    `/child-users/${childId}/phone`, { phone_number: phone }
   );
   return response.data.data!;
 };

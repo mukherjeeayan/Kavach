@@ -15,6 +15,7 @@ export interface AuthUser {
   id: string;
   name: string;
   email: string;
+  role: 'parent' | 'child' | null;
 }
 
 export interface ChildProfile {
@@ -408,6 +409,53 @@ export interface Integration {
   config: Record<string, unknown>;
   is_active: boolean;
   last_sync_at: string | null;
+  created_at: string;
+}
+
+// ── User Settings ──────────────────────────────────────────────
+
+export interface UserSettings {
+  id: string;
+  user_id: string;
+  notifications_enabled: boolean;
+  email_digest_enabled: boolean;
+  digest_frequency: 'DAILY' | 'WEEKLY';
+  screen_time_alerts: boolean;
+  location_alerts: boolean;
+  communication_alerts: boolean;
+  sos_alerts: boolean;
+  self_harm_alerts: boolean;
+  dnd_enabled: boolean;
+  dnd_start_time: string;
+  dnd_end_time: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UserSettingsInput {
+  notifications_enabled?: boolean;
+  email_digest_enabled?: boolean;
+  digest_frequency?: 'DAILY' | 'WEEKLY';
+  screen_time_alerts?: boolean;
+  location_alerts?: boolean;
+  communication_alerts?: boolean;
+  sos_alerts?: boolean;
+  self_harm_alerts?: boolean;
+  dnd_enabled?: boolean;
+  dnd_start_time?: string;
+  dnd_end_time?: string;
+}
+
+// ── Notifications ─────────────────────────────────────────────
+
+export interface Notification {
+  id: string;
+  user_id: string;
+  title: string;
+  body: string;
+  notification_type: string;
+  reference_id: string | null;
+  is_read: boolean;
   created_at: string;
 }
 

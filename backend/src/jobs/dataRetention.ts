@@ -16,7 +16,7 @@ const days = (key: string, fallback: number): number => {
 
 export const RETENTION_DAYS = {
   location: days('RETENTION_LOCATION_DAYS', 90),
-  screenTime: days('RETENTION_SCREEN_TIME_DAYS', 365),
+  screenTime: days('RETENTION_SCREEN_TIME_DAYS', 30),
   audit: days('RETENTION_AUDIT_DAYS', 730),
 };
 
@@ -83,15 +83,95 @@ export const purgeAuditLogs = async (): Promise<number> => {
   return totalDeleted;
 };
 
+export const purgeCommunicationLogs = async (): Promise<number> => {
+  let totalDeleted = 0;
+  const batchSize = 10000;
+  while (true) {
+    const result = await query(
+      `DELETE FROM communication_logs WHERE id IN (
+        SELECT id FROM communication_logs 
+        WHERE recorded_at < now() - interval '90 days'
+        LIMIT $1
+      )`,
+      [batchSize]
+    );
+    const deleted = (result as any).rowCount ?? 0;
+    totalDeleted += deleted;
+    if (deleted < batchSize) break;
+  }
+  return totalDeleted;
+};
+
+export const purgeMoodLogs = async (): Promise<number> => {
+  let totalDeleted = 0;
+  const batchSize = 10000;
+  while (true) {
+    const result = await query(
+      `DELETE FROM mood_logs WHERE id IN (
+        SELECT id FROM mood_logs 
+        WHERE created_at < now() - interval '365 days'
+        LIMIT $1
+      )`,
+      [batchSize]
+    );
+    const deleted = (result as any).rowCount ?? 0;
+    totalDeleted += deleted;
+    if (deleted < batchSize) break;
+  }
+  return totalDeleted;
+};
+
+export const purgeDeviceHealthLogs = async (): Promise<number> => {
+  let totalDeleted = 0;
+  const batchSize = 10000;
+  while (true) {
+    const result = await query(
+      `DELETE FROM device_health_logs WHERE id IN (
+        SELECT id FROM device_health_logs 
+        WHERE created_at < now() - interval '90 days'
+        LIMIT $1
+      )`,
+      [batchSize]
+    );
+    const deleted = (result as any).rowCount ?? 0;
+    totalDeleted += deleted;
+    if (deleted < batchSize) break;
+  }
+  return totalDeleted;
+};
+
+export const purgeKeywordAlerts = async (): Promise<number> => {
+  let totalDeleted = 0;
+  const batchSize = 10000;
+  while (true) {
+    const result = await query(
+      `DELETE FROM keyword_alerts WHERE id IN (
+        SELECT id FROM keyword_alerts 
+        WHERE created_at < now() - interval '90 days'
+        LIMIT $1
+      )`,
+      [batchSize]
+    );
+    const deleted = (result as any).rowCount ?? 0;
+    totalDeleted += deleted;
+    if (deleted < batchSize) break;
+  }
+  return totalDeleted;
+};
+
 export const runAllRetentionPurges = async (): Promise<void> => {
   try {
-    const [loc, st, audit] = await Promise.all([
+    const [loc, st, audit, comm, mood, health, keywords] = await Promise.all([
       purgeLocationLogs(),
       purgeScreenTimeLogs(),
       purgeAuditLogs(),
+      purgeCommunicationLogs(),
+      purgeMoodLogs(),
+      purgeDeviceHealthLogs(),
+      purgeKeywordAlerts(),
     ]);
     logger.info(
-      `Retention purge complete: ${loc} location rows, ${st} screen-time rows, ${audit} audit rows deleted`
+      `Retention purge complete: ${loc} location, ${st} screen-time, ${audit} audit, ${comm} communication, ${mood} mood, ${health} device-health, ${keywords} keyword-alert rows deleted`
     );
   } catch (err) {
     logger.error('Retention purge failed', err);

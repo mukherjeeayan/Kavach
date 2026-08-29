@@ -78,7 +78,7 @@ describe('useRegister', () => {
   it('calls register API on valid data', async () => {
     const mockRegister = vi.mocked(api.register);
     mockRegister.mockResolvedValue({
-      user: { id: 'u2', name: 'New', email: 'new@example.com' },
+      user: { id: 'u2', name: 'New', email: 'new@example.com', role: 'parent' as const },
       child: null,
     });
 

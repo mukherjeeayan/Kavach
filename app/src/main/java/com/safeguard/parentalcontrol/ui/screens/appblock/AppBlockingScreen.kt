@@ -182,7 +182,7 @@ fun AppList(
                     pendingRequest?.let { appToRequestUnblock = it }
                 }
             )
-            Divider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 0.5.dp)
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 0.5.dp)
         }
     }
 

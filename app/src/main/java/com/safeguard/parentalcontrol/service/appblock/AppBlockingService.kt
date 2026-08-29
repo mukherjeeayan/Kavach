@@ -24,8 +24,10 @@ import com.safeguard.parentalcontrol.data.local.entity.ScheduledLockEntity
 import com.safeguard.parentalcontrol.repository.appblock.AppBlockingRepository
 import com.safeguard.parentalcontrol.repository.phase1.Phase1Repository
 import com.safeguard.parentalcontrol.security.SafeGuardDeviceAdminReceiver
+import com.safeguard.parentalcontrol.security.ScreenshotDetector
 import com.safeguard.parentalcontrol.security.TamperDetector
 import com.safeguard.parentalcontrol.security.TamperState
+import com.safeguard.parentalcontrol.data.remote.api.Phase2Api
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -76,6 +78,11 @@ class AppBlockingService : Service() {
 
     @Inject
     lateinit var phase1Repository: Phase1Repository
+
+    @Inject
+    lateinit var phase2Api: Phase2Api
+
+    private var screenshotDetector: ScreenshotDetector? = null
 
     private val serviceScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     private var monitoringJob: Job? = null
@@ -182,6 +189,18 @@ class AppBlockingService : Service() {
         startTamperDetection()
         startLockNotificationWatch()
 
+        // Start screenshot detection
+        try {
+            screenshotDetector = ScreenshotDetector(
+                context = this,
+                phase2Api = phase2Api,
+                deviceId = getDeviceIdentifier()
+            )
+            screenshotDetector?.start()
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to start screenshot detector", e)
+        }
+
         // Report the current device-admin state on every (re)start so
         // the server's "protected" flag stays fresh even if the
         // enable/disable broadcast was missed (e.g. while offline).
@@ -216,6 +235,10 @@ class AppBlockingService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
+        // Stop screenshot detection
+        try {
+            screenshotDetector?.stop()
+        } catch (_: Exception) {}
         // Clean up coroutine scope to avoid leaks
         monitoringJob?.cancel()
         tamperCheckJob?.cancel()
@@ -280,6 +303,12 @@ class AppBlockingService : Service() {
                                 (todayUsageSeconds[currentForegroundPackage] ?: 0) >=
                                     limitMinutes * 60
                             } ?: false
+
+                        // Notify screenshot detector if a restricted app is active
+                        val isRestricted = blockedPackages.contains(currentForegroundPackage) || overDailyLimit || lockActive
+                        screenshotDetector?.setRestrictedPackageActive(
+                            if (isRestricted) currentForegroundPackage else null
+                        )
 
                         if (lockActive) {
                             // Scheduled lock window: allow only the
@@ -350,11 +379,31 @@ class AppBlockingService : Service() {
 
     /**
      * Bring the user back to the home screen by removing the blocked
-     * app from recents.  This is a "soft kill" that doesn't require
-     * root — the app appears to close naturally.
+     * app from recents. Shows a blocking overlay explaining why the
+     * app is blocked, then navigates to home.
      */
     private fun killBlockedApp(activityManager: ActivityManager, packageName: String) {
-        Log.i(TAG, "Blocking app: $packageName — moving task to back")
+        Log.i(TAG, "Blocking app: $packageName — showing overlay and removing task")
+
+        // Launch the blocking overlay activity
+        try {
+            val appName = blockedPackages.find { it == packageName }?.let {
+                // Try to get app name from package manager
+                val appInfo = packageManager.getApplicationInfo(packageName, 0)
+                packageManager.getApplicationLabel(appInfo).toString()
+            } ?: packageName
+
+            val overlayIntent = android.content.Intent(this, BlockedAppOverlayActivity::class.java).apply {
+                putExtra(BlockedAppOverlayActivity.EXTRA_APP_NAME, appName)
+                putExtra(BlockedAppOverlayActivity.EXTRA_BLOCK_REASON, "Blocked by parent")
+                flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or
+                        android.content.Intent.FLAG_ACTIVITY_NO_ANIMATION or
+                        android.content.Intent.FLAG_ACTIVITY_NO_HISTORY
+            }
+            startActivity(overlayIntent)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to launch overlay, falling back to home", e)
+        }
 
         // Remove from recent tasks so the child can't just switch back
         val appTasks = activityManager.appTasks
@@ -370,9 +419,9 @@ class AppBlockingService : Service() {
         }
 
         // Navigate back to our app or the launcher
-        val homeIntent = Intent(Intent.ACTION_MAIN).apply {
-            addCategory(Intent.CATEGORY_HOME)
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        val homeIntent = android.content.Intent(android.content.Intent.ACTION_MAIN).apply {
+            addCategory(android.content.Intent.CATEGORY_HOME)
+            flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
         }
         startActivity(homeIntent)
     }

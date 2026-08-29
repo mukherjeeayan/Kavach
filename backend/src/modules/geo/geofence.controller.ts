@@ -51,3 +51,13 @@ export const checkGeofences = async (req: Request, res: Response, next: NextFunc
     respond(res, 200, { violations }, req);
   } catch (err) { next(err); }
 };
+
+export const checkGeofencesForChild = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { latitude, longitude } = req.body;
+    const data = await geofenceService.checkGeofencesForChild(
+      req.user!.userId, req.params.childId, latitude, longitude
+    );
+    respond(res, 200, data, req);
+  } catch (err) { next(err); }
+};

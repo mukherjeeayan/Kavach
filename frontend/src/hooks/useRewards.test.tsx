@@ -18,10 +18,13 @@ function createWrapper() {
 
 const baseRewardCatalogItem = {
   id: 'r1',
+  parent_id: 'parent-1',
   name: 'Extra Playtime',
   description: '30 minutes of extra screen time',
   cost_points: 100,
-  icon: '??',
+  icon: '🎮',
+  is_active: true,
+  created_at: '2026-01-01T00:00:00Z',
 };
 
 describe('useRewardCatalog', () => {
@@ -60,7 +63,7 @@ describe('useCreateRewardItem', () => {
   });
 
   it('calls createRewardItem on mutate', async () => {
-    vi.mocked(api.createRewardItem).mockResolvedValue({ id: 'r2', ...baseRewardCatalogItem } as never);
+    vi.mocked(api.createRewardItem).mockResolvedValue({ ...baseRewardCatalogItem, id: 'r2' });
 
     const { result } = renderHook(() => useCreateRewardItem(), { wrapper: createWrapper() });
 
@@ -138,7 +141,16 @@ describe('useRedemptions', () => {
   });
 
   it('fetches redemptions when childId is provided', async () => {
-    const mockRedemptions = [{ id: 'red1', reward_id: 'r1', points_cost: 100, status: 'pending' }];
+    const mockRedemptions = [{
+      id: 'red1',
+      child_id: 'child-1',
+      reward_id: 'r1',
+      points_spent: 100,
+      status: 'PENDING' as const,
+      parent_notes: null,
+      redeemed_at: '2026-08-20T10:00:00Z',
+      resolved_at: null,
+    }];
     vi.mocked(api.fetchRedemptions).mockResolvedValue(mockRedemptions);
 
     const { result } = renderHook(() => useRedemptions('child-1'), { wrapper: createWrapper() });

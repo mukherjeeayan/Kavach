@@ -30,7 +30,7 @@ describe('GeofencePage', () => {
 
   it('displays when geofences are fetched', async () => {
     vi.mocked(api.fetchGeofences).mockResolvedValue([
-      { id: 'gf-1', name: 'Home Zone', latitude: 13.0827, longitude: 80.2707, radius_meters: 500, zone_type: 'HOME', alert_on_entry: true, alert_on_exit: true, is_active: true, created_at: '2026-08-20T00:00:00Z', updated_at: '2026-08-20T00:00:00Z' },
+      { id: 'gf-1', child_id: 'child-1', device_id: null, name: 'Home Zone', latitude: 13.0827, longitude: 80.2707, radius_meters: 500, zone_type: 'HOME', alert_on_entry: true, alert_on_exit: true, is_active: true, created_at: '2026-08-20T00:00:00Z', updated_at: '2026-08-20T00:00:00Z' },
     ]);
 
     const { result } = renderHook(() => useGeofences('child-1'), {

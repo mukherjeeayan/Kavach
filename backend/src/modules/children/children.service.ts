@@ -12,6 +12,7 @@ export interface ChildProfile {
   parent_id: string;
   name: string;
   birth_date: string | null;
+  phone: string | null;
   daily_screen_time_limit_minutes: number | null;
   created_at: string;
   updated_at: string;
@@ -211,11 +212,11 @@ export const listChildren = async (
     parentId,
   ]);
   const result = await query(
-    `SELECT id, parent_id, name, birth_date, daily_screen_time_limit_minutes, created_at, updated_at
-     FROM children
-     WHERE parent_id = $1
-     ORDER BY created_at ASC
-     LIMIT $2 OFFSET $3`,
+     `SELECT id, parent_id, name, birth_date, phone, daily_screen_time_limit_minutes, created_at, updated_at
+      FROM children
+      WHERE parent_id = $1
+      ORDER BY created_at ASC
+      LIMIT $2 OFFSET $3`,
     [parentId, limit, toOffset(page, limit)]
   );
   return { items: result.rows, total: count.rows[0].total };
@@ -230,9 +231,9 @@ export const createChild = async (
   birthDate?: string
 ): Promise<ChildProfile> => {
   const result = await query(
-    `INSERT INTO children (parent_id, name, birth_date)
-     VALUES ($1, $2, $3)
-     RETURNING id, parent_id, name, birth_date, daily_screen_time_limit_minutes, created_at, updated_at`,
+     `INSERT INTO children (parent_id, name, birth_date)
+      VALUES ($1, $2, $3)
+      RETURNING id, parent_id, name, birth_date, phone, daily_screen_time_limit_minutes, created_at, updated_at`,
     [parentId, name.trim(), birthDate || null]
   );
   const child = result.rows[0];
@@ -261,10 +262,10 @@ export const setScreenTimeLimit = async (
 ): Promise<ChildProfile> => {
   await verifyChildBelongsToParent(childId, parentId);
   const result = await query(
-    `UPDATE children
-     SET daily_screen_time_limit_minutes = $1, updated_at = now()
-     WHERE id = $2
-     RETURNING id, parent_id, name, birth_date, daily_screen_time_limit_minutes, created_at, updated_at`,
+     `UPDATE children
+      SET daily_screen_time_limit_minutes = $1, updated_at = now()
+      WHERE id = $2
+      RETURNING id, parent_id, name, birth_date, phone, daily_screen_time_limit_minutes, created_at, updated_at`,
     [limitMinutes, childId]
   );
   const child = result.rows[0];
@@ -357,8 +358,8 @@ export const getChild = async (
 ): Promise<ChildProfile> => {
   await verifyChildBelongsToParent(childId, parentId);
   const result = await query(
-    `SELECT id, parent_id, name, birth_date, daily_screen_time_limit_minutes, created_at, updated_at
-     FROM children WHERE id = $1`,
+     `SELECT id, parent_id, name, birth_date, phone, daily_screen_time_limit_minutes, created_at, updated_at
+      FROM children WHERE id = $1`,
     [childId]
   );
   return result.rows[0];
@@ -375,12 +376,12 @@ export const updateChild = async (
 ): Promise<ChildProfile> => {
   await verifyChildBelongsToParent(childId, parentId);
   const result = await query(
-    `UPDATE children
-     SET name = COALESCE($3, name),
-         birth_date = COALESCE($4, birth_date),
-         updated_at = now()
-     WHERE id = $1 AND parent_id = $2
-     RETURNING id, parent_id, name, birth_date, daily_screen_time_limit_minutes, created_at, updated_at`,
+     `UPDATE children
+      SET name = COALESCE($3, name),
+          birth_date = COALESCE($4, birth_date),
+          updated_at = now()
+      WHERE id = $1 AND parent_id = $2
+      RETURNING id, parent_id, name, birth_date, phone, daily_screen_time_limit_minutes, created_at, updated_at`,
     [childId, parentId, input.name?.trim() ?? null, input.birth_date ?? null]
   );
   const child = result.rows[0];
@@ -415,4 +416,33 @@ export const deleteChild = async (
   });
 
   await query(`DELETE FROM children WHERE id = $1 AND parent_id = $2`, [childId, parentId]);
+};
+
+/**
+ * Set or update the child's phone number.
+ */
+export const setChildPhone = async (
+  parentId: string,
+  childId: string,
+  phone: string | null
+): Promise<ChildProfile> => {
+  await verifyChildBelongsToParent(childId, parentId);
+  const result = await query(
+    `UPDATE children
+     SET phone = $1, updated_at = now()
+     WHERE id = $2
+     RETURNING id, parent_id, name, birth_date, phone, daily_screen_time_limit_minutes, created_at, updated_at`,
+    [phone, childId]
+  );
+  const child = result.rows[0];
+
+  await writeAuditLog({
+    actorId: parentId,
+    targetChildId: childId,
+    action: 'SET_CHILD_PHONE',
+    resourceType: 'children',
+    details: { phone: phone ? '***' : null },
+  });
+
+  return child;
 };

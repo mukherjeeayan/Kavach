@@ -40,3 +40,16 @@ export const updateGeofenceSchema = z.object({
 
 export type CreateGeofenceInput = z.infer<typeof createGeofenceSchema>;
 export type UpdateGeofenceInput = z.infer<typeof updateGeofenceSchema>;
+
+export const checkGeofenceSchema = z.object({
+  latitude: z
+    .number({ required_error: 'latitude is required' })
+    .min(-90)
+    .max(90),
+  longitude: z
+    .number({ required_error: 'longitude is required' })
+    .min(-180)
+    .max(180),
+});
+
+export type CheckGeofenceInput = z.infer<typeof checkGeofenceSchema>;

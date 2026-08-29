@@ -27,11 +27,8 @@ if /i "%mode%"==production (
 
 echo.
 echo Generating secure JWT secrets...
-:: Generate 64-char secret using .NET random
-for /f %%i in ('powershell -Command "[convert]::ToBase64String([byte[]]::new(32)) -replace ''''\'/''\'/''\'/g | Select-Object -First 1"') do set "jwt_secret=%%i"
-:: Simpler: just use a fixed approach
-set "jwt_secret=aVCxEyzdtTSKULquYcGoQrJZWAbFnIeR"
-set "jwt_refresh_secret=ikZwNpLjuTnxFIOzHWKJybaGeURQPCoA"
+for /f "delims=" %%i in ('powershell -Command "$bytes = New-Object byte[] 48; [System.Security.Cryptography.RandomNumberGenerator]::Fill($bytes); [Convert]::ToBase64String($bytes) -replace '[+/=]' | ForEach-Object { $_.Substring(0,64) }"') do set "jwt_secret=%%i"
+for /f "delims=" %%i in ('powershell -Command "$bytes = New-Object byte[] 48; [System.Security.Cryptography.RandomNumberGenerator]::Fill($bytes); [Convert]::ToBase64String($bytes) -replace '[+/=]' | ForEach-Object { $_.Substring(0,64) }"') do set "jwt_refresh_secret=%%i"
 
 echo.
 echo Database setup:

@@ -3,7 +3,9 @@ package com.safeguard.parentalcontrol.ui.screens.deviceui
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Apps
+import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.EmojiEmotions
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
@@ -39,7 +41,9 @@ private enum class DeviceTab(
     ScreenTime("Screen time", Icons.Filled.Timer),
     Locks("Locks", Icons.Filled.Lock),
     Location("Location", Icons.Filled.LocationOn),
+    LocationHistory("History", Icons.Filled.History),
     Contacts("Contacts", Icons.Filled.Person),
+    Communication("Calls", Icons.Filled.Call),
     SOS("SOS", Icons.Filled.Warning),
     Mood("Mood", Icons.Filled.EmojiEmotions),
     Rewards("Rewards", Icons.Filled.Star),
@@ -75,7 +79,9 @@ fun DeviceDashboardScreen() {
             DeviceTab.ScreenTime -> ScreenTimeScreen(modifier = contentModifier)
             DeviceTab.Locks -> LocksScreen(modifier = contentModifier)
             DeviceTab.Location -> LocationScreen(modifier = contentModifier)
+            DeviceTab.LocationHistory -> LocationHistoryScreen(modifier = contentModifier)
             DeviceTab.Contacts -> ContactsScreen(modifier = contentModifier)
+            DeviceTab.Communication -> CommunicationLogsScreen(modifier = contentModifier)
             DeviceTab.SOS -> SosScreen()
             DeviceTab.Mood -> MoodScreen()
             DeviceTab.Rewards -> RewardsScreen()

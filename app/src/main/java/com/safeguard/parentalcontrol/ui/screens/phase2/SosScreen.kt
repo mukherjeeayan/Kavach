@@ -28,6 +28,8 @@ fun SosScreen(
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    var showConfirmDialog by remember { mutableStateOf(false) }
+    var pendingLocation by remember { mutableStateOf<Pair<Double?, Double?>?>(null) }
 
     val locationClient = remember { LocationServices.getFusedLocationProviderClient(context) }
 
@@ -54,6 +56,33 @@ fun SosScreen(
             }
             else -> {}
         }
+    }
+
+    if (showConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { showConfirmDialog = false },
+            title = { Text("Send SOS Alert?") },
+            text = {
+                Text("This will send an emergency alert with your current location to your parent. Continue?")
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showConfirmDialog = false
+                        pendingLocation?.let { (lat, lng) ->
+                            viewModel.triggerSos(lat, lng)
+                        }
+                    }
+                ) {
+                    Text("Send SOS")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showConfirmDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 
     Scaffold(
@@ -116,11 +145,11 @@ fun SosScreen(
                             }
                             @Suppress("MissingPermission")
                             locationClient.lastLocation.addOnSuccessListener { location ->
-                                val lat = location?.latitude
-                                val lng = location?.longitude
-                                viewModel.triggerSos(lat, lng)
+                                pendingLocation = location?.latitude to location?.longitude
+                                showConfirmDialog = true
                             }.addOnFailureListener {
-                                viewModel.triggerSos(null, null)
+                                pendingLocation = null to null
+                                showConfirmDialog = true
                             }
                         },
                         modifier = Modifier.size(200.dp),

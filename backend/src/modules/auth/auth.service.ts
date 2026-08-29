@@ -28,6 +28,9 @@ export interface AuthUser {
 
 const bcryptRounds = parseInt(process.env.BCRYPT_SALT_ROUNDS || '12', 10);
 
+const MAX_LOGIN_ATTEMPTS = 10;
+const LOGIN_LOCKOUT_MINUTES = 15;
+
 export interface RegisterInput {
   name: string;
   email: string;
@@ -124,16 +127,42 @@ export const login = async (
   password: string
 ): Promise<{ token: string; refresh_token: string; user: AuthUser; child: ChildProfile | null }> => {
   const result = await query(
-    `SELECT id, email, name, password_hash FROM parents WHERE email = $1`,
+    `SELECT id, email, name, password_hash, failed_login_attempts, login_locked_until
+     FROM parents WHERE email = $1`,
     [email.toLowerCase().trim()]
   );
 
   const row = result.rows[0];
+
+  // Check account lockout
+  if (row?.login_locked_until && new Date(row.login_locked_until).getTime() > Date.now()) {
+    throw new UnauthorizedError('Account temporarily locked due to too many failed attempts. Try again later.');
+  }
+
   const valid = row && password && (await bcrypt.compare(password, row.password_hash));
 
   if (!valid) {
+    // Increment failed attempts and lock if threshold reached
+    if (row) {
+      await query(
+        `UPDATE parents
+         SET failed_login_attempts = failed_login_attempts + 1,
+             login_locked_until = CASE
+               WHEN failed_login_attempts + 1 >= $2 THEN now() + ($3 || ' minutes')::interval
+               ELSE login_locked_until
+             END
+         WHERE id = $1`,
+        [row.id, MAX_LOGIN_ATTEMPTS, LOGIN_LOCKOUT_MINUTES.toString()]
+      );
+    }
     throw new UnauthorizedError('Invalid email or password');
   }
+
+  // Successful login clears failure counters
+  await query(
+    `UPDATE parents SET failed_login_attempts = 0, login_locked_until = NULL WHERE id = $1`,
+    [row.id]
+  );
 
   const user: AuthUser = { id: row.id, email: row.email, name: row.name };
   logger.info(`Parent logged in: ${user.id}`);

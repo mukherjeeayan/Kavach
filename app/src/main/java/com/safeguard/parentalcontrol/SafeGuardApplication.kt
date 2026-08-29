@@ -24,24 +24,33 @@ class SafeGuardApplication : Application(), Configuration.Provider {
 
     override fun onCreate() {
         super.onCreate()
-        // Initialize Timber, Analytics, and Crashlytics here if applicable (excluding debug environments)
         startEnforcement()
     }
 
     private fun startEnforcement() {
-        // Enforcement and sync only make sense after the parent
-        // completed onboarding (real device + child IDs exist).
         if (!onboardingStore.isOnboarded()) {
             return
         }
-        // Start the foreground enforcement/location services, the
-        // periodic sync, and the realtime rule push on every app
-        // launch (boot is handled by BootReceiver).
         SafeGuardMessagingService.ensureChannel(this)
         SafeGuardMessagingService.syncToken(this)
+
+        // Start foreground enforcement services
         SyncScheduler.startEnforcementService(this)
+        SyncScheduler.startLocationTrackingService(this)
         SyncScheduler.startLocationService(this)
+
+        // Schedule periodic background workers
         SyncScheduler.schedule(this)
+        SyncScheduler.scheduleSyncQueue(this)
+        SyncScheduler.scheduleSecurityScan(this)
+        SyncScheduler.scheduleDeviceHealth(this)
+        SyncScheduler.scheduleCommunicationSync(this)
+        SyncScheduler.scheduleOnlyWork(this)
+        SyncScheduler.scheduleDailyLimit(this)
+        SyncScheduler.scheduleBedTime(this)
+        SyncScheduler.schedulePickupReminder(this)
+
+        // Start realtime rule push
         realtimeRulesClient.start()
     }
 

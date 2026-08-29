@@ -5,7 +5,7 @@ import { Router } from 'express';
 import { authenticateJWT, requireRole } from '../../middleware/auth';
 import { validate, validateParams, validateQuery } from '../../middleware/validate';
 import { uuidParams, childAndUuidParams, paginationQuery } from '../../middleware/params';
-import { createGeofenceSchema, updateGeofenceSchema } from './geofence.dto';
+import { createGeofenceSchema, updateGeofenceSchema, checkGeofenceSchema } from './geofence.dto';
 import * as geofenceController from './geofence.controller';
 
 const router = Router({ mergeParams: true });
@@ -27,6 +27,14 @@ router.post(
   validateParams(uuidParams('childId')),
   validate(createGeofenceSchema),
   geofenceController.createGeofence
+);
+
+// POST /api/v1/children/:childId/geofences/check
+router.post(
+  '/:childId/geofences/check',
+  validateParams(uuidParams('childId')),
+  validate(checkGeofenceSchema),
+  geofenceController.checkGeofencesForChild
 );
 
 // PUT /api/v1/children/:childId/geofences/:geofenceId

@@ -19,16 +19,22 @@ function createWrapper() {
 const mockIntegrations = [
   {
     id: '1',
+    parent_id: 'parent-1',
+    integration_type: 'CALENDAR' as const,
     name: 'Google Calendar',
     config: {},
     is_active: true,
+    last_sync_at: null,
     created_at: '2026-01-01T00:00:00Z',
   },
   {
     id: '2',
+    parent_id: 'parent-1',
+    integration_type: 'CUSTOM' as const,
     name: 'Spotify',
     config: {},
     is_active: false,
+    last_sync_at: null,
     created_at: '2026-01-01T00:00:00Z',
   },
 ];
@@ -69,9 +75,12 @@ describe('useCreateIntegration', () => {
   it('creates integration and invalidates queries', async () => {
     const mockIntegration = {
       id: '3',
+      parent_id: 'parent-1',
+      integration_type: 'CALENDAR' as const,
       name: 'Apple Calendar',
       config: {},
       is_active: true,
+      last_sync_at: null,
       created_at: '2026-01-01T00:00:00Z',
     };
     vi.mocked(api.createIntegration).mockResolvedValue(mockIntegration);
@@ -79,19 +88,28 @@ describe('useCreateIntegration', () => {
     const { result } = renderHook(() => useCreateIntegration(), { wrapper: createWrapper() });
 
     await act(async () => {
-      await result.current.mutateAsync({ name: 'Apple Calendar', config: {}, is_active: true });
+      await result.current.mutateAsync({ integration_type: 'CALENDAR', name: 'Apple Calendar' });
     });
 
     expect(api.createIntegration).toHaveBeenCalled();
   });
 
   it('invalidates integrations query on success', async () => {
-    vi.mocked(api.createIntegration).mockResolvedValue({ id: '3', name: 'Test', config: {}, is_active: true, created_at: '2026-01-01T00:00:00Z' });
+    vi.mocked(api.createIntegration).mockResolvedValue({
+      id: '3',
+      parent_id: 'parent-1',
+      integration_type: 'CALENDAR',
+      name: 'Test',
+      config: {},
+      is_active: true,
+      last_sync_at: null,
+      created_at: '2026-01-01T00:00:00Z',
+    });
 
     const { result } = renderHook(() => useCreateIntegration(), { wrapper: createWrapper() });
 
     await act(async () => {
-      await result.current.mutateAsync({ name: 'Test', config: {}, is_active: true });
+      await result.current.mutateAsync({ integration_type: 'CALENDAR', name: 'Test' });
     });
 
     expect(api.createIntegration).toHaveBeenCalled();
@@ -106,9 +124,12 @@ describe('useUpdateIntegration', () => {
   it('updates integration and invalidates queries', async () => {
     const mockIntegration = {
       id: '1',
+      parent_id: 'parent-1',
+      integration_type: 'CALENDAR' as const,
       name: 'Updated Google Calendar',
       config: {},
       is_active: true,
+      last_sync_at: null,
       created_at: '2026-01-01T00:00:00Z',
     };
     vi.mocked(api.updateIntegration).mockResolvedValue(mockIntegration);
@@ -147,7 +168,16 @@ describe('useSyncIntegration', () => {
   });
 
   it('syncs integration and invalidates queries', async () => {
-    vi.mocked(api.syncIntegration).mockResolvedValue(undefined);
+    vi.mocked(api.syncIntegration).mockResolvedValue({
+      id: '1',
+      parent_id: 'parent-1',
+      integration_type: 'CALENDAR',
+      name: 'Google Calendar',
+      config: {},
+      is_active: true,
+      last_sync_at: null,
+      created_at: '2026-01-01T00:00:00Z',
+    });
 
     const { result } = renderHook(() => useSyncIntegration(), { wrapper: createWrapper() });
 

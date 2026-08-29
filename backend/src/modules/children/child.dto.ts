@@ -45,6 +45,14 @@ export const screenTimeLimitSchema = z.object({
     .nullable(),
 });
 
+export const setChildPhoneSchema = z.object({
+  phone: z
+    .string()
+    .max(32, 'phone cannot exceed 32 characters')
+    .nullable(),
+});
+
 export type CreateChildInput = z.infer<typeof createChildSchema>;
 export type UpdateChildInput = z.infer<typeof updateChildSchema>;
 export type ScreenTimeLimitInput = z.infer<typeof screenTimeLimitSchema>;
+export type SetChildPhoneInput = z.infer<typeof setChildPhoneSchema>;

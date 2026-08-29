@@ -18,15 +18,51 @@ function createWrapper() {
 
 const mockDeviceHealth = {
   id: '1',
-  child_id: 'child-1',
   device_id: 'device-1',
-  risk_level: 'LOW',
-  last_seen: '2026-08-20T10:00:00Z',
+  battery_level: 85,
+  is_charging: false,
+  storage_total_mb: 64000,
+  storage_free_mb: 32000,
+  is_rooted: false,
+  is_developer_options: false,
+  is_usb_debugging: false,
+  os_version: '14',
+  app_version: '1.0.0',
+  recorded_at: '2026-08-20T10:00:00Z',
+  created_at: '2026-08-20T10:00:00Z',
 };
 
 const mockHistory = [
-  { id: '1', action: 'check_in', timestamp: '2026-08-20T08:00:00Z' },
-  { id: '2', action: 'check_out', timestamp: '2026-08-20T17:00:00Z' },
+  {
+    id: '1',
+    device_id: 'device-1',
+    battery_level: 85,
+    is_charging: false,
+    storage_total_mb: 64000,
+    storage_free_mb: 32000,
+    is_rooted: false,
+    is_developer_options: false,
+    is_usb_debugging: false,
+    os_version: '14',
+    app_version: '1.0.0',
+    recorded_at: '2026-08-20T08:00:00Z',
+    created_at: '2026-08-20T08:00:00Z',
+  },
+  {
+    id: '2',
+    device_id: 'device-1',
+    battery_level: 70,
+    is_charging: true,
+    storage_total_mb: 64000,
+    storage_free_mb: 30000,
+    is_rooted: false,
+    is_developer_options: false,
+    is_usb_debugging: false,
+    os_version: '14',
+    app_version: '1.0.0',
+    recorded_at: '2026-08-20T17:00:00Z',
+    created_at: '2026-08-20T17:00:00Z',
+  },
 ];
 
 describe('useDeviceHealth', () => {

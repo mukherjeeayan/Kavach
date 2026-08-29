@@ -4,6 +4,19 @@ import react from '@vitejs/plugin-react'
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          'vendor-query': ['@tanstack/react-query'],
+          'vendor-redux': ['redux', 'react-redux'],
+          'vendor-maps': ['mapbox-gl'],
+          'vendor-charts': ['recharts'],
+        },
+      },
+    },
+  },
   server: {
     port: 5173,
     proxy: {

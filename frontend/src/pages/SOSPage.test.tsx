@@ -30,7 +30,7 @@ describe('SOSPage', () => {
 
   it('displays when SOS events are fetched', async () => {
     vi.mocked(api.fetchSosEvents).mockResolvedValue([
-      { id: 'evt-1', child_id: 'child-1', trigger_method: 'button', status: 'ACTIVE', created_at: '2026-08-20T10:00:00Z' },
+      { id: 'evt-1', child_id: 'child-1', device_id: 'dev-1', latitude: 13.0827, longitude: 80.2707, battery_level: 85, trigger_method: 'BUTTON', status: 'ACTIVE', acknowledged_at: null, resolved_at: null, notes: null, created_at: '2026-08-20T10:00:00Z' },
     ]);
 
     const { result } = renderHook(() => useSosEvents('child-1'), {

@@ -105,6 +105,9 @@ fun OnboardingScreen(
                 isLoading = isLoading,
                 onRegister = { name ->
                     selectedChild?.let { viewModel.registerDevice(it, name) }
+                },
+                onPhoneProvided = { phone ->
+                    viewModel.updateChildPhone(phone)
                 }
             )
             OnboardingStep.Pin -> PinStep(

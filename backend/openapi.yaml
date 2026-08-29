@@ -97,7 +97,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Envelope"
-        "400":
+        "422":
           description: Validation error
           content:
             application/json:
@@ -224,7 +224,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Envelope"
 
-/auth/password:
+  /auth/password:
     put:
       tags: [Auth]
       summary: Change user password
@@ -344,7 +344,7 @@ paths:
         "401":
           description: Invalid PIN or lockout
 
-/auth/biometric-token:
+  /auth/biometric-token:
     post:
       tags: [Auth]
       summary: Get short-lived biometric token (15 min, rate-limited)
@@ -1561,7 +1561,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Envelope"
-        "400":
+        "422":
           description: Validation error
         "401":
           description: Unauthorized
@@ -1623,7 +1623,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Envelope"
-        "400":
+        "422":
           description: Validation error
         "401":
           description: Unauthorized
@@ -1669,7 +1669,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Envelope"
-        "400":
+        "422":
           description: Validation error
         "401":
           description: Unauthorized
@@ -1752,7 +1752,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Envelope"
-        "400":
+        "422":
           description: Validation error
         "401":
           description: Unauthorized
@@ -1854,7 +1854,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Envelope"
-        "400":
+        "422":
           description: Validation error
         "401":
           description: Unauthorized
@@ -1883,7 +1883,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Envelope"
-        "400":
+        "422":
           description: Validation error
         "401":
           description: Unauthorized
@@ -2041,7 +2041,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Envelope"
-        "400":
+        "422":
           description: Validation error
         "401":
           description: Unauthorized
@@ -2066,7 +2066,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Envelope"
-        "400":
+        "422":
           description: Validation error
         "401":
           description: Unauthorized
@@ -2098,7 +2098,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Envelope"
-        "400":
+        "422":
           description: Validation error
         "401":
           description: Unauthorized
@@ -2144,7 +2144,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Envelope"
-        "400":
+        "422":
           description: Validation error
         "401":
           description: Unauthorized
@@ -2262,7 +2262,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Envelope"
-        "400":
+        "422":
           description: Validation error
         "401":
           description: Unauthorized
@@ -2295,7 +2295,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Envelope"
-        "400":
+        "422":
           description: Validation error
         "401":
           description: Unauthorized
@@ -2382,7 +2382,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Envelope"
-        "400":
+        "422":
           description: Validation error
         "401":
           description: Unauthorized
@@ -2574,7 +2574,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Envelope"
-        "400":
+        "422":
           description: Validation error
         "401":
           description: Unauthorized
@@ -2606,7 +2606,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Envelope"
-        "400":
+        "422":
           description: Validation error
         "401":
           description: Unauthorized
@@ -2679,7 +2679,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Envelope"
-        "400":
+        "422":
           description: Validation error
         "401":
           description: Unauthorized
@@ -2770,7 +2770,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Envelope"
-        "400":
+        "422":
           description: Validation error
         "401":
           description: Unauthorized
@@ -2830,7 +2830,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Envelope"
-        "400":
+        "422":
           description: Validation error or insufficient points
         "401":
           description: Unauthorized
@@ -2914,7 +2914,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Envelope"
-        "400":
+        "422":
           description: Validation error
         "401":
           description: Unauthorized
@@ -2941,7 +2941,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Envelope"
-        "400":
+        "422":
           description: Validation error
         "401":
           description: Unauthorized
@@ -3032,7 +3032,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Envelope"
-        "400":
+        "422":
           description: Validation error
         "401":
           description: Unauthorized
@@ -3108,7 +3108,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Envelope"
-        "400":
+        "422":
           description: Validation error
         "401":
           description: Unauthorized
@@ -3140,7 +3140,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Envelope"
-        "400":
+        "422":
           description: Validation error
         "401":
           description: Unauthorized

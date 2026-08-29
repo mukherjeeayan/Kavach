@@ -6,7 +6,7 @@ import { Router } from 'express';
 import { authenticateJWT, requireRole } from '../../middleware/auth';
 import { validate, validateParams, validateQuery } from '../../middleware/validate';
 import { uuidParams, paginationQuery, childAndUuidParams } from '../../middleware/params';
-import { createChildSchema, updateChildSchema, screenTimeLimitSchema } from './child.dto';
+import { createChildSchema, updateChildSchema, screenTimeLimitSchema, setChildPhoneSchema } from './child.dto';
 import * as childrenController from './children.controller';
 import * as deviceController from '../devices/device.controller';
 
@@ -95,6 +95,14 @@ router.delete(
   '/:childId/guardians/:guardianId',
   validateParams(childAndUuidParams('guardianId')),
   childrenController.removeGuardian
+);
+
+// PUT /api/v1/children/:childId/phone — set or clear the child's phone number
+router.put(
+  '/:childId/phone',
+  validateParams(uuidParams('childId')),
+  validate(setChildPhoneSchema),
+  childrenController.setChildPhone
 );
 
 export default router;

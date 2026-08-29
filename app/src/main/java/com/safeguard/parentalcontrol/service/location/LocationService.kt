@@ -7,6 +7,8 @@ import android.app.NotificationManager
 import android.app.Service
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.os.Build
 import android.os.IBinder
 import android.util.Log
@@ -17,14 +19,21 @@ import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
+import com.safeguard.parentalcontrol.data.local.OnboardingStore
 import com.safeguard.parentalcontrol.data.local.dao.LocationDao
 import com.safeguard.parentalcontrol.data.local.entity.LocationEntryEntity
+import com.safeguard.parentalcontrol.data.remote.api.ParentalApi
+import com.safeguard.parentalcontrol.data.remote.dto.LocationUploadRequest
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import java.util.TimeZone
 import javax.inject.Inject
 
 /**
@@ -41,6 +50,12 @@ class LocationService : Service() {
     @Inject
     lateinit var locationDao: LocationDao
 
+    @Inject
+    lateinit var parentalApi: ParentalApi
+
+    @Inject
+    lateinit var onboardingStore: OnboardingStore
+
     private lateinit var fusedClient: FusedLocationProviderClient
     @Volatile
     private var isTracking = false
@@ -51,16 +66,20 @@ class LocationService : Service() {
             val location = result.lastLocation ?: return
             serviceScope.launch {
                 try {
-                    locationDao.insert(
-                        LocationEntryEntity(
-                            latitude = location.latitude,
-                            longitude = location.longitude,
-                            accuracyM = location.accuracy.toDouble().takeIf { it > 0 },
-                            speedKmh = if (location.hasSpeed()) location.speed * 3.6 else null,
-                            recordedAt = location.time.takeIf { it > 0 } ?: System.currentTimeMillis()
-                        )
+                    val entity = LocationEntryEntity(
+                        latitude = location.latitude,
+                        longitude = location.longitude,
+                        accuracyM = location.accuracy.toDouble().takeIf { it > 0 },
+                        speedKmh = if (location.hasSpeed()) location.speed * 3.6 else null,
+                        recordedAt = location.time.takeIf { it > 0 } ?: System.currentTimeMillis()
                     )
+                    locationDao.insert(entity)
                     Log.d(TAG, "Location buffered (${location.latitude}, ${location.longitude})")
+
+                    // Attempt immediate upload if network available
+                    if (hasNetworkConnectivity()) {
+                        uploadLocation(location)
+                    }
                 } catch (e: Exception) {
                     Log.e(TAG, "Failed to buffer location", e)
                 }
@@ -104,9 +123,6 @@ class LocationService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
-        // Stop the upload coroutine as well, otherwise the scope keeps
-        // running (and may still hold the last location) after the
-        // service is torn down.
         serviceScope.cancel()
         if (isTracking) {
             try {
@@ -118,6 +134,38 @@ class LocationService : Service() {
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
+
+    private suspend fun uploadLocation(location: android.location.Location) {
+        val deviceId = onboardingStore.deviceId ?: return
+        try {
+            val request = LocationUploadRequest(
+                latitude = location.latitude,
+                longitude = location.longitude,
+                accuracy_m = location.accuracy.toDouble().takeIf { it > 0 },
+                speed_kmh = if (location.hasSpeed()) location.speed * 3.6 else null,
+                recorded_at = isoUtc(location.time.takeIf { it > 0 } ?: System.currentTimeMillis())
+            )
+            val response = parentalApi.uploadLocation(deviceId, request)
+            if (response.isSuccessful) {
+                Log.d(TAG, "Location uploaded to server")
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Location upload failed (will retry via sync worker): ${e.message}")
+        }
+    }
+
+    private fun isoUtc(epochMs: Long): String {
+        val format = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US)
+        format.timeZone = TimeZone.getTimeZone("UTC")
+        return format.format(Date(epochMs))
+    }
+
+    private fun hasNetworkConnectivity(): Boolean {
+        val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val network = cm.activeNetwork ?: return false
+        val caps = cm.getNetworkCapabilities(network) ?: return false
+        return caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+    }
 
     private fun createNotificationChannel() {
         val channel = NotificationChannel(

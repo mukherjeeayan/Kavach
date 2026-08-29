@@ -2,6 +2,7 @@ import 'dotenv/config';
 import express, { Application } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import compression from 'compression';
 import crypto from 'crypto';
 import cookieParser from 'cookie-parser';
 import fs from 'fs';
@@ -34,7 +35,23 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 // Security Middleware
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:", "https://api.mapbox.com", "https://*.tile.openstreetmap.org"],
+      connectSrc: ["'self'", "ws:", "wss:"],
+      fontSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      mediaSrc: ["'self'"],
+      frameSrc: ["'none'"],
+    }
+  },
+  hsts: { maxAge: 31536000, includeSubDomains: true, preload: true },
+}));
+app.use(compression());
 // With credentials:true the origin can never be '*' — echo the request
 // origin in development, and require an explicit allowlist in production.
 app.use(cors({
@@ -108,7 +125,10 @@ try {
       }
       try {
         const jwt = require('jsonwebtoken');
-        jwt.verify(authHeader.slice(7), process.env.JWT_SECRET!);
+        const decoded = jwt.verify(authHeader.slice(7), process.env.JWT_SECRET!) as { role?: string };
+        if (decoded.role !== 'parent') {
+          return res.status(403).json({ error: 'Access denied' });
+        }
         next();
       } catch {
         return res.status(401).json({ error: 'Invalid or expired token' });
@@ -120,6 +140,14 @@ try {
     customSiteTitle: 'Kavach API Docs',
   }));
   app.get('/api/docs.json', (_req, res) => res.json(openapiSpec));
+
+  // Cache headers for API documentation assets
+  app.use('/api/docs', (req, res, next) => {
+    if (req.path.match(/\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$/)) {
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    }
+    next();
+  });
 } catch {
   // Silently skip if spec missing (dev convenience, not a hard dep)
 }
@@ -155,6 +183,15 @@ import { securityDeviceRouter, securityParentRouter } from './modules/security/s
 import selfHarmRoutes from './modules/selfharm/selfHarm.routes';
 import { voiceCommandDeviceRouter, voiceCommandParentRouter } from './modules/voicecommands/voiceCommand.routes';
 import integrationRoutes from './modules/integrations/integration.routes';
+// ── New feature routes ───────────────────────────────────────────
+import communicationLogRoutes from './modules/communication-log/communication-log.routes';
+import dailyLocationSummaryRoutes from './modules/location/daily-location-summary.routes';
+import statisticsRoutes from './modules/statistics/statistics.routes';
+// ── Settings, Notifications, Reports, Alerts Routes ─────────────
+import settingsRoutes from './modules/settings/settings.routes';
+import notificationsRoutes from './modules/notifications/notifications.routes';
+import reportsRoutes from './modules/reports/reports.routes';
+import alertsRoutes from './modules/alerts/alerts.routes';
 
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/children/:childId/apps', appBlockingRoutes);
@@ -195,6 +232,15 @@ app.use('/api/v1/children', selfHarmRoutes);
 app.use('/api/v1/devices', voiceCommandDeviceRouter);
 app.use('/api/v1/children', voiceCommandParentRouter);
 app.use('/api/v1/integrations', integrationRoutes);
+// New feature routes
+app.use('/api/v1/children', communicationLogRoutes);
+app.use('/api/v1/children', dailyLocationSummaryRoutes);
+app.use('/api/v1/children', statisticsRoutes);
+// Settings, Notifications, Reports, Alerts
+app.use('/api/v1/settings', settingsRoutes);
+app.use('/api/v1/notifications', notificationsRoutes);
+app.use('/api/v1/reports', reportsRoutes);
+app.use('/api/v1/children', alertsRoutes);
 
 
 // Global Error Handler (must be last)
@@ -205,7 +251,9 @@ app.use((req, res) => {
   res.status(404).json({
     success: false,
     data: {},
-    error: `Route ${req.method} ${req.path} not found`,
+    error: process.env.NODE_ENV === 'production' 
+      ? 'Route not found' 
+      : `Route ${req.method} ${req.path} not found`,
     timestamp: new Date().toISOString(),
     request_id: req.headers['x-request-id'] || 'unknown',
   });

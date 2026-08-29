@@ -16,20 +16,29 @@ function createWrapper() {
   );
 }
 
-const mockKeywords = [
-  {
-    id: '1',
-    name: 'screen time',
-    category: 'app_usage',
-    created_at: '2026-01-01T00:00:00Z',
-  },
-  {
-    id: '2',
-    name: 'bedtime',
-    category: 'routine',
-    created_at: '2026-01-01T00:00:00Z',
-  },
-];
+const mockKeywords = {
+  data: [
+    {
+      id: '1',
+      category: 'CUSTOM' as const,
+      keyword: 'screen time',
+      severity: 'LOW' as const,
+      language: 'en',
+      is_active: true,
+      created_at: '2026-01-01T00:00:00Z',
+    },
+    {
+      id: '2',
+      category: 'CUSTOM' as const,
+      keyword: 'bedtime',
+      severity: 'LOW' as const,
+      language: 'en',
+      is_active: true,
+      created_at: '2026-01-01T00:00:00Z',
+    },
+  ],
+  meta: { page: 1, limit: 50, total: 2, total_pages: 1 },
+};
 
 describe('useKeywords', () => {
   beforeEach(() => {
@@ -78,8 +87,11 @@ describe('useCreateKeyword', () => {
   it('creates keyword and invalidates queries', async () => {
     const mockKeyword = {
       id: '3',
-      name: 'new keyword',
-      category: 'app_usage',
+      category: 'CUSTOM' as const,
+      keyword: 'new keyword',
+      severity: 'LOW' as const,
+      language: 'en',
+      is_active: true,
       created_at: '2026-01-01T00:00:00Z',
     };
     vi.mocked(api.createKeyword).mockResolvedValue(mockKeyword);
@@ -87,19 +99,27 @@ describe('useCreateKeyword', () => {
     const { result } = renderHook(() => useCreateKeyword(), { wrapper: createWrapper() });
 
     await act(async () => {
-      await result.current.mutateAsync({ name: 'new keyword', category: 'app_usage' });
+      await result.current.mutateAsync({ category: 'CUSTOM', keyword: 'new keyword' });
     });
 
     expect(api.createKeyword).toHaveBeenCalled();
   });
 
   it('invalidates keywords query on success', async () => {
-    vi.mocked(api.createKeyword).mockResolvedValue({ id: '3', name: 'Test', category: 'app_usage', created_at: '2026-01-01T00:00:00Z' });
+    vi.mocked(api.createKeyword).mockResolvedValue({
+      id: '3',
+      category: 'CUSTOM',
+      keyword: 'Test',
+      severity: 'LOW',
+      language: 'en',
+      is_active: true,
+      created_at: '2026-01-01T00:00:00Z',
+    });
 
     const { result } = renderHook(() => useCreateKeyword(), { wrapper: createWrapper() });
 
     await act(async () => {
-      await result.current.mutateAsync({ name: 'Test', category: 'app_usage' });
+      await result.current.mutateAsync({ category: 'CUSTOM', keyword: 'Test' });
     });
 
     expect(api.createKeyword).toHaveBeenCalled();

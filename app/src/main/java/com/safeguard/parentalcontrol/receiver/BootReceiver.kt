@@ -27,6 +27,11 @@ class BootReceiver : BroadcastReceiver() {
                 Log.w("BootReceiver", "Failed to start enforcement service", e)
             }
             try {
+                SyncScheduler.startLocationTrackingService(context)
+            } catch (e: Exception) {
+                Log.w("BootReceiver", "Failed to start location tracking service", e)
+            }
+            try {
                 SyncScheduler.startLocationService(context)
             } catch (e: Exception) {
                 Log.w("BootReceiver", "Failed to start location service", e)
@@ -35,6 +40,31 @@ class BootReceiver : BroadcastReceiver() {
                 SyncScheduler.schedule(context)
             } catch (e: Exception) {
                 Log.w("BootReceiver", "Failed to schedule sync", e)
+            }
+            try {
+                SyncScheduler.scheduleSyncQueue(context)
+            } catch (e: Exception) {
+                Log.w("BootReceiver", "Failed to schedule sync queue", e)
+            }
+            try {
+                SyncScheduler.scheduleOnlyWork(context)
+            } catch (e: Exception) {
+                Log.w("BootReceiver", "Failed to schedule OnlyWorkWorker", e)
+            }
+            try {
+                SyncScheduler.scheduleDailyLimit(context)
+            } catch (e: Exception) {
+                Log.w("BootReceiver", "Failed to schedule DailyLimitWorker", e)
+            }
+            try {
+                SyncScheduler.scheduleBedTime(context)
+            } catch (e: Exception) {
+                Log.w("BootReceiver", "Failed to schedule BedTimeWorker", e)
+            }
+            try {
+                SyncScheduler.schedulePickupReminder(context)
+            } catch (e: Exception) {
+                Log.w("BootReceiver", "Failed to schedule PickupReminderWorker", e)
             }
             try {
                 realtimeRulesClient.start()

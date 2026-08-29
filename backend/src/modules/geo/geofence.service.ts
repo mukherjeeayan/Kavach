@@ -272,3 +272,61 @@ function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
 }
+
+/**
+ * Parent-side geofence check: determines which geofence zones a child
+ * is currently in based on lat/lng. Finds the child's primary device
+ * automatically.
+ */
+export const checkGeofencesForChild = async (
+  parentId: string,
+  childId: string,
+  latitude: number,
+  longitude: number
+) => {
+  await verifyChildBelongsToParent(childId, parentId);
+
+  const device = await query(
+    `SELECT id FROM devices WHERE child_id = $1 LIMIT 1`,
+    [childId]
+  );
+  if (device.rows.length === 0) throw new NotFoundError('No device found for this child');
+  const deviceId = device.rows[0].id;
+
+  const geofences = await query(
+    `SELECT id, name, latitude, longitude, radius_meters, zone_type
+     FROM geofences
+     WHERE child_id = $1 AND is_active = TRUE`,
+    [childId]
+  );
+
+  const insideZones: Array<{
+    geofence_id: string;
+    name: string;
+    zone_type: string;
+    distance_meters: number;
+  }> = [];
+
+  for (const gf of geofences.rows) {
+    const distance = haversineDistance(
+      latitude, longitude,
+      Number(gf.latitude), Number(gf.longitude)
+    );
+    if (distance <= Number(gf.radius_meters)) {
+      insideZones.push({
+        geofence_id: gf.id,
+        name: gf.name,
+        zone_type: gf.zone_type,
+        distance_meters: Math.round(distance),
+      });
+    }
+  }
+
+  return {
+    child_id: childId,
+    latitude,
+    longitude,
+    inside_zones: insideZones,
+    total_active_geofences: geofences.rows.length,
+  };
+};

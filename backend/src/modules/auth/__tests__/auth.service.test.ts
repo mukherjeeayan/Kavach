@@ -48,6 +48,12 @@ const mockParentRow = {
   name: 'Test Parent',
 };
 
+const mockParentRowWithLockout = {
+  ...mockParentRow,
+  failed_login_attempts: 0,
+  login_locked_until: null,
+};
+
 beforeEach(() => {
   jest.clearAllMocks();
 });
@@ -152,8 +158,9 @@ describe('auth.service', () => {
     it('should return tokens, user and child for valid credentials', async () => {
       mockedQuery
         .mockResolvedValueOnce({
-          rows: [{ ...mockParentRow, password_hash: 'hashed-password' }],
+          rows: [{ ...mockParentRowWithLockout, password_hash: 'hashed-password' }],
         } as any) // SELECT parents
+        .mockResolvedValueOnce({ rows: [] } as any) // UPDATE clear failed_login_attempts
         .mockResolvedValueOnce({
           rows: [{ id: 'child-id', name: 'Kid', birth_date: '2015-01-01' }],
         } as any); // SELECT children (first child)
@@ -176,8 +183,9 @@ describe('auth.service', () => {
     it('should return a null child when the parent has no children', async () => {
       mockedQuery
         .mockResolvedValueOnce({
-          rows: [{ ...mockParentRow, password_hash: 'hashed-password' }],
+          rows: [{ ...mockParentRowWithLockout, password_hash: 'hashed-password' }],
         } as any) // SELECT parents
+        .mockResolvedValueOnce({ rows: [] } as any) // UPDATE clear failed_login_attempts
         .mockResolvedValueOnce({ rows: [] } as any); // SELECT children (empty)
 
       const bcrypt = jest.requireMock('bcrypt');
@@ -189,9 +197,11 @@ describe('auth.service', () => {
     });
 
     it('should throw UnauthorizedError for a wrong password', async () => {
-      mockedQuery.mockResolvedValueOnce({
-        rows: [{ ...mockParentRow, password_hash: 'hashed-password' }],
-      } as any);
+      mockedQuery
+        .mockResolvedValueOnce({
+          rows: [{ ...mockParentRowWithLockout, password_hash: 'hashed-password' }],
+        } as any) // SELECT parents
+        .mockResolvedValueOnce({ rows: [] } as any); // UPDATE increment failed_login_attempts
       const bcrypt = jest.requireMock('bcrypt');
       bcrypt.compare.mockResolvedValueOnce(false);
 

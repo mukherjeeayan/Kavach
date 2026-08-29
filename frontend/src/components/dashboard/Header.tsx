@@ -62,6 +62,12 @@ export default function Header({ user, onLogout }: HeaderProps) {
           >
             Settings
           </Link>
+          <Link
+            to="/notifications"
+            className="text-sm text-gray-600 dark:text-gray-300 hover:text-primary dark:hover:text-blue-400 transition-colors"
+          >
+            Notifications
+          </Link>
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-primary/10 dark:bg-primary/20 rounded-full flex items-center justify-center">
               <span className="text-sm font-medium text-primary dark:text-blue-400">
@@ -120,6 +126,13 @@ export default function Header({ user, onLogout }: HeaderProps) {
               className="block px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
             >
               Settings
+            </Link>
+            <Link
+              to="/notifications"
+              onClick={() => setMenuOpen(false)}
+              className="block px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
+            >
+              Notifications
             </Link>
             <button
               onClick={() => { setMenuOpen(false); onLogout(); }}

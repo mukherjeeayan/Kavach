@@ -3,14 +3,20 @@
 
 import { z } from 'zod';
 
+const passwordField = z
+  .string({ required_error: 'password is required' })
+  .min(8, 'password must be at least 8 characters')
+  .max(128, 'password cannot exceed 128 characters')
+  .regex(/[A-Z]/, 'password must contain at least one uppercase letter')
+  .regex(/[a-z]/, 'password must contain at least one lowercase letter')
+  .regex(/[0-9]/, 'password must contain at least one digit')
+  .regex(/[^A-Za-z0-9]/, 'password must contain at least one special character');
+
 export const loginSchema = z.object({
   email: z
     .string({ required_error: 'email is required' })
     .email('email must be a valid email address'),
-  password: z
-    .string({ required_error: 'password is required' })
-    .min(8, 'password must be at least 8 characters')
-    .max(128, 'password cannot exceed 128 characters'),
+  password: passwordField,
 });
 
 export const refreshTokenSchema = z.object({
@@ -41,10 +47,7 @@ export const biometricTokenSchema = z.object({
   email: z
     .string({ required_error: 'email is required' })
     .email('email must be a valid email address'),
-  password: z
-    .string({ required_error: 'password is required' })
-    .min(8, 'password must be at least 8 characters')
-    .max(128, 'password cannot exceed 128 characters'),
+  password: passwordField,
 });
 
 export const registerSchema = z.object({
@@ -55,10 +58,7 @@ export const registerSchema = z.object({
   email: z
     .string({ required_error: 'email is required' })
     .email('email must be a valid email address'),
-  password: z
-    .string({ required_error: 'password is required' })
-    .min(8, 'password must be at least 8 characters')
-    .max(128, 'password cannot exceed 128 characters'),
+  password: passwordField,
   child_name: z
     .string({ required_error: 'child_name cannot be empty' })
     .min(1, 'child_name cannot be empty')
@@ -86,10 +86,7 @@ export const resetPasswordSchema = z.object({
   token: z
     .string({ required_error: 'token is required' })
     .min(1, 'token cannot be empty'),
-  new_password: z
-    .string({ required_error: 'new_password is required' })
-    .min(8, 'new_password must be at least 8 characters')
-    .max(128, 'new_password cannot exceed 128 characters'),
+  new_password: passwordField,
 });
 
 export const updateProfileSchema = z.object({
@@ -102,11 +99,8 @@ export const updateProfileSchema = z.object({
 export const changePasswordSchema = z.object({
   current_password: z
     .string({ required_error: 'current_password is required' })
-    .min(1, 'current_password cannot be empty'),
-  new_password: z
-    .string({ required_error: 'new_password is required' })
-    .min(8, 'new_password must be at least 8 characters')
-    .max(128, 'new_password cannot exceed 128 characters'),
+    .min(8, 'current_password must be at least 8 characters'),
+  new_password: passwordField,
 });
 
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
