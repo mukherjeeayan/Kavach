@@ -1,5 +1,5 @@
 -- ====================================================================
--- 013_settings_notifications.sql
+-- 020_settings_notifications.sql
 -- UP MIGRATION
 --
 -- Settings and Notifications feature tables:

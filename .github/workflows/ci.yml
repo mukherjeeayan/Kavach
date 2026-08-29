@@ -47,6 +47,14 @@ jobs:
           cache-dependency-path: backend/package-lock.json
       - run: npm ci
       - run: npm run build
+      - name: Wait for Postgres
+        run: |
+          for i in {1..30}; do
+            pg_isready -h localhost -p 5432 -U testuser && break
+            sleep 1
+          done
+      - name: Run database migrations
+        run: npm run db:migrate
       - run: npm test -- --silent
 
   frontend:
