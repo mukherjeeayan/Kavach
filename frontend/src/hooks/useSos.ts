@@ -1,10 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { fetchSosEvents, acknowledgeSos, resolveSos } from '../services/api';
 
-export const useSosEvents = (childId: string | null, status?: string) =>
+export const useSosEvents = (childId: string | null, status?: string, page = 1, limit = 10) =>
   useQuery({
-    queryKey: ['sos', childId, status],
-    queryFn: () => fetchSosEvents(childId as string, status),
+    queryKey: ['sos', childId, status, page, limit],
+    queryFn: () => fetchSosEvents(childId as string, status, page, limit),
     enabled: !!childId,
   });
 

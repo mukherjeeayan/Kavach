@@ -32,13 +32,16 @@ describe('useSosEvents', () => {
     const mockEvents = [
       { id: 'evt-1', child_id: 'child-1', device_id: 'dev-1', latitude: 13.0827, longitude: 80.2707, battery_level: 85, trigger_method: 'BUTTON' as const, status: 'ACTIVE' as const, acknowledged_at: null, resolved_at: null, notes: null, created_at: '2026-08-20T10:00:00Z' },
     ];
-    vi.mocked(api.fetchSosEvents).mockResolvedValue(mockEvents);
+    vi.mocked(api.fetchSosEvents).mockResolvedValue({
+      data: mockEvents,
+      meta: { page: 1, limit: 10, total: 1, total_pages: 1 },
+    });
 
     const { result } = renderHook(() => useSosEvents('child-1'), { wrapper: createWrapper() });
 
     await waitFor(() => {
       expect(result.current.isSuccess).toBe(true);
-      expect(result.current.data).toEqual(mockEvents);
+      expect(result.current.data?.data).toEqual(mockEvents);
     });
   });
 

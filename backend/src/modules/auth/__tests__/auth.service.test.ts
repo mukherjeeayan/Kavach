@@ -95,7 +95,7 @@ describe('auth.service', () => {
 
       expect(result.token).toBe('signed-token');
       expect(result.refresh_token).toBe('signed-token');
-      expect(result.user).toEqual(mockParentRow);
+      expect(result.user).toEqual({ ...mockParentRow, email_verified: false });
       expect(result.child).toEqual({ id: 'child-id', name: 'Kid', birth_date: '2015-01-01' });
     });
 

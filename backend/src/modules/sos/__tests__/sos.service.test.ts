@@ -78,11 +78,12 @@ describe('sos.service', () => {
     it('should default trigger_method to BUTTON', async () => {
       mockedQuery
         .mockResolvedValueOnce({ rows: [{ id: DEVICE_ID, child_id: CHILD_ID }] } as any)
-        .mockResolvedValueOnce({ rows: [{ id: EVENT_ID, trigger_method: 'BUTTON' }] } as any);
+        .mockResolvedValueOnce({ rows: [{ id: EVENT_ID, trigger_method: 'BUTTON' }] } as any)
+        .mockResolvedValueOnce({ rows: [] } as any); // guardians lookup for push
 
       await sosService.createSosEvent(PARENT_ID, DEVICE_ID, {});
 
-      expect(mockedQuery).toHaveBeenLastCalledWith(
+      expect(mockedQuery).toHaveBeenCalledWith(
         expect.stringContaining('INSERT INTO emergency_sos_events'),
         expect.arrayContaining([DEVICE_ID, CHILD_ID, null, null, null, 'BUTTON'])
       );

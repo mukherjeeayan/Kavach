@@ -5,8 +5,11 @@ import {
   fetchRewardPoints,
   awardPoints,
   fetchRedemptions,
+  fetchRewardRedemptions,
   redeemReward,
+  updateRedemptionStatus,
 } from '../services/api';
+import type { RewardRedemption } from '../types/api';
 
 export const useRewardCatalog = () =>
   useQuery({
@@ -51,7 +54,35 @@ export const useRedeemReward = (childId: string | null) => {
     mutationFn: (rewardId: string) => redeemReward(childId as string, rewardId),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['redemptions', childId] });
+      qc.invalidateQueries({ queryKey: ['rewardRedemptions', childId] });
       qc.invalidateQueries({ queryKey: ['rewardPoints', childId] });
+    },
+  });
+};
+
+export const useRewardRedemptions = (
+  childId: string | null,
+  status?: 'PENDING' | 'APPROVED' | 'REJECTED' | 'FULFILLED'
+) =>
+  useQuery<RewardRedemption[]>({
+    queryKey: ['rewardRedemptions', childId, status ?? 'all'],
+    queryFn: () => fetchRewardRedemptions(childId as string, status),
+    enabled: !!childId,
+  });
+
+export const useUpdateRedemptionStatus = (childId: string | null) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      redemptionId,
+      status,
+    }: {
+      redemptionId: string;
+      status: 'APPROVED' | 'REJECTED' | 'FULFILLED';
+    }) => updateRedemptionStatus(childId as string, redemptionId, status),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['redemptions', childId] });
+      qc.invalidateQueries({ queryKey: ['rewardRedemptions', childId] });
     },
   });
 };

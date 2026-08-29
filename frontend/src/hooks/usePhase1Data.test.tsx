@@ -179,12 +179,15 @@ describe('useChildAlerts', () => {
         acknowledged_at: null,
       },
     ];
-    vi.mocked(api.fetchChildAlerts).mockResolvedValue(mockAlerts);
+    vi.mocked(api.fetchChildAlerts).mockResolvedValue({
+      data: mockAlerts,
+      meta: { page: 1, limit: 20, total: 1, total_pages: 1 },
+    });
 
     const { result } = renderHook(() => useChildAlerts('child-1'), { wrapper: createWrapper() });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(result.current.data).toEqual(mockAlerts);
+    expect(result.current.data?.data).toEqual(mockAlerts);
   });
 });
 

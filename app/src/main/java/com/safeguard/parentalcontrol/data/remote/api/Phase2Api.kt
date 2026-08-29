@@ -10,6 +10,8 @@ import com.safeguard.parentalcontrol.data.remote.dto.MoodLogDto
 import com.safeguard.parentalcontrol.data.remote.dto.SecurityScanReportDto
 import com.safeguard.parentalcontrol.data.remote.dto.SosEventDto
 import com.safeguard.parentalcontrol.data.remote.dto.SosTriggerDto
+import com.safeguard.parentalcontrol.data.remote.dto.UrlAccessRequestDto
+import com.safeguard.parentalcontrol.data.remote.dto.UrlAccessRequestResponseDto
 import com.safeguard.parentalcontrol.data.remote.dto.UrlFilterRuleDto
 import com.safeguard.parentalcontrol.data.remote.dto.VoiceCommandReportDto
 import com.safeguard.parentalcontrol.data.remote.dto.WifiLogReportDto
@@ -78,4 +80,16 @@ interface Phase2Api {
         @Path("deviceId") deviceId: String,
         @Body body: VoiceCommandReportDto
     ): Response<ApiResponse<Unit>>
+
+    @POST("devices/{deviceId}/self-harm-alerts")
+    suspend fun uploadSelfHarmAlert(
+        @Path("deviceId") deviceId: String,
+        @Body body: com.safeguard.parentalcontrol.data.remote.dto.SelfHarmAlertUploadDto
+    ): Response<ApiResponse<Unit>>
+
+    @POST("children/{childId}/url-access-requests")
+    suspend fun requestUrlAccess(
+        @Path("childId") childId: String,
+        @Body body: UrlAccessRequestDto
+    ): Response<ApiResponse<UrlAccessRequestResponseDto>>
 }

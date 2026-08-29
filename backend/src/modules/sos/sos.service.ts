@@ -5,6 +5,7 @@ import { query } from '../../config/database';
 import { NotFoundError } from '../../utils/errors';
 import { verifyChildBelongsToParent } from '../children/children.service';
 import { writeAuditLog } from '../shared/audit.service';
+import { sendPushToAllParents } from '../shared/pushNotificationService';
 
 export interface SosEventInput {
   latitude?: number;
@@ -59,6 +60,17 @@ export const createSosEvent = async (
       longitude: input.longitude,
     },
   });
+
+  await sendPushToAllParents(
+    childId,
+    'SOS Alert',
+    `Emergency SOS triggered (${input.trigger_method ?? 'BUTTON'})`,
+    {
+      type: 'sos',
+      event_id: result.rows[0].id,
+      child_id: childId,
+    }
+  );
 
   return result.rows[0];
 };

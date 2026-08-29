@@ -1,18 +1,29 @@
+import { useState } from 'react';
 import { useSosEvents, useAcknowledgeSos, useResolveSos } from '../../hooks/useSos';
 import { SkeletonList } from '../ui/Skeleton';
+import ConfirmDialog from '../ui/ConfirmDialog';
+import type { SosEvent } from '../../types/api';
 
 interface Props {
   childId: string;
   onError: (msg: string | null) => void;
 }
 
+const SOS_PAGE_SIZE = 10;
+
 export default function EmergencySOS({ childId, onError }: Props) {
-  const { data: events, isLoading } = useSosEvents(childId);
+  const [page, setPage] = useState(1);
+  const [confirmResolve, setConfirmResolve] = useState<SosEvent | null>(null);
+  const { data, isLoading } = useSosEvents(childId, undefined, page, SOS_PAGE_SIZE);
   const acknowledge = useAcknowledgeSos(childId);
   const resolve = useResolveSos(childId);
 
-  const activeEvents = (events ?? []).filter((e) => e.status === 'ACTIVE');
-  const otherEvents = (events ?? []).filter((e) => e.status !== 'ACTIVE');
+  const events = data?.data ?? [];
+  const meta = data?.meta;
+  const totalPages = meta?.total_pages ?? 0;
+
+  const activeEvents = events.filter((e) => e.status === 'ACTIVE');
+  const otherEvents = events.filter((e) => e.status !== 'ACTIVE');
 
   const handleAcknowledge = async (eventId: string) => {
     try {
@@ -28,6 +39,13 @@ export default function EmergencySOS({ childId, onError }: Props) {
     } catch {
       onError('Failed to resolve SOS event');
     }
+  };
+
+  const onConfirmResolve = async () => {
+    if (!confirmResolve) return;
+    const eventId = confirmResolve.id;
+    setConfirmResolve(null);
+    await handleResolve(eventId);
   };
 
   if (isLoading) return <SkeletonList items={2} />;
@@ -56,7 +74,7 @@ export default function EmergencySOS({ childId, onError }: Props) {
       </div>
 
       <div className="p-6">
-        {(events ?? []).length === 0 ? (
+        {events.length === 0 ? (
           <div className="text-center py-8">
             <svg className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -108,7 +126,7 @@ export default function EmergencySOS({ childId, onError }: Props) {
                           Acknowledge
                         </button>
                         <button
-                          onClick={() => handleResolve(event.id)}
+                          onClick={() => setConfirmResolve(event)}
                           disabled={resolve.isPending}
                           className="px-3 py-1.5 text-xs font-medium bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors"
                         >
@@ -147,9 +165,43 @@ export default function EmergencySOS({ childId, onError }: Props) {
                 ))}
               </div>
             )}
+
+            {meta && totalPages > 1 && (
+              <div className="flex justify-center gap-2 pt-2 border-t border-gray-100 dark:border-gray-700">
+                <button
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="px-3 py-1 text-xs border rounded-lg disabled:opacity-50"
+                >
+                  Prev
+                </button>
+                <span className="px-3 py-1 text-xs text-gray-500">
+                  Page {meta.page} of {totalPages}
+                </span>
+                <button
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages}
+                  className="px-3 py-1 text-xs border rounded-lg disabled:opacity-50"
+                >
+                  Next
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
+
+      {confirmResolve && (
+        <ConfirmDialog
+          title="Resolve SOS Event"
+          message="Are you sure you want to resolve this SOS event? This action cannot be undone."
+          confirmLabel="Resolve"
+          cancelLabel="Cancel"
+          variant="danger"
+          onConfirm={onConfirmResolve}
+          onCancel={() => setConfirmResolve(null)}
+        />
+      )}
     </section>
   );
 }

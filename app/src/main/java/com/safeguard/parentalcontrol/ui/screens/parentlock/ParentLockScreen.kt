@@ -14,7 +14,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -29,8 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 import com.safeguard.parentalcontrol.data.local.ParentPinStore
-import com.safeguard.parentalcontrol.security.ScreenshotPrevention.disableScreenshotPrevention
-import com.safeguard.parentalcontrol.security.ScreenshotPrevention.enableScreenshotPrevention
+import com.safeguard.parentalcontrol.security.SecureScreen
 import java.util.concurrent.Executors
 
 /**
@@ -43,15 +41,24 @@ fun ParentLockScreen(
     pinStore: ParentPinStore,
     onUnlocked: () -> Unit
 ) {
+    SecureScreen {
+        ParentLockScreenContent(
+            pinStore = pinStore,
+            onUnlocked = onUnlocked
+        )
+    }
+}
+
+@Composable
+private fun ParentLockScreenContent(
+    pinStore: ParentPinStore,
+    onUnlocked: () -> Unit
+) {
     val context = LocalContext.current
     val activity = context as? FragmentActivity
     val biometricAvailable = remember {
         BiometricManager.from(context).canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG) ==
             BiometricManager.BIOMETRIC_SUCCESS
-    }
-
-    LaunchedEffect(activity) {
-        activity?.enableScreenshotPrevention()
     }
 
     var pin by remember { mutableStateOf("") }

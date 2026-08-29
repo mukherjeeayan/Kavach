@@ -151,9 +151,46 @@ class AppBlockingViewModel @Inject constructor(
     fun requestUnblock(ruleId: String, reason: String) {
         viewModelScope.launch {
             val result = repository.requestUnblock(childId, ruleId, reason)
+            result.onSuccess {
+                _uiEvents.emit(
+                    AppBlockingUiEvent.ShowToast("Unblock request sent to your parent")
+                )
+            }
             result.onFailure { e ->
                 // Surface the error as a toast — never replace the whole
                 // list UI with an error state for a single failed action.
+                _uiEvents.emit(
+                    AppBlockingUiEvent.ShowToast(
+                        e.message ?: "Failed to submit unblock request"
+                    )
+                )
+            }
+        }
+    }
+
+    /**
+     * Resolve a package name to its server-side rule and submit the
+     * unblock request. Used by the blocked-app overlay where the
+     * child only knows the package they tried to launch.
+     */
+    fun requestUnblockByPackage(packageName: String, reason: String) {
+        viewModelScope.launch {
+            val rule = repository.getRuleByPackage(deviceId, packageName)
+            if (rule == null) {
+                _uiEvents.emit(
+                    AppBlockingUiEvent.ShowToast(
+                        "No active block rule found for this app."
+                    )
+                )
+                return@launch
+            }
+            val result = repository.requestUnblock(childId, rule.id, reason)
+            result.onSuccess {
+                _uiEvents.emit(
+                    AppBlockingUiEvent.ShowToast("Unblock request sent to your parent")
+                )
+            }
+            result.onFailure { e ->
                 _uiEvents.emit(
                     AppBlockingUiEvent.ShowToast(
                         e.message ?: "Failed to submit unblock request"

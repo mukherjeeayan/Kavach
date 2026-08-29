@@ -44,10 +44,11 @@ describe('api layer', () => {
         created_at: '2026-08-19T10:00:00.000Z',
       },
     ];
-    mockedGet.mockResolvedValue({ data: envelope({ alerts }) });
+    const paginated = { data: alerts, meta: { page: 1, limit: 20, total: 1, total_pages: 1 } };
+    mockedGet.mockResolvedValue({ data: envelope(paginated) });
     const result = await fetchChildAlerts('child-1');
-    expect(result).toEqual(alerts);
-    expect(apiClient.get).toHaveBeenCalledWith('/children/child-1/alerts');
+    expect(result).toEqual(paginated);
+    expect(apiClient.get).toHaveBeenCalledWith('/children/child-1/alerts?page=1&limit=20');
   });
 
   it('setScreenTimeLimit posts limit_minutes and returns the child', async () => {

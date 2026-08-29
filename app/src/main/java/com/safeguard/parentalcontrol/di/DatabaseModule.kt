@@ -3,11 +3,14 @@ package com.safeguard.parentalcontrol.di
 import android.content.Context
 import androidx.room.Room
 import com.safeguard.parentalcontrol.data.local.dao.AppBlockRuleDao
+import com.safeguard.parentalcontrol.data.local.dao.BehaviorPredictionDao
 import com.safeguard.parentalcontrol.data.local.dao.ContactRuleDao
 import com.safeguard.parentalcontrol.data.local.dao.GeofenceDao
 import com.safeguard.parentalcontrol.data.local.dao.LocationDao
 import com.safeguard.parentalcontrol.data.local.dao.ScheduledLockDao
 import com.safeguard.parentalcontrol.data.local.dao.ScreenTimeDao
+import com.safeguard.parentalcontrol.data.local.dao.SecurityScanDao
+import com.safeguard.parentalcontrol.data.local.dao.SelfHarmAlertDao
 import com.safeguard.parentalcontrol.data.local.dao.SyncQueueDao
 import com.safeguard.parentalcontrol.data.local.dao.UrlFilterDao
 import com.safeguard.parentalcontrol.data.local.db.EncryptedDatabase
@@ -45,4 +48,7 @@ object DatabaseModule {
     @Provides fun provideGeofenceDao(db: SafeGuardDatabase): GeofenceDao = db.geofenceDao()
     @Provides fun provideSyncQueueDao(db: SafeGuardDatabase): SyncQueueDao = db.syncQueueDao()
     @Provides fun provideScheduledLockDao(db: SafeGuardDatabase): ScheduledLockDao = db.scheduledLockDao()
+    @Provides fun provideSecurityScanDao(db: SafeGuardDatabase): SecurityScanDao = db.securityScanDao()
+    @Provides fun provideSelfHarmAlertDao(db: SafeGuardDatabase): SelfHarmAlertDao = db.selfHarmAlertDao()
+    @Provides fun provideBehaviorPredictionDao(db: SafeGuardDatabase): BehaviorPredictionDao = db.behaviorPredictionDao()
 }

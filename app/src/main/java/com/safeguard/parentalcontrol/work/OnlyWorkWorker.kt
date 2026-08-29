@@ -1,51 +1,67 @@
 package com.safeguard.parentalcontrol.work
 
-import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
+import android.content.SharedPreferences
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.safeguard.parentalcontrol.data.local.OnboardingStore
-import com.safeguard.parentalcontrol.data.local.dao.AppBlockRuleDao
+import com.safeguard.parentalcontrol.data.local.ScreenTimeLimitPreferences
 import com.safeguard.parentalcontrol.data.local.dao.ScreenTimeDao
 import com.safeguard.parentalcontrol.notifications.SafeGuardMessagingService
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import androidx.core.content.edit
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 /**
  * Periodic worker that enforces the overall screen time limit.
- * Reads the current day's total usage from Room and sends a
- * notification if it exceeds the configured maximum.
+ * Reads the current day's total usage from Room, sends a notification
+ * when the limit is exceeded, and persists an "overall limit exceeded"
+ * flag that the foreground service reads to start blocking
+ * non-essential apps (the same way it would during a bedtime lock
+ * window).
  */
 @HiltWorker
 class OnlyWorkWorker @AssistedInject constructor(
     @Assisted appContext: Context,
     @Assisted workerParams: WorkerParameters,
     private val screenTimeDao: ScreenTimeDao,
-    private val onboardingStore: OnboardingStore
+    private val onboardingStore: OnboardingStore,
+    private val limitPreferences: ScreenTimeLimitPreferences
 ) : CoroutineWorker(appContext, workerParams) {
 
     override suspend fun doWork(): Result {
-        val childId = onboardingStore.childId ?: return Result.success()
+        if (onboardingStore.deviceId == null) return Result.success()
+        if (!limitPreferences.enabled) {
+            // Limit is off — make sure any stale "exceeded" flag from
+            // a previous day is cleared so the service stops blocking.
+            clearExceededFlag()
+            return Result.success()
+        }
 
         return try {
             val today = dayKey()
             val entries = screenTimeDao.getByDate(today)
             val totalSeconds = entries.sumOf { it.seconds }
             val totalMinutes = totalSeconds / 60
-
-            // Default daily limit: 120 minutes (configurable via server sync)
-            val dailyLimitMinutes = getDailyLimitFromPrefs()
+            val dailyLimitMinutes = limitPreferences.dailyLimitMinutes
 
             if (totalMinutes >= dailyLimitMinutes) {
-                sendLimitNotification(totalMinutes, dailyLimitMinutes)
+                if (!isExceededFlagSet()) {
+                    sendLimitNotification(totalMinutes, dailyLimitMinutes)
+                }
+                setExceededFlag(true)
                 Log.i(TAG, "Screen time limit exceeded: ${totalMinutes}min / ${dailyLimitMinutes}min")
+            } else {
+                // Back under the limit (e.g. after midnight rollover or
+                // a new cap). Clear the flag so the service unblocks.
+                clearExceededFlag()
             }
 
             Result.success()
@@ -55,20 +71,29 @@ class OnlyWorkWorker @AssistedInject constructor(
         }
     }
 
-    private fun getDailyLimitFromPrefs(): Int {
-        val prefs = applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        return prefs.getInt(KEY_DAILY_LIMIT, DEFAULT_DAILY_LIMIT_MINUTES)
+    private fun setExceededFlag(value: Boolean) {
+        exceededPrefs().edit { putBoolean(KEY_EXCEEDED, value) }
     }
+
+    private fun clearExceededFlag() {
+        setExceededFlag(false)
+    }
+
+    private fun isExceededFlagSet(): Boolean =
+        exceededPrefs().getBoolean(KEY_EXCEEDED, false)
+
+    private fun exceededPrefs(): SharedPreferences =
+        applicationContext.getSharedPreferences(PREFS_EXCEEDED, Context.MODE_PRIVATE)
 
     private fun sendLimitNotification(usedMinutes: Int, limitMinutes: Int) {
         val manager = applicationContext.getSystemService(Context.NOTIFICATION_SERVICE)
             as NotificationManager
         SafeGuardMessagingService.ensureChannel(applicationContext)
 
-        val notification = NotificationCompat.Builder(applicationContext, SafeGuardMessagingService.CHANNEL_ID)
+        val notification = NotificationCompat.Builder(applicationContext, SafeGuardMessagingService.CHANNEL_ALERT)
             .setSmallIcon(android.R.drawable.ic_dialog_alert)
             .setContentTitle("Screen time limit reached")
-            .setContentText("You've used ${usedMinutes} minutes today (limit: ${limitMinutes} min).")
+            .setContentText("You've used ${usedMinutes} minutes today (limit: ${limitMinutes} min). Non-essential apps are now locked.")
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)
             .build()
@@ -81,9 +106,13 @@ class OnlyWorkWorker @AssistedInject constructor(
 
     companion object {
         private const val TAG = "OnlyWorkWorker"
-        private const val PREFS_NAME = "safeguard_screen_time_limits"
-        private const val KEY_DAILY_LIMIT = "daily_limit_minutes"
-        private const val DEFAULT_DAILY_LIMIT_MINUTES = 120
         private const val NOTIFICATION_ID = 2001
+
+        // SharedPreferences key the AppBlockingService reads to decide
+        // whether to apply the overall-limit lockdown. Lives in a
+        // separate prefs file so it can be cleared independently of
+        // the user-configured cap.
+        const val PREFS_EXCEEDED = "safeguard_overall_limit"
+        const val KEY_EXCEEDED = "limit_exceeded"
     }
 }

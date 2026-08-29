@@ -276,6 +276,242 @@ paths:
                           revoked:
                             type: integer
 
+  /auth/export-data:
+    get:
+      tags: [Auth]
+      summary: Export all data for the authenticated parent
+      description: |
+        Returns every piece of data the platform holds for the
+        authenticated parent (and their children) as a single JSON
+        document. The response is sent as an `attachment` so browsers
+        download a timestamped file. High-volume time-series tables
+        (location, screen-time, communication logs) are windowed to
+        the last 30 days; deeper history can be requested separately.
+      operationId: exportUserData
+      responses:
+        "200":
+          description: Export payload
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+              description: 'attachment; filename="kavach-export-<timestamp>.json"'
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Envelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          exportedAt:
+                            type: string
+                            format: date-time
+                          parent:
+                            type: object
+                            nullable: true
+                          children:
+                            type: array
+                            items:
+                              type: object
+                          devices:
+                            type: array
+                            items:
+                              type: object
+                          appBlocks:
+                            type: array
+                            items:
+                              type: object
+                          scheduledLocks:
+                            type: array
+                            items:
+                              type: object
+                          contactRules:
+                            type: array
+                            items:
+                              type: object
+                          locationHistory:
+                            type: array
+                            items:
+                              type: object
+                          screenTime:
+                            type: array
+                            items:
+                              type: object
+                          communicationLogs:
+                            type: array
+                            items:
+                              type: object
+                          keywordAlerts:
+                            type: array
+                            items:
+                              type: object
+                          sosEvents:
+                            type: array
+                            items:
+                              type: object
+                          geofences:
+                            type: array
+                            items:
+                              type: object
+                          urlFilters:
+                            type: array
+                            items:
+                              type: object
+                          moodLogs:
+                            type: array
+                            items:
+                              type: object
+                          rewards:
+                            type: array
+                            items:
+                              type: object
+                          securityScans:
+                            type: array
+                            items:
+                              type: object
+                          notifications:
+                            type: array
+                            items:
+                              type: object
+                          consents:
+                            type: array
+                            items:
+                              type: object
+        "401":
+          description: Unauthorized
+
+  /auth/account:
+    delete:
+      tags: [Auth]
+      summary: Permanently delete the authenticated parent's account
+      description: |
+        Confirms the current password and then hard-deletes the
+        parent, every child profile, and every dependent row inside
+        a single transaction. Sessions are cleared because the
+        parent row that owns them is gone. This action is irreversible.
+      operationId: deleteAccount
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [password]
+              properties:
+                password:
+                  type: string
+                  minLength: 1
+      responses:
+        "200":
+          description: Account deleted
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Envelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          message:
+                            type: string
+        "401":
+          description: Incorrect password
+        "404":
+          description: Parent not found
+        "422":
+          description: Validation error
+
+  /auth/push-token:
+    post:
+      tags: [Auth]
+      summary: Register an FCM push token for the authenticated parent
+      operationId: registerPushToken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token:
+                  type: string
+                  description: FCM registration token from the device
+                platform:
+                  type: string
+                  description: android | ios | web
+                  default: android
+      responses:
+        "200":
+          description: Push token registered
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Envelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          registered:
+                            type: boolean
+        "401":
+          description: Unauthorized
+        "422":
+          description: Validation error
+
+  /auth/verify-email:
+    get:
+      tags: [Auth]
+      summary: Verify email address using a token emailed at registration
+      operationId: verifyEmail
+      description: |
+        Unauthenticated. The token in the query string IS the credential —
+        the link is sent to the parent's inbox at registration time and
+        expires 24 hours after issue.
+      parameters:
+        - in: query
+          name: token
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Email verified
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Envelope"
+        "400":
+          description: Invalid or expired verification token
+
+  /auth/resend-verification:
+    post:
+      tags: [Auth]
+      summary: Resend the verification email
+      operationId: resendVerification
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Verification email sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Envelope"
+        "400":
+          description: Email is already verified
+        "401":
+          description: Unauthorized
+        "404":
+          description: User not found
+
   /auth/pin:
     put:
       tags: [Auth]
@@ -3316,6 +3552,8 @@ components:
           format: email
         name:
           type: string
+        email_verified:
+          type: boolean
 
     Child:
       type: object

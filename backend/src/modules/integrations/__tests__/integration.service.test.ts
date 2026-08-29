@@ -130,16 +130,19 @@ describe('integration.service', () => {
 
   describe('syncIntegration', () => {
     it('should update last_sync_at and audit for an active integration', async () => {
-      const syncedRow = { ...integrationRow, last_sync_at: new Date().toISOString() };
-      mockedQuery.mockResolvedValueOnce({ rows: [syncedRow] } as any);
+      const selectedRow = { ...integrationRow, config: {} };
+      mockedQuery
+        .mockResolvedValueOnce({ rows: [selectedRow] } as any)
+        .mockResolvedValueOnce({ rowCount: 1 } as any);
 
       const result = await integrationService.syncIntegration(PARENT_ID, INTEGRATION_ID);
 
-      expect(result.last_sync_at).toBeDefined();
-      expect(mockedQuery).toHaveBeenCalledWith(
-        expect.stringContaining('SET last_sync_at'),
-        [INTEGRATION_ID, PARENT_ID]
-      );
+      expect(result.syncedAt).toBeInstanceOf(Date);
+      // SELECT first, then UPDATE to record last_sync_at / sync_status
+      expect(mockedQuery).toHaveBeenCalledTimes(2);
+      expect(mockedQuery.mock.calls[0][0]).toMatch(/SELECT[\s\S]*FROM integrations/);
+      expect(mockedQuery.mock.calls[1][0]).toMatch(/UPDATE integrations/);
+      expect(mockedQuery.mock.calls[1][0]).toMatch(/last_sync_at\s*=\s*NOW\(\)/);
       expect(mockedAudit.writeAuditLog).toHaveBeenCalledWith(
         expect.objectContaining({ action: 'INTEGRATION_SYNCED' })
       );

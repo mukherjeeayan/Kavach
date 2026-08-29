@@ -5,6 +5,7 @@ import { query } from '../../config/database';
 import { NotFoundError } from '../../utils/errors';
 import { verifyChildBelongsToParent, ensureDeviceBelongsToChild } from '../children/children.service';
 import { writeAuditLog } from '../shared/audit.service';
+import { sendPushToAllParents } from '../shared/pushNotificationService';
 import { toOffset, buildPaginationMeta } from '../../utils/pagination';
 import type { CreateGeofenceInput, UpdateGeofenceInput } from './geofence.dto';
 
@@ -254,6 +255,30 @@ export const checkGeofences = async (
   }
 
   return violations;
+};
+
+/**
+ * Fire-and-forget push notification for any geofence violations the
+ * caller just recorded. Kept as a side effect (best-effort) so the
+ * synchronous checkGeofences() flow doesn't have to await FCM.
+ */
+export const notifyGeofenceViolations = async (
+  childId: string,
+  violations: Array<{ name: string; event_type: 'ENTRY' | 'EXIT' }>
+): Promise<void> => {
+  if (violations.length === 0) return;
+  for (const v of violations) {
+    await sendPushToAllParents(
+      childId,
+      'Geofence Alert',
+      `${v.event_type === 'ENTRY' ? 'Entered' : 'Exited'} ${v.name}`,
+      {
+        type: 'geofence',
+        event_type: v.event_type,
+        child_id: childId,
+      }
+    );
+  }
 };
 
 /**

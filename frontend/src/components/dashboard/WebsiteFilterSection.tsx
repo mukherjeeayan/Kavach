@@ -3,9 +3,11 @@ import {
   useUrlFilters,
   useCreateUrlFilter,
   useDeleteUrlFilter,
+  useUpdateUrlFilter,
 } from '../../hooks/useUrlFilters';
 import { SkeletonTable } from '../ui/Skeleton';
 import ConfirmDialog from '../ui/ConfirmDialog';
+import type { UrlFilterInput, UrlFilterRule } from '../../types/api';
 
 interface Props {
   childId: string;
@@ -14,15 +16,30 @@ interface Props {
 
 const CATEGORIES = ['Social Media', 'Games', 'Adult', 'Shopping', 'Entertainment', 'Custom'];
 
+interface EditState {
+  url: string;
+  category: string;
+  ruleType: 'BLOCK' | 'ALLOW';
+}
+
+const emptyEdit = (rule: UrlFilterRule): EditState => ({
+  url: rule.url_pattern,
+  category: rule.category ?? 'Custom',
+  ruleType: rule.rule_type,
+});
+
 export default function WebsiteFilterSection({ childId, onError }: Props) {
   const [url, setUrl] = useState('');
   const [ruleType, setRuleType] = useState<'BLOCK' | 'ALLOW'>('BLOCK');
   const [category, setCategory] = useState('Custom');
   const [showDeleteId, setShowDeleteId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [edit, setEdit] = useState<EditState | null>(null);
 
   const { data: rules, isLoading } = useUrlFilters(childId);
   const createRule = useCreateUrlFilter(childId);
   const deleteRule = useDeleteUrlFilter(childId);
+  const updateRule = useUpdateUrlFilter(childId);
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,6 +59,34 @@ export default function WebsiteFilterSection({ childId, onError }: Props) {
       setShowDeleteId(null);
     } catch {
       onError('Failed to delete URL rule');
+    }
+  };
+
+  const startEdit = (rule: UrlFilterRule) => {
+    setEditingId(rule.id);
+    setEdit(emptyEdit(rule));
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEdit(null);
+  };
+
+  const saveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingId || !edit || !edit.url.trim()) return;
+    try {
+      await updateRule.mutateAsync({
+        ruleId: editingId,
+        input: {
+          url_pattern: edit.url.trim(),
+          rule_type: edit.ruleType,
+          category: edit.category,
+        } as Partial<UrlFilterInput>,
+      });
+      cancelEdit();
+    } catch {
+      onError('Failed to update URL rule');
     }
   };
 
@@ -120,32 +165,104 @@ export default function WebsiteFilterSection({ childId, onError }: Props) {
               <tbody className="divide-y divide-gray-50 dark:divide-gray-700/50">
                 {(rules ?? []).map((rule) => (
                   <tr key={rule.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
-                    <td className="py-3 text-gray-900 dark:text-white font-mono text-xs max-w-[200px] truncate">
-                      {rule.url_pattern}
-                    </td>
-                    <td className="py-3">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        rule.rule_type === 'BLOCK'
-                          ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                          : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                      }`}>
-                        {rule.rule_type}
-                      </span>
-                    </td>
-                    <td className="py-3 text-gray-500 dark:text-gray-400">{rule.category || '-'}</td>
-                    <td className="py-3">
-                      <span className={`w-2 h-2 rounded-full inline-block ${
-                        rule.is_active ? 'bg-green-500' : 'bg-gray-300'
-                      }`} />
-                    </td>
-                    <td className="py-3 text-right">
-                      <button
-                        onClick={() => setShowDeleteId(rule.id)}
-                        className="text-red-500 hover:text-red-700 text-xs font-medium"
-                      >
-                        Delete
-                      </button>
-                    </td>
+                    {editingId === rule.id && edit ? (
+                      <td colSpan={5} className="py-3">
+                        <form onSubmit={saveEdit} className="flex flex-col sm:flex-row gap-2" data-testid="url-filter-edit-form">
+                          <input
+                            type="text"
+                            aria-label="URL pattern"
+                            value={edit.url}
+                            onChange={(e) => setEdit({ ...edit, url: e.target.value })}
+                            placeholder="URL pattern"
+                            className="flex-1 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-1.5 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                          />
+                          <div className="flex items-center gap-3 px-2 text-sm text-gray-600 dark:text-gray-300">
+                            <label className="flex items-center gap-1">
+                              <input
+                                type="radio"
+                                name={`edit-rule-type-${rule.id}`}
+                                checked={edit.ruleType === 'BLOCK'}
+                                onChange={() => setEdit({ ...edit, ruleType: 'BLOCK' })}
+                              />
+                              Block
+                            </label>
+                            <label className="flex items-center gap-1">
+                              <input
+                                type="radio"
+                                name={`edit-rule-type-${rule.id}`}
+                                checked={edit.ruleType === 'ALLOW'}
+                                onChange={() => setEdit({ ...edit, ruleType: 'ALLOW' })}
+                              />
+                              Allow
+                            </label>
+                          </div>
+                          <select
+                            aria-label="Category"
+                            value={edit.category}
+                            onChange={(e) => setEdit({ ...edit, category: e.target.value })}
+                            className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-1.5 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                          >
+                            {CATEGORIES.map((c) => (
+                              <option key={c} value={c}>{c}</option>
+                            ))}
+                          </select>
+                          <div className="flex gap-2">
+                            <button
+                              type="submit"
+                              disabled={updateRule.isPending || !edit.url.trim()}
+                              className="px-3 py-1.5 bg-primary text-white text-xs font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                            >
+                              {updateRule.isPending ? 'Saving...' : 'Save'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={cancelEdit}
+                              className="px-3 py-1.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 text-xs font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </form>
+                      </td>
+                    ) : (
+                      <>
+                        <td className="py-3 text-gray-900 dark:text-white font-mono text-xs max-w-[200px] truncate">
+                          {rule.url_pattern}
+                        </td>
+                        <td className="py-3">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            rule.rule_type === 'BLOCK'
+                              ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                              : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                          }`}>
+                            {rule.rule_type}
+                          </span>
+                        </td>
+                        <td className="py-3 text-gray-500 dark:text-gray-400">{rule.category || '-'}</td>
+                        <td className="py-3">
+                          <span className={`w-2 h-2 rounded-full inline-block ${
+                            rule.is_active ? 'bg-green-500' : 'bg-gray-300'
+                          }`} />
+                        </td>
+                        <td className="py-3 text-right">
+                          <div className="flex justify-end gap-2">
+                            <button
+                              onClick={() => startEdit(rule)}
+                              aria-label={`Edit ${rule.url_pattern}`}
+                              className="text-blue-500 hover:text-blue-700 text-xs font-medium"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => setShowDeleteId(rule.id)}
+                              className="text-red-500 hover:text-red-700 text-xs font-medium"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </td>
+                      </>
+                    )}
                   </tr>
                 ))}
               </tbody>

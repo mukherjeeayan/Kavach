@@ -40,13 +40,16 @@ describe('useMoodLogs', () => {
 
   it('fetches mood logs when childId is provided', async () => {
     const mockLogs = [baseMoodLog];
-    vi.mocked(api.fetchMoodLogs).mockResolvedValue(mockLogs);
+    vi.mocked(api.fetchMoodLogs).mockResolvedValue({
+      data: mockLogs,
+      meta: { page: 1, limit: 20, total: 1, total_pages: 1 },
+    });
 
     const { result } = renderHook(() => useMoodLogs('child-1'), { wrapper: createWrapper() });
 
     await waitFor(() => {
       expect(result.current.isSuccess).toBe(true);
-      expect(result.current.data).toEqual(mockLogs);
+      expect(result.current.data?.data).toEqual(mockLogs);
     });
   });
 

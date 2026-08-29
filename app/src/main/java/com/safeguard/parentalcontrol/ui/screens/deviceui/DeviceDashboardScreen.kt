@@ -10,21 +10,27 @@ import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import com.safeguard.parentalcontrol.notifications.NotificationHandler
 import com.safeguard.parentalcontrol.ui.screens.appblock.AppBlockingScreen
 import com.safeguard.parentalcontrol.ui.screens.phase2.GeofenceStatusScreen
 import com.safeguard.parentalcontrol.ui.screens.phase2.MoodScreen
@@ -54,12 +60,42 @@ private enum class DeviceTab(
  * Root of the on-device dashboard: bottom navigation between the app
  * blocker and the read-only views for screen time, scheduled locks,
  * location, contact rules, and Phase 2 features.
+ *
+ * On launch, [deepLinkType] is consulted to select a specific tab
+ * (e.g. when a notification deep link brought the user here). Unknown
+ * or null types fall through to the default Apps tab.
  */
 @Composable
-fun DeviceDashboardScreen() {
+fun DeviceDashboardScreen(
+    onOpenSettings: () -> Unit = {},
+    deepLinkType: String? = null,
+    onDeepLinkConsumed: () -> Unit = {}
+) {
     var selectedTab by rememberSaveable { mutableStateOf(DeviceTab.Apps) }
 
+    val targetTab = remember(deepLinkType) {
+        NotificationHandler.targetTabFor(deepLinkType)?.let { label ->
+            DeviceTab.entries.firstOrNull { it.label == label }
+        }
+    }
+    LaunchedEffect(targetTab) {
+        if (targetTab != null) {
+            selectedTab = targetTab
+            onDeepLinkConsumed()
+        }
+    }
+
     Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("SafeGuard") },
+                actions = {
+                    IconButton(onClick = onOpenSettings) {
+                        Icon(Icons.Filled.Settings, contentDescription = "Settings")
+                    }
+                }
+            )
+        },
         bottomBar = {
             NavigationBar {
                 DeviceTab.entries.forEach { tab ->

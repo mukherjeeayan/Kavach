@@ -14,11 +14,22 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.safeguard.parentalcontrol.viewmodel.phase2.SecurityState
 import com.safeguard.parentalcontrol.viewmodel.phase2.SecurityViewModel
+import com.safeguard.parentalcontrol.security.SecureScreen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SecurityScreen(
     viewModel: SecurityViewModel = hiltViewModel()
+) {
+    SecureScreen {
+        SecurityScreenContent(viewModel = viewModel)
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SecurityScreenContent(
+    viewModel: SecurityViewModel
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()

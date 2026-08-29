@@ -82,11 +82,15 @@ export const fetchChildren = async (): Promise<ChildProfile[]> => {
 };
 
 /** Recent tamper/screen-time-limit alerts for a child. */
-export const fetchChildAlerts = async (childId: string): Promise<ChildAlert[]> => {
-  const response = await apiClient.get<ApiResponse<{ alerts: ChildAlert[] }>>(
-    `/children/${childId}/alerts`
+export const fetchChildAlerts = async (
+  childId: string,
+  page = 1,
+  limit = 20
+): Promise<PaginatedResponse<ChildAlert>> => {
+  const response = await apiClient.get<ApiResponse<PaginatedResponse<ChildAlert>>>(
+    `/children/${childId}/alerts?page=${page}&limit=${limit}`
   );
-  return response.data.data?.alerts ?? [];
+  return response.data.data ?? { data: [], meta: { page: 1, limit, total: 0, total_pages: 0 } };
 };
 
 /** Set (or clear, with null) the child's daily screen-time limit in minutes. */
@@ -357,12 +361,18 @@ export const reviewKeywordAlert = async (childId: string, alertId: string): Prom
 
 // ── Phase 2: Emergency SOS ─────────────────────────────────────
 
-export const fetchSosEvents = async (childId: string, status?: string): Promise<SosEvent[]> => {
-  const params = status ? `?status=${status}` : '';
-  const response = await apiClient.get<ApiResponse<SosEvent[]>>(
-    `/children/${childId}/sos${params}`
+export const fetchSosEvents = async (
+  childId: string,
+  status?: string,
+  page = 1,
+  limit = 10
+): Promise<PaginatedResponse<SosEvent>> => {
+  const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+  if (status) params.set('status', status);
+  const response = await apiClient.get<ApiResponse<PaginatedResponse<SosEvent>>>(
+    `/children/${childId}/sos?${params}`
   );
-  return response.data.data ?? [];
+  return response.data.data ?? { data: [], meta: { page: 1, limit, total: 0, total_pages: 0 } };
 };
 
 export const acknowledgeSos = async (childId: string, eventId: string): Promise<SosEvent> => {
@@ -463,11 +473,15 @@ export const deleteKeyword = async (keywordId: string): Promise<void> => {
 
 // ── Phase 3: Mood Tracking ─────────────────────────────────────
 
-export const fetchMoodLogs = async (childId: string): Promise<MoodLog[]> => {
-  const response = await apiClient.get<ApiResponse<MoodLog[]>>(
-    `/children/${childId}/mood`
+export const fetchMoodLogs = async (
+  childId: string,
+  page = 1,
+  limit = 20
+): Promise<PaginatedResponse<MoodLog>> => {
+  const response = await apiClient.get<ApiResponse<PaginatedResponse<MoodLog>>>(
+    `/children/${childId}/mood?page=${page}&limit=${limit}`
   );
-  return response.data.data ?? [];
+  return response.data.data ?? { data: [], meta: { page: 1, limit, total: 0, total_pages: 0 } };
 };
 
 export const fetchMoodSummary = async (childId: string): Promise<{ average: number; count: number } | null> => {
@@ -524,6 +538,29 @@ export const fetchRedemptions = async (childId: string): Promise<RewardRedemptio
     `/children/${childId}/rewards/redemptions`
   );
   return response.data.data ?? [];
+};
+
+export const fetchRewardRedemptions = async (
+  childId: string,
+  status?: 'PENDING' | 'APPROVED' | 'REJECTED' | 'FULFILLED'
+): Promise<RewardRedemption[]> => {
+  const params = status ? `?status=${status}` : '';
+  const response = await apiClient.get<ApiResponse<RewardRedemption[]>>(
+    `/children/${childId}/rewards/redemptions${params}`
+  );
+  return response.data.data ?? [];
+};
+
+export const updateRedemptionStatus = async (
+  childId: string,
+  redemptionId: string,
+  status: 'APPROVED' | 'REJECTED' | 'FULFILLED'
+): Promise<RewardRedemption> => {
+  const response = await apiClient.put<ApiResponse<RewardRedemption>>(
+    `/children/${childId}/rewards/redemptions/${redemptionId}/status`,
+    { status }
+  );
+  return response.data.data!;
 };
 
 export const redeemReward = async (childId: string, rewardId: string): Promise<RewardRedemption> => {

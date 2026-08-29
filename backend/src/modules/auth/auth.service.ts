@@ -6,7 +6,13 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import pool, { query } from '../../config/database';
-import { UnauthorizedError, ConflictError, NotFoundError, ForbiddenError } from '../../utils/errors';
+import {
+  UnauthorizedError,
+  ConflictError,
+  NotFoundError,
+  ForbiddenError,
+  BadRequestError,
+} from '../../utils/errors';
 import {
   signAccessToken,
   signScopedToken,
@@ -16,6 +22,7 @@ import {
   verifyRefreshToken,
 } from '../shared/token.service';
 import { writeAuditLog } from '../shared/audit.service';
+import { sendEmail } from '../shared/email.service';
 import logger from '../../utils/logger';
 
 export { UnauthorizedError };
@@ -24,9 +31,11 @@ export interface AuthUser {
   id: string;
   email: string;
   name: string;
+  email_verified?: boolean;
 }
 
 const bcryptRounds = parseInt(process.env.BCRYPT_SALT_ROUNDS || '12', 10);
+const verificationBcryptRounds = 10;
 
 const MAX_LOGIN_ATTEMPTS = 10;
 const LOGIN_LOCKOUT_MINUTES = 15;
@@ -97,10 +106,23 @@ export const register = async (
 
     await client.query('COMMIT');
 
-    const user: AuthUser = { id: parent.id, email: parent.email, name: parent.name };
+    const user: AuthUser = {
+      id: parent.id,
+      email: parent.email,
+      name: parent.name,
+      email_verified: false,
+    };
     logger.info(`Parent registered: ${user.id}`);
     if (child) {
       logger.info(`Child profile created as part of registration: ${child.id}`);
+    }
+
+    // Issue a verification email. Failures here must not break registration
+    // (the user can resend), so we log and swallow.
+    try {
+      await issueAndSendVerification(user.id, user.email, user.name);
+    } catch (err) {
+      logger.error(`Failed to send verification email to ${user.email}:`, err);
     }
 
     return {
@@ -127,7 +149,7 @@ export const login = async (
   password: string
 ): Promise<{ token: string; refresh_token: string; user: AuthUser; child: ChildProfile | null }> => {
   const result = await query(
-    `SELECT id, email, name, password_hash, failed_login_attempts, login_locked_until
+    `SELECT id, email, name, password_hash, email_verified, failed_login_attempts, login_locked_until
      FROM parents WHERE email = $1`,
     [email.toLowerCase().trim()]
   );
@@ -164,7 +186,12 @@ export const login = async (
     [row.id]
   );
 
-  const user: AuthUser = { id: row.id, email: row.email, name: row.name };
+  const user: AuthUser = {
+    id: row.id,
+    email: row.email,
+    name: row.name,
+    email_verified: row.email_verified === true,
+  };
   logger.info(`Parent logged in: ${user.id}`);
 
   // Surface the first child profile (mirrors the register response) so
@@ -489,12 +516,17 @@ export const resetPassword = async (
 
 export const getMe = async (parentId: string): Promise<AuthUser> => {
   const result = await query(
-    `SELECT id, email, name FROM parents WHERE id = $1`,
+    `SELECT id, email, name, email_verified FROM parents WHERE id = $1`,
     [parentId]
   );
   const row = result.rows[0];
   if (!row) throw new NotFoundError('User not found');
-  return { id: row.id, email: row.email, name: row.name };
+  return {
+    id: row.id,
+    email: row.email,
+    name: row.name,
+    email_verified: row.email_verified === true,
+  };
 };
 
 export const updateProfile = async (
@@ -503,7 +535,7 @@ export const updateProfile = async (
 ): Promise<AuthUser> => {
   const result = await query(
     `UPDATE parents SET name = $1 WHERE id = $2
-     RETURNING id, email, name`,
+     RETURNING id, email, name, email_verified`,
     [name.trim(), parentId]
   );
   if ((result.rowCount ?? 0) === 0) throw new NotFoundError('User not found');
@@ -517,7 +549,12 @@ export const updateProfile = async (
     details: { name: name.trim() },
   });
 
-  return { id: row.id, email: row.email, name: row.name };
+  return {
+    id: row.id,
+    email: row.email,
+    name: row.name,
+    email_verified: row.email_verified === true,
+  };
 };
 
 /**
@@ -586,4 +623,392 @@ export const logoutAll = async (parentId: string): Promise<{ revoked: number }> 
   const revoked = result.rowCount ?? 0;
   logger.info(`Signed out all devices for parent ${parentId}: ${revoked} sessions revoked`);
   return { revoked };
+};
+
+// ---------------------------------------------------------------------------
+// Email verification
+// ---------------------------------------------------------------------------
+
+const VERIFICATION_TTL_HOURS = 24;
+const FRONTEND_URL = process.env.FRONTEND_URL || 'https://kavach.app';
+
+/**
+ * Generate a fresh verification token, persist its bcrypt hash, and email
+ * the raw token to the parent. The raw token is what the user clicks on
+ * in their inbox — only the hash is stored.
+ */
+const issueAndSendVerification = async (
+  userId: string,
+  email: string,
+  name: string
+): Promise<void> => {
+  const rawToken = crypto.randomBytes(32).toString('hex');
+  const tokenHash = await bcrypt.hash(rawToken, verificationBcryptRounds);
+
+  await query(
+    `INSERT INTO email_verifications (user_id, token_hash, expires_at)
+     VALUES ($1, $2, NOW() + INTERVAL '${VERIFICATION_TTL_HOURS} hours')`,
+    [userId, tokenHash]
+  );
+
+  const verifyUrl = `${FRONTEND_URL}/verify-email?token=${rawToken}`;
+  await sendEmail({
+    to: email,
+    subject: 'Kavach — Verify your email address',
+    html: `
+      <h2>Welcome to Kavach, ${name}!</h2>
+      <p>Please confirm your email address to finish setting up your account.</p>
+      <p>This link expires in ${VERIFICATION_TTL_HOURS} hours.</p>
+      <p><a href="${verifyUrl}">Verify my email</a></p>
+      <p>If the link doesn't work, paste this URL into your browser:</p>
+      <p>${verifyUrl}</p>
+    `,
+    text: `Welcome to Kavach, ${name}!\n\nVerify your email by visiting: ${verifyUrl}\n\nThis link expires in ${VERIFICATION_TTL_HOURS} hours.`,
+  });
+};
+
+/**
+ * Verify a parent's email using a raw token from the verification link.
+ * Tokens are stored as bcrypt hashes, so we have to scan all live
+ * (unused, unexpired) tokens and compare with bcrypt.
+ */
+export const verifyEmail = async (
+  rawToken: string
+): Promise<{ message: string }> => {
+  if (!rawToken || typeof rawToken !== 'string') {
+    throw new BadRequestError('Invalid or expired verification token');
+  }
+
+  const result = await query(
+    `SELECT id, user_id, token_hash FROM email_verifications
+     WHERE verified_at IS NULL AND expires_at > NOW()`
+  );
+
+  for (const row of result.rows) {
+    if (await bcrypt.compare(rawToken, row.token_hash)) {
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        // Single-use: mark this token as consumed. We also defensively
+        // burn any other live tokens for the same user so a leaked old
+        // link can never be replayed.
+        const consumed = await client.query(
+          `UPDATE email_verifications
+           SET verified_at = NOW()
+           WHERE id = $1 AND verified_at IS NULL`,
+          [row.id]
+        );
+        if ((consumed.rowCount ?? 0) === 0) {
+          throw new BadRequestError('Invalid or expired verification token');
+        }
+        await client.query(
+          `UPDATE email_verifications
+           SET verified_at = NOW()
+           WHERE user_id = $1 AND verified_at IS NULL AND id <> $2`,
+          [row.user_id, row.id]
+        );
+        await client.query(
+          `UPDATE parents SET email_verified = TRUE WHERE id = $1`,
+          [row.user_id]
+        );
+        await client.query(
+          `INSERT INTO audit_logs (actor_id, action, resource_type, details)
+           VALUES ($1, 'EMAIL_VERIFIED', 'parents', '{}')`,
+          [row.user_id]
+        );
+        await client.query('COMMIT');
+        logger.info(`Email verified for parent ${row.user_id}`);
+        return { message: 'Email verified successfully' };
+      } catch (err) {
+        await client.query('ROLLBACK');
+        throw err;
+      } finally {
+        client.release();
+      }
+    }
+  }
+
+  throw new BadRequestError('Invalid or expired verification token');
+};
+
+/**
+ * Issue a new verification email for a parent who hasn't verified yet.
+ * Rejects parents whose email is already verified.
+ */
+export const resendVerification = async (
+  userId: string
+): Promise<{ message: string }> => {
+  const result = await query(
+    `SELECT id, email, name, email_verified FROM parents WHERE id = $1`,
+    [userId]
+  );
+  const row = result.rows[0];
+  if (!row) {
+    throw new NotFoundError('User not found');
+  }
+  if (row.email_verified === true) {
+    throw new BadRequestError('Email is already verified');
+  }
+
+  await issueAndSendVerification(row.id, row.email, row.name);
+  logger.info(`Verification email resent to parent ${row.id}`);
+  return { message: 'Verification email sent' };
+};
+
+/**
+ * Collect every piece of personal data associated with the parent and
+ * their children into a single JSON document. This is the payload
+ * returned by the GDPR / account-portability endpoint. High-volume
+ * time-series tables (location, screen-time, communication logs) are
+ * windowed to the last 30 days to keep the export bounded; the parent
+ * can request deeper history on demand.
+ *
+ * All sections are queried in parallel so the export latency is
+ * roughly the slowest single query rather than the sum of all of them.
+ */
+export const exportUserData = async (parentId: string): Promise<Record<string, any>> => {
+  const [
+    parent,
+    children,
+    devices,
+    appBlocks,
+    locks,
+    contacts,
+    locations,
+    screenTime,
+    commLogs,
+    keywordAlerts,
+    sosEvents,
+    geofences,
+    urlFilters,
+    moodLogs,
+    rewards,
+    securityScans,
+    notifications,
+    consents,
+  ] = await Promise.all([
+    query(
+      'SELECT id, name, email, phone, email_verified, created_at FROM parents WHERE id = $1',
+      [parentId]
+    ),
+    query('SELECT * FROM children WHERE parent_id = $1', [parentId]),
+    query(
+      'SELECT d.* FROM devices d INNER JOIN children c ON c.id = d.child_id WHERE c.parent_id = $1',
+      [parentId]
+    ),
+    query(
+      'SELECT a.* FROM app_block_rules a INNER JOIN children c ON c.id = a.child_id WHERE c.parent_id = $1',
+      [parentId]
+    ),
+    query(
+      'SELECT s.* FROM scheduled_locks s INNER JOIN children c ON c.id = s.child_id WHERE c.parent_id = $1',
+      [parentId]
+    ),
+    query(
+      'SELECT cr.* FROM contact_rules cr INNER JOIN children c ON c.id = cr.child_id WHERE c.parent_id = $1',
+      [parentId]
+    ),
+    query(
+      `SELECT l.* FROM location_history l INNER JOIN children c ON c.id = l.child_id
+       WHERE c.parent_id = $1 AND l.recorded_at > NOW() - INTERVAL '30 days'`,
+      [parentId]
+    ),
+    query(
+      `SELECT st.* FROM screen_time_logs st INNER JOIN children c ON c.id = st.child_id
+       WHERE c.parent_id = $1 AND st.date > NOW() - INTERVAL '30 days'`,
+      [parentId]
+    ),
+    query(
+      `SELECT cl.* FROM communication_logs cl INNER JOIN children c ON c.id = cl.child_id
+       WHERE c.parent_id = $1 AND cl.created_at > NOW() - INTERVAL '30 days'`,
+      [parentId]
+    ),
+    query(
+      'SELECT ka.* FROM keyword_alerts ka INNER JOIN children c ON c.id = ka.child_id WHERE c.parent_id = $1',
+      [parentId]
+    ),
+    query(
+      'SELECT s.* FROM emergency_sos_events s INNER JOIN children c ON c.id = s.child_id WHERE c.parent_id = $1',
+      [parentId]
+    ),
+    query(
+      'SELECT g.* FROM geofences g INNER JOIN children c ON c.id = g.child_id WHERE c.parent_id = $1',
+      [parentId]
+    ),
+    query(
+      'SELECT u.* FROM url_filters u INNER JOIN children c ON c.id = u.child_id WHERE c.parent_id = $1',
+      [parentId]
+    ),
+    query(
+      'SELECT m.* FROM mood_logs m INNER JOIN children c ON c.id = m.child_id WHERE c.parent_id = $1',
+      [parentId]
+    ),
+    query('SELECT * FROM reward_catalog WHERE parent_id = $1', [parentId]),
+    query(
+      'SELECT s.* FROM security_scans s INNER JOIN children c ON c.id = s.child_id WHERE c.parent_id = $1',
+      [parentId]
+    ),
+    query('SELECT * FROM notifications WHERE user_id = $1', [parentId]),
+    query('SELECT * FROM consent_records WHERE user_id = $1', [parentId]),
+  ]);
+
+  return {
+    exportedAt: new Date().toISOString(),
+    parent: parent.rows[0] || null,
+    children: children.rows,
+    devices: devices.rows,
+    appBlocks: appBlocks.rows,
+    scheduledLocks: locks.rows,
+    contactRules: contacts.rows,
+    locationHistory: locations.rows,
+    screenTime: screenTime.rows,
+    communicationLogs: commLogs.rows,
+    keywordAlerts: keywordAlerts.rows,
+    sosEvents: sosEvents.rows,
+    geofences: geofences.rows,
+    urlFilters: urlFilters.rows,
+    moodLogs: moodLogs.rows,
+    rewards: rewards.rows,
+    securityScans: securityScans.rows,
+    notifications: notifications.rows,
+    consents: consents.rows,
+  };
+};
+
+/**
+ * Permanently delete a parent account and every dependent row in a
+ * single transaction. The caller must re-authenticate by providing
+ * the current password. Children are also removed — all child-scoped
+ * tables reference either children or devices (which themselves
+ * reference children), so the deletes are sequenced child-id-first
+ * to satisfy any non-cascading FKs. The parent row is the last to
+ * go so the audit log can still record `DELETE_ACCOUNT`.
+ */
+export const deleteAccount = async (parentId: string, password: string): Promise<void> => {
+  const result = await query('SELECT password_hash FROM parents WHERE id = $1', [parentId]);
+  if (result.rows.length === 0) {
+    throw new NotFoundError('Parent not found');
+  }
+  const valid = await bcrypt.compare(password, result.rows[0].password_hash);
+  if (!valid) {
+    throw new UnauthorizedError('Incorrect password');
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    // Child-scoped tables — all keyed on child_id.
+    await client.query(
+      `DELETE FROM location_history WHERE child_id IN (SELECT id FROM children WHERE parent_id = $1)`,
+      [parentId]
+    );
+    await client.query(
+      `DELETE FROM screen_time_logs WHERE child_id IN (SELECT id FROM children WHERE parent_id = $1)`,
+      [parentId]
+    );
+    await client.query(
+      `DELETE FROM communication_logs WHERE child_id IN (SELECT id FROM children WHERE parent_id = $1)`,
+      [parentId]
+    );
+    await client.query(
+      `DELETE FROM keyword_alerts WHERE child_id IN (SELECT id FROM children WHERE parent_id = $1)`,
+      [parentId]
+    );
+    await client.query(
+      `DELETE FROM emergency_sos_events WHERE child_id IN (SELECT id FROM children WHERE parent_id = $1)`,
+      [parentId]
+    );
+    await client.query(
+      `DELETE FROM geofences WHERE child_id IN (SELECT id FROM children WHERE parent_id = $1)`,
+      [parentId]
+    );
+    await client.query(
+      `DELETE FROM url_filters WHERE child_id IN (SELECT id FROM children WHERE parent_id = $1)`,
+      [parentId]
+    );
+    await client.query(
+      `DELETE FROM mood_logs WHERE child_id IN (SELECT id FROM children WHERE parent_id = $1)`,
+      [parentId]
+    );
+    await client.query(
+      `DELETE FROM security_scans WHERE child_id IN (SELECT id FROM children WHERE parent_id = $1)`,
+      [parentId]
+    );
+    await client.query(
+      `DELETE FROM app_block_rules WHERE child_id IN (SELECT id FROM children WHERE parent_id = $1)`,
+      [parentId]
+    );
+    await client.query(
+      `DELETE FROM scheduled_locks WHERE child_id IN (SELECT id FROM children WHERE parent_id = $1)`,
+      [parentId]
+    );
+    await client.query(
+      `DELETE FROM contact_rules WHERE child_id IN (SELECT id FROM children WHERE parent_id = $1)`,
+      [parentId]
+    );
+
+    // Devices are owned by children — must die before children.
+    await client.query(
+      `DELETE FROM devices WHERE child_id IN (SELECT id FROM children WHERE parent_id = $1)`,
+      [parentId]
+    );
+
+    // Parent-scoped (non-child) tables.
+    await client.query(`DELETE FROM reward_catalog WHERE parent_id = $1`, [parentId]);
+    await client.query(`DELETE FROM notifications WHERE user_id = $1`, [parentId]);
+    await client.query(`DELETE FROM consent_records WHERE user_id = $1`, [parentId]);
+    await client.query(
+      `DELETE FROM refresh_tokens WHERE parent_id = $1`,
+      [parentId]
+    );
+    await client.query(
+      `DELETE FROM password_reset_tokens WHERE parent_id = $1`,
+      [parentId]
+    );
+
+    // Children go last among child rows so dependent rows can resolve.
+    await client.query(`DELETE FROM children WHERE parent_id = $1`, [parentId]);
+
+    // Record the deletion in the audit log *before* the parent row
+    // itself is removed.
+    await client.query(
+      `INSERT INTO audit_logs (actor_id, action, resource_type, details)
+       VALUES ($1, 'DELETE_ACCOUNT', 'parents', '{}')`,
+      [parentId]
+    );
+
+    // Finally remove the parent.
+    await client.query(`DELETE FROM parents WHERE id = $1`, [parentId]);
+
+    await client.query('COMMIT');
+    logger.info(`Parent account deleted: ${parentId}`);
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+};
+
+/**
+ * Register or update an FCM push token for a parent's device. The
+ * token is the source of truth (unique), so if another account
+ * somehow ended up holding it we re-bind it to this parent.
+ */
+export const registerPushToken = async (
+  userId: string,
+  token: string,
+  platform?: string
+): Promise<{ registered: true }> => {
+  const platformValue = platform ?? 'android';
+  await pool.query(
+    `INSERT INTO push_tokens (user_id, token, platform)
+     VALUES ($1, $2, $3)
+     ON CONFLICT (token) DO UPDATE
+       SET user_id = EXCLUDED.user_id,
+           platform = EXCLUDED.platform`,
+    [userId, token, platformValue]
+  );
+  return { registered: true };
 };

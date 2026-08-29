@@ -305,14 +305,15 @@ class AppBlockingService : Service() {
                             } ?: false
 
                         // Notify screenshot detector if a restricted app is active
-                        val isRestricted = blockedPackages.contains(currentForegroundPackage) || overDailyLimit || lockActive
+                        val isRestricted = blockedPackages.contains(currentForegroundPackage) || overDailyLimit || lockActive || isOverallLimitExceeded()
                         screenshotDetector?.setRestrictedPackageActive(
                             if (isRestricted) currentForegroundPackage else null
                         )
 
-                        if (lockActive) {
-                            // Scheduled lock window: allow only the
-                            // launcher, system UI, settings and ourselves.
+                        if (lockActive || isOverallLimitExceeded()) {
+                            // Lock window OR overall daily limit reached:
+                            // allow only the launcher, system UI, settings
+                            // and ourselves.
                             if (currentForegroundPackage !in lockAllowlist()) {
                                 killBlockedApp(activityManager, currentForegroundPackage)
                             }
@@ -395,6 +396,7 @@ class AppBlockingService : Service() {
 
             val overlayIntent = android.content.Intent(this, BlockedAppOverlayActivity::class.java).apply {
                 putExtra(BlockedAppOverlayActivity.EXTRA_APP_NAME, appName)
+                putExtra(BlockedAppOverlayActivity.EXTRA_PACKAGE_NAME, packageName)
                 putExtra(BlockedAppOverlayActivity.EXTRA_BLOCK_REASON, "Blocked by parent")
                 flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or
                         android.content.Intent.FLAG_ACTIVITY_NO_ANIMATION or
@@ -475,6 +477,25 @@ class AppBlockingService : Service() {
         )?.activityInfo?.packageName
         if (launcher != null) allowlist.add(launcher)
         return allowlist
+    }
+
+    /**
+     * True when the OnlyWorkWorker has flagged that the overall daily
+     * screen-time cap has been reached. Reads a SharedPreferences
+     * flag — cheap enough to call every monitoring tick.
+     */
+    private fun isOverallLimitExceeded(): Boolean {
+        return try {
+            getSharedPreferences(
+                com.safeguard.parentalcontrol.work.OnlyWorkWorker.PREFS_EXCEEDED,
+                Context.MODE_PRIVATE
+            ).getBoolean(
+                com.safeguard.parentalcontrol.work.OnlyWorkWorker.KEY_EXCEEDED,
+                false
+            )
+        } catch (_: Exception) {
+            false
+        }
     }
 
     private fun parseMinutes(hhmm: String): Int? {

@@ -1,16 +1,19 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
 import type { RootState } from '../store/store';
 import { useLogout } from '../hooks/useAuth';
+import { useSettings, useUpdateSettings } from '../hooks/useSettings';
 import apiClient from '../services/apiClient';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 import Toast from '../components/ui/Toast';
-import type { UserSettings, UserSettingsInput } from '../types/api';
+import type { UserSettingsInput } from '../types/api';
 
 export default function SettingsPage() {
   const user = useSelector((state: RootState) => state.auth.user);
   const { handleLogout } = useLogout();
+  const { data: settings, isLoading: settingsLoading } = useSettings();
+  const updateSettings = useUpdateSettings();
 
   const [name, setName] = useState(user?.name ?? '');
   const [currentPassword, setCurrentPassword] = useState('');
@@ -27,28 +30,7 @@ export default function SettingsPage() {
   const [pinError, setPinError] = useState<string | null>(null);
   const [logoutAllStatus, setLogoutAllStatus] = useState<'idle' | 'loading'>('idle');
   const [confirmLogoutAll, setConfirmLogoutAll] = useState(false);
-
-  // Settings state
-  const [settings, setSettings] = useState<UserSettings | null>(null);
-  const [settingsLoading, setSettingsLoading] = useState(true);
-  const [settingsSaving, setSettingsSaving] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
-
-  // Load settings on mount
-  useEffect(() => {
-    const loadSettings = async () => {
-      try {
-        const response = await apiClient.get<{ settings: UserSettings }>('/settings');
-        setSettings(response.data.settings ?? null);
-      } catch {
-        // Settings might not exist yet, will be created on first save
-        setSettings(null);
-      } finally {
-        setSettingsLoading(false);
-      }
-    };
-    loadSettings();
-  }, []);
 
   const handleUpdateName = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -100,27 +82,19 @@ export default function SettingsPage() {
     }
   };
 
-  // Save notification settings
   const handleSaveSettings = async (input: UserSettingsInput) => {
-    setSettingsSaving(true);
     try {
-      const response = await apiClient.put<{ settings: UserSettings }>('/settings', input);
-      setSettings(response.data.settings ?? null);
+      await updateSettings.mutateAsync(input);
       setToast({ message: 'Settings saved successfully', type: 'success' });
     } catch {
       setToast({ message: 'Failed to save settings', type: 'error' });
-    } finally {
-      setSettingsSaving(false);
     }
   };
 
-  // Toggle a setting
   const handleToggle = async (key: keyof UserSettingsInput, value: boolean) => {
     await handleSaveSettings({ [key]: value });
   };
 
-  // Revokes every refresh token server-side; the local session is then
-  // cleared so this device is signed out too.
   const handleLogoutAll = async () => {
     setLogoutAllStatus('loading');
     try {
@@ -130,6 +104,15 @@ export default function SettingsPage() {
     }
     await handleLogout();
   };
+
+  const settingsSaving = updateSettings.isPending;
+  const settingsError = updateSettings.isError;
+
+  useEffect(() => {
+    if (!settingsError) return;
+    setToast({ message: 'Failed to save settings', type: 'error' });
+    updateSettings.reset();
+  }, [settingsError, updateSettings]);
 
   return (
     <div className="min-h-screen bg-background">

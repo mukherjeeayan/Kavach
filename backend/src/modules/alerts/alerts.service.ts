@@ -7,6 +7,7 @@ import { query } from '../../config/database';
 import { NotFoundError } from '../../utils/errors';
 import { toOffset } from '../../utils/pagination';
 import { verifyChildBelongsToParent } from '../children/children.service';
+import { sendPushToAllParents } from '../shared/pushNotificationService';
 import type { AlertsQueryInput } from './alerts.dto';
 
 export interface Alert {
@@ -318,7 +319,21 @@ export const markAsRead = async (
   }
 
   // Re-fetch the updated alert
-  return getAlertById(parentId, childId, alertId);
+  const updated = await getAlertById(parentId, childId, alertId);
+
+  await sendPushToAllParents(
+    childId,
+    'Alert',
+    `${updated.alert_type} acknowledged`,
+    {
+      type: 'alert',
+      alert_id: alertId,
+      alert_type: updated.alert_type,
+      child_id: childId,
+    }
+  );
+
+  return updated;
 };
 
 /**

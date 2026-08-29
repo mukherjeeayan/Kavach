@@ -223,3 +223,96 @@ export const logoutAll = async (req: Request, res: Response, next: NextFunction)
     next(err);
   }
 };
+
+/**
+ * POST /api/v1/auth/push-token
+ * Body: { token, platform? }
+ * Registers an FCM token for the authenticated parent so the
+ * backend can deliver push notifications.
+ */
+export const registerPushToken = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { token, platform } = req.body;
+    const result = await authService.registerPushToken(
+      req.user!.userId,
+      token,
+      platform
+    );
+    respond(res, 200, result, req);
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * GET /api/v1/auth/export-data
+ * Returns every piece of data we hold for the authenticated parent
+ * (and their children) as a single JSON document. The response is
+ * marked `attachment` so browsers download a timestamped file rather
+ * than rendering the JSON inline.
+ */
+export const exportData = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const payload = await authService.exportUserData(req.user!.userId);
+    const filename = `kavach-export-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    respond(res, 200, payload, req);
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * DELETE /api/v1/auth/account
+ * Body: { password }
+ * Confirms the password, then hard-deletes the parent + every
+ * dependent row inside a single transaction. Sessions are cleared
+ * because the parent row that owns them is gone.
+ */
+export const deleteAccount = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    await authService.deleteAccount(req.user!.userId, req.body.password);
+    clearSessionCookies(res);
+    respond(res, 200, { message: 'Account deleted successfully' }, req);
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * GET /api/v1/auth/verify-email?token=...
+ * Consumes a verification token from the link the user clicked in
+ * their inbox. Unauthenticated by design (the link itself is the
+ * credential).
+ */
+export const verifyEmail = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const token = req.query.token;
+    if (typeof token !== 'string' || !token) {
+      return respondError(res, 400, 'Verification token is required', req);
+    }
+    const result = await authService.verifyEmail(token);
+    respond(res, 200, result, req);
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * POST /api/v1/auth/resend-verification
+ * Issues a fresh verification email for the authenticated parent.
+ * Rejects if the parent has already verified their email.
+ */
+export const resendVerification = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const result = await authService.resendVerification(req.user!.userId);
+    respond(res, 200, result, req);
+  } catch (err) {
+    next(err);
+  }
+};

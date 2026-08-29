@@ -5,6 +5,7 @@ import { query } from '../../config/database';
 import { NotFoundError } from '../../utils/errors';
 import { verifyChildBelongsToParent } from '../children/children.service';
 import { writeAuditLog } from '../shared/audit.service';
+import { sendPushToAllParents } from '../shared/pushNotificationService';
 import { toOffset } from '../../utils/pagination';
 
 const ALERT_COLUMNS = `id, child_id, device_id, source_type, detected_keywords, content_snippet, risk_level, is_acknowledged, acknowledged_at, acknowledged_by, created_at`;
@@ -71,6 +72,17 @@ export const acknowledgeAlert = async (
     resourceType: 'self_harm_alerts',
     details: { alert_id: alertId, risk_level: alert.risk_level },
   });
+
+  await sendPushToAllParents(
+    childId,
+    'Safety Alert',
+    `Self-harm alert acknowledged (${alert.risk_level})`,
+    {
+      type: 'self_harm',
+      alert_id: alertId,
+      child_id: childId,
+    }
+  );
 
   return alert;
 };

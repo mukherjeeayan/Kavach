@@ -44,6 +44,13 @@ interface AppBlockingRepository {
     suspend fun requestUnblock(childId: String, ruleId: String, reason: String): Result<AppBlockRuleEntity>
 
     /**
+     * Resolve a device+package combination to its rule id. Lets the
+     * blocked-app overlay submit a request without exposing the
+     * server-side rule id to the UI.
+     */
+    suspend fun getRuleByPackage(deviceId: String, packageName: String): AppBlockRuleEntity?
+
+    /**
      * Notify the server that tampering was detected on this device
      * (root, debugger, etc.). Best-effort — returns success only when
      * the server acknowledged the alert.

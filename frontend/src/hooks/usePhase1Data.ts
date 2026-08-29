@@ -49,10 +49,10 @@ export const useDailyScreenTime = (childId: string | null, date: string) =>
     enabled: !!childId,
   });
 
-export const useChildAlerts = (childId: string | null) =>
+export const useChildAlerts = (childId: string | null, page = 1, limit = 20) =>
   useQuery({
-    queryKey: ['childAlerts', childId],
-    queryFn: () => fetchChildAlerts(childId as string),
+    queryKey: ['childAlerts', childId, page, limit],
+    queryFn: () => fetchChildAlerts(childId as string, page, limit),
     enabled: !!childId,
     refetchInterval: 5 * 60 * 1000,
   });

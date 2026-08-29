@@ -1,8 +1,16 @@
+import { useState } from 'react';
 import { useChildAlerts } from '../../hooks/usePhase1Data';
 import { SkeletonList } from '../ui/Skeleton';
 
+const ALERTS_PAGE_SIZE = 20;
+
 export default function AlertsSection({ childId }: { childId: string | null }) {
-  const alerts = useChildAlerts(childId);
+  const [page, setPage] = useState(1);
+  const alerts = useChildAlerts(childId, page, ALERTS_PAGE_SIZE);
+
+  const items = alerts.data?.data ?? [];
+  const meta = alerts.data?.meta;
+  const totalPages = meta?.total_pages ?? 0;
 
   return (
     <section className="animate-fade-in">
@@ -20,7 +28,7 @@ export default function AlertsSection({ childId }: { childId: string | null }) {
             </p>
           </div>
         )}
-        {!alerts.isLoading && !alerts.isError && alerts.data && alerts.data.length === 0 && (
+        {!alerts.isLoading && !alerts.isError && items.length === 0 && (
           <div className="px-4 py-8 text-center">
             <div className="w-12 h-12 mx-auto mb-3 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center">
               <svg className="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -32,28 +40,51 @@ export default function AlertsSection({ childId }: { childId: string | null }) {
             </p>
           </div>
         )}
-        {!alerts.isLoading && !alerts.isError && (alerts.data ?? []).length > 0 && (
-          <ul className="divide-y divide-gray-200 dark:divide-gray-700">
-            {(alerts.data ?? []).map((alert, i) => (
-              <li key={`${alert.created_at}-${i}`} className="px-4 py-3 flex items-start gap-3">
-                <span
-                  className={`mt-1 inline-block w-2 h-2 rounded-full shrink-0 ${
-                    alert.action === 'TAMPER_ALERT' ? 'bg-red-500' : 'bg-amber-500'
-                  }`}
-                />
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-gray-900 dark:text-white">
-                    {alert.action === 'TAMPER_ALERT'
-                      ? 'Device tamper detected'
-                      : alert.action === 'PER_APP_LIMIT_REACHED'
-                        ? 'Per-app daily limit reached'
-                        : 'Screen-time limit reached'}
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">{formatAlert(alert)}</p>
-                </div>
-              </li>
-            ))}
-          </ul>
+        {!alerts.isLoading && !alerts.isError && items.length > 0 && (
+          <>
+            <ul className="divide-y divide-gray-200 dark:divide-gray-700">
+              {items.map((alert, i) => (
+                <li key={`${alert.created_at}-${i}`} className="px-4 py-3 flex items-start gap-3">
+                  <span
+                    className={`mt-1 inline-block w-2 h-2 rounded-full shrink-0 ${
+                      alert.action === 'TAMPER_ALERT' ? 'bg-red-500' : 'bg-amber-500'
+                    }`}
+                  />
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">
+                      {alert.action === 'TAMPER_ALERT'
+                        ? 'Device tamper detected'
+                        : alert.action === 'PER_APP_LIMIT_REACHED'
+                          ? 'Per-app daily limit reached'
+                          : 'Screen-time limit reached'}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{formatAlert(alert)}</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+            {meta && totalPages > 1 && (
+              <div className="flex justify-center gap-2 px-4 py-3 border-t border-gray-100 dark:border-gray-700">
+                <button
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="px-3 py-1 text-xs border rounded-lg disabled:opacity-50"
+                >
+                  Prev
+                </button>
+                <span className="px-3 py-1 text-xs text-gray-500">
+                  Page {meta.page} of {totalPages}
+                </span>
+                <button
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages}
+                  className="px-3 py-1 text-xs border rounded-lg disabled:opacity-50"
+                >
+                  Next
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
     </section>

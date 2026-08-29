@@ -204,4 +204,12 @@ class AppBlockingRepositoryImpl @Inject constructor(
             false
         }
     }
+
+    override suspend fun getRuleByPackage(deviceId: String, packageName: String): AppBlockRuleEntity? {
+        return try {
+            appBlockRuleDao.getRuleByPackage(deviceId, packageName)
+        } catch (_: Exception) {
+            null
+        }
+    }
 }

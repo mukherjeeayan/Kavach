@@ -37,10 +37,17 @@
         android:gravity="center" />
 
     <Button
-        android:id="@+id/btnGoHome"
+        android:id="@+id/btnRequestUnblock"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="32dp"
+        android:text="Request Unblock" />
+
+    <Button
+        android:id="@+id/btnGoHome"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
         android:text="Go to Home Screen"
         android:textSize="16sp" />
 

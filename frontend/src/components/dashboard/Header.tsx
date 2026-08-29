@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import type { AuthUser } from '../../types/api';
+import { useNotifications } from '../../hooks/useNotifications';
 
 interface HeaderProps {
   user: AuthUser | null;
@@ -9,6 +10,9 @@ interface HeaderProps {
 
 export default function Header({ user, onLogout }: HeaderProps) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const { data: notifications } = useNotifications();
+  const unreadCount = (notifications ?? []).filter((n) => !n.is_read).length;
+  const badgeText = unreadCount > 99 ? '99+' : String(unreadCount);
   const [darkMode, setDarkMode] = useState(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem('darkMode') === 'true' ||
@@ -64,9 +68,20 @@ export default function Header({ user, onLogout }: HeaderProps) {
           </Link>
           <Link
             to="/notifications"
-            className="text-sm text-gray-600 dark:text-gray-300 hover:text-primary dark:hover:text-blue-400 transition-colors"
+            className="relative text-sm text-gray-600 dark:text-gray-300 hover:text-primary dark:hover:text-blue-400 transition-colors"
+            aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ''}`}
           >
-            Notifications
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+            </svg>
+            {unreadCount > 0 && (
+              <span
+                data-testid="notification-badge"
+                className="absolute -top-1 -right-2 min-w-[18px] h-[18px] px-1 bg-red-500 rounded-full text-white text-[10px] font-bold flex items-center justify-center"
+              >
+                {badgeText}
+              </span>
+            )}
           </Link>
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-primary/10 dark:bg-primary/20 rounded-full flex items-center justify-center">
@@ -130,9 +145,17 @@ export default function Header({ user, onLogout }: HeaderProps) {
             <Link
               to="/notifications"
               onClick={() => setMenuOpen(false)}
-              className="block px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
+              className="flex items-center justify-between px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
             >
-              Notifications
+              <span>Notifications</span>
+              {unreadCount > 0 && (
+                <span
+                  data-testid="notification-badge-mobile"
+                  className="min-w-[18px] h-[18px] px-1 bg-red-500 rounded-full text-white text-[10px] font-bold flex items-center justify-center"
+                >
+                  {badgeText}
+                </span>
+              )}
             </Link>
             <button
               onClick={() => { setMenuOpen(false); onLogout(); }}

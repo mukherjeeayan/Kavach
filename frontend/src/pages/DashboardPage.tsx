@@ -27,6 +27,7 @@ import WebsiteFilterSection from '../components/dashboard/WebsiteFilterSection';
 import DeviceHealthSection from '../components/dashboard/DeviceHealthSection';
 import CommunicationSection from '../components/dashboard/CommunicationSection';
 import KeywordAlertsSection from '../components/dashboard/KeywordAlertsSection';
+import KeywordDictionarySection from '../components/dashboard/KeywordDictionarySection';
 import EmergencySOS from '../components/dashboard/EmergencySOS';
 import AnalyticsSection from '../components/dashboard/AnalyticsSection';
 import GeofenceSection from '../components/dashboard/GeofenceSection';
@@ -308,6 +309,7 @@ export default function DashboardPage() {
                 <GeofenceSection childId={childId} onError={setActionError} />
                 <CommunicationSection childId={childId} />
                 <KeywordAlertsSection childId={childId} onError={setActionError} />
+                <KeywordDictionarySection onError={setActionError} />
                 <AnalyticsSection childId={childId} onError={setActionError} />
               </>
             )}
@@ -316,7 +318,11 @@ export default function DashboardPage() {
             {pinUnlocked && (
               <>
                 <MoodTrackingSection childId={childId} />
-                <RewardSection childId={childId} onError={setActionError} />
+                <RewardSection
+                  childId={childId}
+                  onError={setActionError}
+                  childName={childrenQuery.data?.find((c) => c.id === childId)?.name}
+                />
                 <SelfHarmAlertsSection childId={childId} onError={setActionError} />
                 <VoiceCommandsSection childId={childId} />
               </>

@@ -5,6 +5,7 @@ import { query } from '../../config/database';
 import { NotFoundError } from '../../utils/errors';
 import { verifyChildBelongsToParent } from '../children/children.service';
 import { writeAuditLog } from '../shared/audit.service';
+import { sendPushToAllParents } from '../shared/pushNotificationService';
 import { toOffset, buildPaginationMeta } from '../../utils/pagination';
 
 export type CommType = 'SMS_IN' | 'SMS_OUT' | 'CALL_IN' | 'CALL_OUT' | 'CALL_MISSED';
@@ -105,6 +106,18 @@ export const recordCommunications = async (
       resourceType: 'communication_logs',
       details: { device_id: deviceId, total: entries.length, flagged: flaggedCount },
     });
+
+    await sendPushToAllParents(
+      childId,
+      'Content Alert',
+      `${flaggedCount} flagged item${flaggedCount === 1 ? '' : 's'} detected`,
+      {
+        type: 'keyword_alert',
+        device_id: deviceId,
+        child_id: childId,
+        flagged_count: String(flaggedCount),
+      }
+    );
   }
 
   return { uploaded: entries.length, flagged: flaggedCount };

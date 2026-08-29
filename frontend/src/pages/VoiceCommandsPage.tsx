@@ -1,12 +1,10 @@
-﻿import { useVoiceCommands } from '../hooks/useVoiceCommands';
+﻿import { useParams } from 'react-router-dom';
+import { useVoiceCommands } from '../hooks/useVoiceCommands';
 import { SkeletonList } from '../components/ui/Skeleton';
 
-interface Props {
-  childId: string;
-}
-
-export default function VoiceCommandsPage({ childId }: Props) {
-  const { data, isLoading } = useVoiceCommands(childId, 1, 50);
+export default function VoiceCommandsPage() {
+  const { childId } = useParams<{ childId: string }>();
+  const { data, isLoading } = useVoiceCommands(childId!, 1, 50);
 
   if (isLoading) return <SkeletonList items={3} />;
 

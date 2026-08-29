@@ -1,6 +1,7 @@
 ﻿import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render, waitFor } from '@testing-library/react';
 import { renderHook } from '@testing-library/react';
+import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import GeofencePage from './GeofencePage';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useGeofences } from '../hooks/useGeofencing';
@@ -8,12 +9,18 @@ import * as api from '../services/api';
 
 vi.mock('../services/api');
 
-function createWrapper() {
+function createWrapper(initialPath = '/children/child-1/geofence') {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   return ({ children }: { children: React.ReactNode }) => (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter initialEntries={[initialPath]}>
+        <Routes>
+          <Route path="/children/:childId/geofence" element={children} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>
   );
 }
 
@@ -23,7 +30,7 @@ describe('GeofencePage', () => {
   });
 
   it('renders Geofence page with loading state', () => {
-    const { container, unmount } = render(<GeofencePage childId="child-1" />, { wrapper: createWrapper() });
+    const { container, unmount } = render(<GeofencePage />, { wrapper: createWrapper() });
     expect(container.querySelector('[aria-hidden="true"]')).toBeInTheDocument();
     unmount();
   });
@@ -34,7 +41,11 @@ describe('GeofencePage', () => {
     ]);
 
     const { result } = renderHook(() => useGeofences('child-1'), {
-      wrapper: createWrapper(),
+      wrapper: ({ children }) => (
+        <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+          {children}
+        </QueryClientProvider>
+      ),
     });
 
     await waitFor(() => {

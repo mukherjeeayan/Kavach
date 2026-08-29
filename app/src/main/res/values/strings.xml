@@ -1,3 +1,26 @@
 <resources>
     <string name="app_name">Kavach</string>
+    <string name="url_filter_service_description">SafeGuard monitors web browsing to block websites that your parent has restricted on this device.</string>
+    <string name="url_blocked_title">This website is blocked</string>
+    <string name="url_blocked_subtitle">This website is blocked by SafeGuard</string>
+    <string name="url_request_access">Request Access</string>
+    <string name="url_go_back">Go Back</string>
+    <string name="url_block_notification_channel">SafeGuard Web Protection</string>
+    <string name="url_service_notification_title">SafeGuard Web Protection Active</string>
+    <string name="url_service_notification_text">Monitoring browser activity to enforce web filtering rules</string>
+    <string name="url_request_sent">Access request sent to your parent</string>
+    <string name="url_request_failed">Failed to send request. Please try again.</string>
+
+    <!-- Self-harm alert monitor foreground service -->
+    <string name="self_harm_monitor_channel_name">Safety monitor</string>
+    <string name="self_harm_monitor_channel_desc">Watches for crisis indicators in messages and search activity</string>
+    <string name="self_harm_monitor_title">Safety monitor is active</string>
+    <string name="self_harm_monitor_text">Looking out for crisis signals so we can help fast</string>
+
+    <!-- Crisis resources (India) -->
+    <string name="crisis_hotline_icall">iCall: 9152987821</string>
+    <string name="crisis_hotline_vandrevala">Vandrevala Foundation: 1860-2662-345</string>
+    <string name="crisis_hotline_full">iCall: 9152987821, Vandrevala Foundation: 1860-2662-345</string>
+    <string name="crisis_resources_title">You are not alone</string>
+    <string name="crisis_resources_body">If you\'re going through a hard time, please reach out to a counselor. You can talk to someone right now:</string>
 </resources>

@@ -19,6 +19,10 @@ const ManageChildPage = lazy(() => import('./pages/ManageChildPage'));
 const ReportsPage = lazy(() => import('./pages/ReportsPage'));
 const CommunicationsPage = lazy(() => import('./pages/CommunicationsPage'));
 const NotificationsPage = lazy(() => import('./pages/NotificationsPage'));
+const GeofencePage = lazy(() => import('./pages/GeofencePage'));
+const RewardsPage = lazy(() => import('./pages/RewardsPage'));
+const SOSPage = lazy(() => import('./pages/SOSPage'));
+const VoiceCommandsPage = lazy(() => import('./pages/VoiceCommandsPage'));
 const ChildSetupScreen = lazy(() => import('./screens/ChildSetupScreen'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 
@@ -129,6 +133,38 @@ function App() {
                   element={
                     <RoleProtectedRoute role="parent">
                       <ChildSetupScreen />
+                    </RoleProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/children/:childId/geofence"
+                  element={
+                    <RoleProtectedRoute role="parent">
+                      <GeofencePage />
+                    </RoleProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/children/:childId/rewards"
+                  element={
+                    <RoleProtectedRoute role="parent">
+                      <RewardsPage />
+                    </RoleProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/children/:childId/sos"
+                  element={
+                    <RoleProtectedRoute role="parent">
+                      <SOSPage />
+                    </RoleProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/children/:childId/voice-commands"
+                  element={
+                    <RoleProtectedRoute role="parent">
+                      <VoiceCommandsPage />
                     </RoleProtectedRoute>
                   }
                 />

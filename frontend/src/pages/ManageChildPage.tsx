@@ -249,12 +249,12 @@ export default function ManageChildPage() {
                   <section className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
                     <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Recent Alerts</h3>
                     {alertsQuery.isLoading && <SkeletonList items={2} />}
-                    {alertsQuery.data && alertsQuery.data.length === 0 && (
+                    {alertsQuery.data && alertsQuery.data.data.length === 0 && (
                       <p className="text-sm text-gray-500 dark:text-gray-400">No alerts.</p>
                     )}
-                    {alertsQuery.data && alertsQuery.data.length > 0 && (
+                    {alertsQuery.data && alertsQuery.data.data.length > 0 && (
                       <ul className="divide-y divide-gray-100 dark:divide-gray-700">
-                        {alertsQuery.data.slice(0, 5).map((alert, i) => (
+                        {alertsQuery.data.data.slice(0, 5).map((alert, i) => (
                           <li key={`${alert.id}-${i}`} className="py-2">
                             <p className="text-sm text-gray-900 dark:text-white">{alert.action.replace(/_/g, ' ')}</p>
                             <p className="text-xs text-gray-500 dark:text-gray-400">{new Date(alert.created_at).toLocaleString()}</p>

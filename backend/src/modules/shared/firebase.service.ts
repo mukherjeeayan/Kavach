@@ -14,6 +14,10 @@ type FirebaseMessaging = {
   sendEachForMulticast: (message: Record<string, unknown>) => Promise<{
     successCount: number;
     failureCount: number;
+    responses: Array<{
+      success: boolean;
+      error?: { code?: string; message?: string };
+    }>;
   }>;
 };
 
@@ -82,5 +86,74 @@ export const sendToChild = async (
     logger.info(`FCM push sent to ${tokens.length} device(s) for child ${childId}`);
   } catch (e) {
     logger.warn(`FCM push to child ${childId} failed`, e as Error);
+  }
+};
+
+/**
+ * Send a multicast push notification to a list of FCM tokens.
+ * Returns { success, failure } counts. When Firebase is not
+ * configured this is a no-op that returns { 0, 0 } so callers can
+ * continue without erroring. Never throws.
+ */
+export const sendMulticastNotification = async (
+  tokens: string[],
+  title: string,
+  body: string,
+  data: Record<string, string> = {}
+): Promise<{ success: number; failure: number }> => {
+  if (!tokens || tokens.length === 0) {
+    return { success: 0, failure: 0 };
+  }
+  const m = getMessaging();
+  if (!m) {
+    return { success: 0, failure: 0 };
+  }
+  try {
+    const response = await m.sendEachForMulticast({
+      tokens,
+      notification: { title, body },
+      data,
+    });
+    // Prune tokens FCM explicitly told us are dead so future sends
+    // don't waste a slot on them. Codes vary by SDK version; the
+    // two below cover the common "unregistered / invalid" cases.
+    if (response.responses && response.responses.length === tokens.length) {
+      const deadCodes = new Set([
+        'messaging/registration-token-not-registered',
+        'messaging/invalid-registration-token',
+      ]);
+      const invalid: string[] = [];
+      response.responses.forEach((r, i) => {
+        if (!r.success && r.error && r.error.code && deadCodes.has(r.error.code)) {
+          invalid.push(tokens[i]);
+        }
+      });
+      if (invalid.length > 0) {
+        await removeInvalidTokens(invalid);
+      }
+    }
+    return { success: response.successCount, failure: response.failureCount };
+  } catch (e) {
+    logger.warn(`FCM multicast push failed (${tokens.length} tokens)`, e as Error);
+    return { success: 0, failure: tokens.length };
+  }
+};
+
+/**
+ * Remove FCM tokens that FCM has marked as invalid/unregistered so
+ * future sends stop trying them. Best-effort: never throws.
+ */
+export const removeInvalidTokens = async (
+  invalidTokens: string[]
+): Promise<void> => {
+  if (invalidTokens.length === 0) return;
+  try {
+    await query(
+      `DELETE FROM push_tokens WHERE token = ANY($1::text[])`,
+      [invalidTokens]
+    );
+    logger.info(`Pruned ${invalidTokens.length} invalid push token(s)`);
+  } catch (e) {
+    logger.warn('Failed to prune invalid push tokens', e as Error);
   }
 };

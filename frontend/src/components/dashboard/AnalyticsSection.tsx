@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useGenerateReport, useLatestReport } from '../../hooks/useAnalytics';
+import { useChildren } from '../../hooks/useChildrenData';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { SkeletonCard } from '../ui/Skeleton';
 
@@ -19,6 +20,7 @@ function formatSeconds(seconds: number): string {
 export default function AnalyticsSection({ childId, onError }: Props) {
   const [reportType, setReportType] = useState<'WEEKLY' | 'MONTHLY'>('WEEKLY');
   const { data: report, isLoading: reportLoading } = useLatestReport(childId, reportType);
+  const { data: children } = useChildren();
   const generateReport = useGenerateReport(childId);
 
   const handleGenerate = async () => {
@@ -26,6 +28,88 @@ export default function AnalyticsSection({ childId, onError }: Props) {
       await generateReport.mutateAsync(reportType);
     } catch {
       onError('Failed to generate report');
+    }
+  };
+
+  const childName = children?.find((c) => c.id === childId)?.name ?? 'Child';
+
+  const computeSafetyScore = (data: Record<string, unknown>): number => {
+    const st = (data.screen_time as { grand_total_seconds?: number } | undefined)?.grand_total_seconds ?? 0;
+    const alerts = (data.keyword_alerts as Array<{ count: number }> | undefined) ?? [];
+    const alertCount = alerts.reduce((s, a) => s + (a.count ?? 0), 0);
+    const days = Math.max(1, report?.period_start && report?.period_end
+      ? Math.max(1, Math.ceil((new Date(report.period_end).getTime() - new Date(report.period_start).getTime()) / 86_400_000))
+      : 7);
+    const dailyHours = st / 3600 / days;
+    const usagePenalty = Math.min(40, dailyHours * 4);
+    const alertPenalty = Math.min(50, alertCount * 5);
+    return Math.max(0, Math.round(100 - usagePenalty - alertPenalty));
+  };
+
+  const handleExport = () => {
+    if (!reportData) return;
+    const data = reportData as Record<string, unknown>;
+    const st = (data.screen_time as { grand_total_seconds?: number; by_app?: Array<{ app_package: string; total_seconds: number }> } | undefined);
+    const loc = (data.location as { total_pings?: number } | undefined);
+    const comms = (data.communications as Array<{ comm_type: string; count: number }> | undefined) ?? [];
+    const alerts = (data.keyword_alerts as Array<{ severity: string; count: number }> | undefined) ?? [];
+    const totalComms = comms.reduce((s, c) => s + (c.count ?? 0), 0);
+    const totalAlerts = alerts.reduce((s, a) => s + (a.count ?? 0), 0);
+    const safetyScore = computeSafetyScore(data);
+    const periodStart = report?.period_start ? new Date(report.period_start).toLocaleDateString() : '-';
+    const periodEnd = report?.period_end ? new Date(report.period_end).toLocaleDateString() : '-';
+    const topApps = (st?.by_app ?? []).slice(0, 5)
+      .map((a) => `<tr><td>${a.app_package}</td><td>${formatSeconds(a.total_seconds)}</td></tr>`)
+      .join('');
+
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${childName} Report</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #111; max-width: 800px; margin: 24px auto; padding: 0 16px; }
+  h1 { color: #1d4ed8; margin-bottom: 4px; }
+  h2 { margin-top: 24px; border-bottom: 2px solid #e5e7eb; padding-bottom: 4px; }
+  .meta { color: #6b7280; font-size: 14px; margin-bottom: 16px; }
+  .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin: 12px 0; }
+  .card { border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; }
+  .card .label { font-size: 12px; color: #6b7280; }
+  .card .value { font-size: 24px; font-weight: 700; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #e5e7eb; }
+  th { background: #f9fafb; }
+  .score-good { color: #059669; }
+  .score-warn { color: #d97706; }
+  .score-bad { color: #dc2626; }
+  @media print { .no-print { display: none; } body { margin: 0; } }
+</style></head><body>
+<button class="no-print" onclick="window.print()" style="margin-bottom:16px;padding:8px 16px;background:#1d4ed8;color:#fff;border:0;border-radius:6px;cursor:pointer;">Print / Save as PDF</button>
+<h1>Kavach ${reportType.toLowerCase()} report — ${childName}</h1>
+<div class="meta">Period: ${periodStart} — ${periodEnd} • Generated: ${new Date(report!.generated_at).toLocaleString()}</div>
+
+<h2>Summary</h2>
+<div class="grid">
+  <div class="card"><div class="label">Safety score</div><div class="value ${
+    safetyScore >= 75 ? 'score-good' : safetyScore >= 50 ? 'score-warn' : 'score-bad'
+  }">${safetyScore}/100</div></div>
+  <div class="card"><div class="label">Alerts</div><div class="value">${totalAlerts}</div></div>
+  <div class="card"><div class="label">Total screen time</div><div class="value">${formatSeconds(st?.grand_total_seconds ?? 0)}</div></div>
+  <div class="card"><div class="label">Location pings</div><div class="value">${loc?.total_pings ?? 0}</div></div>
+  <div class="card"><div class="label">Communications</div><div class="value">${totalComms}</div></div>
+</div>
+
+<h2>Alerts by severity</h2>
+${alerts.length === 0 ? '<p>No keyword alerts in this period.</p>' :
+  `<table><thead><tr><th>Severity</th><th>Count</th></tr></thead><tbody>${alerts.map((a) =>
+    `<tr><td>${a.severity}</td><td>${a.count}</td></tr>`).join('')}</tbody></table>`}
+
+<h2>Top apps</h2>
+${topApps ? `<table><thead><tr><th>Package</th><th>Time</th></tr></thead><tbody>${topApps}</tbody></table>` : '<p>No app usage data.</p>'}
+</body></html>`;
+
+    const win = window.open('', '_blank');
+    if (win) {
+      win.document.write(html);
+      win.document.close();
+      win.focus();
+      setTimeout(() => win.print(), 250);
     }
   };
 
@@ -65,6 +149,13 @@ export default function AnalyticsSection({ childId, onError }: Props) {
               className="px-4 py-1.5 bg-primary text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
             >
               {generateReport.isPending ? 'Generating...' : 'Generate'}
+            </button>
+            <button
+              onClick={handleExport}
+              disabled={!reportData}
+              className="px-4 py-1.5 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-sm font-medium rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 transition-colors"
+            >
+              Export PDF
             </button>
           </div>
         </div>

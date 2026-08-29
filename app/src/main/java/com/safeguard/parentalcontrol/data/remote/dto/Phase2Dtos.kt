@@ -11,6 +11,17 @@ data class UrlFilterRuleDto(
     @SerializedName("is_active") val isActive: Boolean
 )
 
+data class UrlAccessRequestDto(
+    @SerializedName("url") val url: String,
+    @SerializedName("reason") val reason: String? = null
+)
+
+data class UrlAccessRequestResponseDto(
+    @SerializedName("id") val id: String,
+    @SerializedName("url") val url: String,
+    @SerializedName("status") val status: String
+)
+
 data class CreateUrlFilterDto(
     @SerializedName("pattern") val pattern: String,
     @SerializedName("rule_type") val ruleType: String = "BLOCK",
@@ -156,6 +167,22 @@ data class RewardPointsDto(
     @SerializedName("available") val available: Int
 )
 
+data class RewardRedemptionRequestDto(
+    @SerializedName("child_id") val childId: String,
+    @SerializedName("reward_id") val rewardId: String
+)
+
+data class RewardRedemptionDto(
+    @SerializedName("id") val id: String,
+    @SerializedName("child_id") val childId: String,
+    @SerializedName("reward_id") val rewardId: String,
+    @SerializedName("reward_name") val rewardName: String?,
+    @SerializedName("points_cost") val pointsCost: Int,
+    @SerializedName("status") val status: String,
+    @SerializedName("requested_at") val requestedAt: String?,
+    @SerializedName("resolved_at") val resolvedAt: String?
+)
+
 data class BehaviorPredictionDto(
     @SerializedName("id") val id: String,
     @SerializedName("child_id") val childId: String,
@@ -174,5 +201,19 @@ data class SelfHarmAlertDto(
     @SerializedName("content_snippet") val contentSnippet: String?,
     @SerializedName("risk_level") val riskLevel: String,
     @SerializedName("is_acknowledged") val isAcknowledged: Boolean,
+    @SerializedName("created_at") val createdAt: String
+)
+
+/**
+ * Lighter payload used when a child's device pushes a brand new
+ * self-harm alert up to the parent dashboard.
+ */
+data class SelfHarmAlertUploadDto(
+    @SerializedName("id") val id: String,
+    @SerializedName("child_id") val childId: String,
+    @SerializedName("source_type") val sourceType: String,
+    @SerializedName("detected_keywords") val detectedKeywords: List<String>,
+    @SerializedName("content_snippet") val contentSnippet: String?,
+    @SerializedName("risk_level") val riskLevel: String,
     @SerializedName("created_at") val createdAt: String
 )

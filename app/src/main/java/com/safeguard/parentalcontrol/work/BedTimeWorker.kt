@@ -1,22 +1,20 @@
 package com.safeguard.parentalcontrol.work
 
-import android.app.NotificationChannel
-import android.app.NotificationManager
 import android.content.Context
 import android.os.Build
+import android.os.PowerManager
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
+import com.safeguard.parentalcontrol.data.local.BedtimePreferences
 import com.safeguard.parentalcontrol.data.local.OnboardingStore
 import com.safeguard.parentalcontrol.data.local.dao.ScheduledLockDao
-import com.safeguard.parentalcontrol.data.local.entity.ScheduledLockEntity
 import com.safeguard.parentalcontrol.notifications.SafeGuardMessagingService
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import java.util.Calendar
-import java.util.Locale
 
 /**
  * Periodic worker that checks whether the current time falls within
@@ -29,39 +27,35 @@ class BedTimeWorker @AssistedInject constructor(
     @Assisted appContext: Context,
     @Assisted workerParams: WorkerParameters,
     private val scheduledLockDao: ScheduledLockDao,
-    private val onboardingStore: OnboardingStore
+    private val onboardingStore: OnboardingStore,
+    private val bedtimePreferences: BedtimePreferences
 ) : CoroutineWorker(appContext, workerParams) {
 
     override suspend fun doWork(): Result {
         val deviceId = onboardingStore.deviceId ?: return Result.success()
 
         return try {
-            val prefs = applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            val bedtimeStart = prefs.getString(KEY_BEDTIME_START, null)
-            val bedtimeEnd = prefs.getString(KEY_BEDTIME_END, null)
-            val dndEnabled = prefs.getBoolean(KEY_DND_ENABLED, false)
-
-            if (bedtimeStart != null && bedtimeEnd != null) {
+            if (bedtimePreferences.enabled) {
                 val now = Calendar.getInstance()
                 val minutesNow = now.get(Calendar.HOUR_OF_DAY) * 60 + now.get(Calendar.MINUTE)
-                val start = parseMinutes(bedtimeStart)
-                val end = parseMinutes(bedtimeEnd)
+                val start = bedtimePreferences.bedtimeStart.toMinutesOfDay()
+                val end = bedtimePreferences.bedtimeEnd.toMinutesOfDay()
+                val isBedtime = if (start <= end) {
+                    minutesNow in start until end
+                } else {
+                    // Crosses midnight (e.g. 22:00 -> 07:00)
+                    minutesNow >= start || minutesNow < end
+                }
 
-                if (start != null && end != null) {
-                    val isBedtime = if (start <= end) {
-                        minutesNow in start until end
-                    } else {
-                        // Crosses midnight
-                        minutesNow >= start || minutesNow < end
+                if (isBedtime) {
+                    sendBedtimeNotification()
+                    if (bedtimePreferences.dndEnabled && isScreenOn()) {
+                        // DND only matters while the user is actually
+                        // looking at the device — pointless to flip
+                        // the system filter on a sleeping device.
+                        enforceDnd()
                     }
-
-                    if (isBedtime) {
-                        sendBedtimeNotification()
-                        if (dndEnabled) {
-                            enforceDnd()
-                        }
-                        Log.i(TAG, "Bedtime active ($bedtimeStart - $bedtimeEnd)")
-                    }
+                    Log.i(TAG, "Bedtime active (preferences-driven)")
                 }
             }
 
@@ -99,12 +93,23 @@ class BedTimeWorker @AssistedInject constructor(
         }
     }
 
+    private fun isScreenOn(): Boolean {
+        val pm = applicationContext.getSystemService(Context.POWER_SERVICE) as? PowerManager
+            ?: return false
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT_WATCH) {
+            pm.isInteractive
+        } else {
+            @Suppress("DEPRECATION")
+            pm.isScreenOn
+        }
+    }
+
     private fun sendBedtimeNotification() {
         val manager = applicationContext.getSystemService(Context.NOTIFICATION_SERVICE)
-            as NotificationManager
+            as android.app.NotificationManager
         SafeGuardMessagingService.ensureChannel(applicationContext)
 
-        val notification = NotificationCompat.Builder(applicationContext, SafeGuardMessagingService.CHANNEL_ID)
+        val notification = NotificationCompat.Builder(applicationContext, SafeGuardMessagingService.CHANNEL_ALERT)
             .setSmallIcon(android.R.drawable.ic_lock_lock)
             .setContentTitle("Bedtime")
             .setContentText("It's bedtime. Put down your device and get some rest!")
@@ -121,11 +126,11 @@ class BedTimeWorker @AssistedInject constructor(
         // which is a system-level setting. This is a best-effort approach.
         try {
             val manager = applicationContext.getSystemService(Context.NOTIFICATION_SERVICE)
-                as NotificationManager
+                as android.app.NotificationManager
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 if (manager.isNotificationPolicyAccessGranted) {
                     manager.setInterruptionFilter(
-                        NotificationManager.INTERRUPTION_FILTER_PRIORITY
+                        android.app.NotificationManager.INTERRUPTION_FILTER_PRIORITY
                     )
                 }
             }
@@ -144,10 +149,8 @@ class BedTimeWorker @AssistedInject constructor(
 
     companion object {
         private const val TAG = "BedTimeWorker"
-        private const val PREFS_NAME = "safeguard_bedtime"
-        private const val KEY_BEDTIME_START = "bedtime_start"
-        private const val KEY_BEDTIME_END = "bedtime_end"
-        private const val KEY_DND_ENABLED = "dnd_enabled"
         private const val NOTIFICATION_ID = 2003
     }
 }
+
+private fun java.time.LocalTime.toMinutesOfDay(): Int = hour * 60 + minute

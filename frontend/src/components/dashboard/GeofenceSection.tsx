@@ -7,6 +7,7 @@ import {
 } from '../../hooks/useGeofencing';
 import { SkeletonTable } from '../ui/Skeleton';
 import ConfirmDialog from '../ui/ConfirmDialog';
+import type { Geofence, GeofenceInput } from '../../types/api';
 
 interface Props {
   childId: string;
@@ -20,6 +21,26 @@ const ZONE_ICONS: Record<string, string> = {
   CUSTOM: 'M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z',
 };
 
+interface EditState {
+  name: string;
+  latitude: string;
+  longitude: string;
+  radius: string;
+  alertEntry: boolean;
+  alertExit: boolean;
+  isActive: boolean;
+}
+
+const emptyEdit = (gf: Geofence): EditState => ({
+  name: gf.name,
+  latitude: String(gf.latitude),
+  longitude: String(gf.longitude),
+  radius: String(gf.radius_meters),
+  alertEntry: gf.alert_on_entry,
+  alertExit: gf.alert_on_exit,
+  isActive: gf.is_active,
+});
+
 export default function GeofenceSection({ childId, onError }: Props) {
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState('');
@@ -30,6 +51,8 @@ export default function GeofenceSection({ childId, onError }: Props) {
   const [alertEntry, setAlertEntry] = useState(false);
   const [alertExit, setAlertExit] = useState(true);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [edit, setEdit] = useState<EditState | null>(null);
 
   const { data: geofences, isLoading } = useGeofences(childId);
   const createGeo = useCreateGeofence(childId);
@@ -74,7 +97,46 @@ export default function GeofenceSection({ childId, onError }: Props) {
 
   const handleToggle = async (id: string, isActive: boolean) => {
     try {
-      await updateGeo.mutateAsync({ geofenceId: id, input: { is_active: !isActive } as Partial<import('../../types/api').GeofenceInput> });
+      await updateGeo.mutateAsync({ geofenceId: id, input: { is_active: !isActive } as Partial<GeofenceInput> });
+    } catch {
+      onError('Failed to update geofence');
+    }
+  };
+
+  const startEdit = (gf: Geofence) => {
+    setEditingId(gf.id);
+    setEdit(emptyEdit(gf));
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEdit(null);
+  };
+
+  const saveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingId || !edit) return;
+    const latNum = parseFloat(edit.latitude);
+    const lngNum = parseFloat(edit.longitude);
+    const radiusNum = parseInt(edit.radius, 10);
+    if (isNaN(latNum) || isNaN(lngNum) || isNaN(radiusNum)) {
+      onError('Please enter valid coordinates and radius');
+      return;
+    }
+    try {
+      await updateGeo.mutateAsync({
+        geofenceId: editingId,
+        input: {
+          name: edit.name,
+          latitude: latNum,
+          longitude: lngNum,
+          radius_meters: radiusNum,
+          alert_on_entry: edit.alertEntry,
+          alert_on_exit: edit.alertExit,
+          is_active: edit.isActive,
+        } as Partial<GeofenceInput>,
+      });
+      cancelEdit();
     } catch {
       onError('Failed to update geofence');
     }
@@ -190,63 +252,167 @@ export default function GeofenceSection({ childId, onError }: Props) {
             {geofenceList.map((gf) => (
               <div
                 key={gf.id}
-                className={`flex items-center justify-between p-4 rounded-lg border transition-colors ${
-                  gf.is_active
-                    ? 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700'
-                    : 'bg-gray-50 dark:bg-gray-700/30 border-gray-100 dark:border-gray-700 opacity-60'
+                className={`rounded-lg border transition-colors ${
+                  editingId === gf.id
+                    ? 'bg-emerald-50 dark:bg-emerald-900/10 border-emerald-200 dark:border-emerald-800 p-4'
+                    : `flex items-center justify-between p-4 ${
+                        gf.is_active
+                          ? 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700'
+                          : 'bg-gray-50 dark:bg-gray-700/30 border-gray-100 dark:border-gray-700 opacity-60'
+                      }`
                 }`}
               >
-                <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                    gf.zone_type === 'HOME' ? 'bg-blue-100 dark:bg-blue-900/30' :
-                    gf.zone_type === 'SCHOOL' ? 'bg-purple-100 dark:bg-purple-900/30' :
-                    gf.zone_type === 'FRIEND' ? 'bg-pink-100 dark:bg-pink-900/30' :
-                    'bg-gray-100 dark:bg-gray-700'
-                  }`}>
-                    <svg className={`w-5 h-5 ${
-                      gf.zone_type === 'HOME' ? 'text-blue-600 dark:text-blue-400' :
-                      gf.zone_type === 'SCHOOL' ? 'text-purple-600 dark:text-purple-400' :
-                      gf.zone_type === 'FRIEND' ? 'text-pink-600 dark:text-pink-400' :
-                      'text-gray-600 dark:text-gray-400'
-                    }`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={ZONE_ICONS[gf.zone_type]} />
-                    </svg>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-900 dark:text-white">{gf.name}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      {gf.radius_meters}m radius &middot; {gf.zone_type}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="flex gap-1">
-                    {gf.alert_on_entry && (
-                      <span className="text-[10px] px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded">Entry</span>
-                    )}
-                    {gf.alert_on_exit && (
-                      <span className="text-[10px] px-1.5 py-0.5 bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 rounded">Exit</span>
-                    )}
-                  </div>
-                  <button
-                    onClick={() => handleToggle(gf.id, gf.is_active)}
-                    className={`w-10 h-5 rounded-full transition-colors relative ${
-                      gf.is_active ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'
-                    }`}
-                  >
-                    <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-transform ${
-                      gf.is_active ? 'left-5' : 'left-0.5'
-                    }`} />
-                  </button>
-                  <button
-                    onClick={() => setDeleteId(gf.id)}
-                    className="text-red-500 hover:text-red-700 p-1"
-                  >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                  </button>
-                </div>
+                {editingId === gf.id && edit ? (
+                  <form onSubmit={saveEdit} className="space-y-3 w-full" data-testid="geofence-edit-form">
+                    <div className="grid grid-cols-2 gap-3">
+                      <input
+                        type="text"
+                        aria-label="Zone name"
+                        value={edit.name}
+                        onChange={(e) => setEdit({ ...edit, name: e.target.value })}
+                        placeholder="Zone name"
+                        className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                      />
+                      <input
+                        type="number"
+                        aria-label="Radius"
+                        value={edit.radius}
+                        onChange={(e) => setEdit({ ...edit, radius: e.target.value })}
+                        placeholder="Radius (m)"
+                        className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <input
+                        type="number"
+                        step="any"
+                        aria-label="Latitude"
+                        value={edit.latitude}
+                        onChange={(e) => setEdit({ ...edit, latitude: e.target.value })}
+                        placeholder="Latitude"
+                        className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                      />
+                      <input
+                        type="number"
+                        step="any"
+                        aria-label="Longitude"
+                        value={edit.longitude}
+                        onChange={(e) => setEdit({ ...edit, longitude: e.target.value })}
+                        placeholder="Longitude"
+                        className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                      />
+                    </div>
+                    <div className="flex flex-wrap items-center gap-4">
+                      <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+                        <input
+                          type="checkbox"
+                          checked={edit.alertEntry}
+                          onChange={(e) => setEdit({ ...edit, alertEntry: e.target.checked })}
+                          className="rounded"
+                        />
+                        Alert on entry
+                      </label>
+                      <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+                        <input
+                          type="checkbox"
+                          checked={edit.alertExit}
+                          onChange={(e) => setEdit({ ...edit, alertExit: e.target.checked })}
+                          className="rounded"
+                        />
+                        Alert on exit
+                      </label>
+                      <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+                        <input
+                          type="checkbox"
+                          checked={edit.isActive}
+                          onChange={(e) => setEdit({ ...edit, isActive: e.target.checked })}
+                          className="rounded"
+                        />
+                        Active
+                      </label>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        type="submit"
+                        disabled={updateGeo.isPending}
+                        className="px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                      >
+                        {updateGeo.isPending ? 'Saving...' : 'Save'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={cancelEdit}
+                        className="px-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 text-sm font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </form>
+                ) : (
+                  <>
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                        gf.zone_type === 'HOME' ? 'bg-blue-100 dark:bg-blue-900/30' :
+                        gf.zone_type === 'SCHOOL' ? 'bg-purple-100 dark:bg-purple-900/30' :
+                        gf.zone_type === 'FRIEND' ? 'bg-pink-100 dark:bg-pink-900/30' :
+                        'bg-gray-100 dark:bg-gray-700'
+                      }`}>
+                        <svg className={`w-5 h-5 ${
+                          gf.zone_type === 'HOME' ? 'text-blue-600 dark:text-blue-400' :
+                          gf.zone_type === 'SCHOOL' ? 'text-purple-600 dark:text-purple-400' :
+                          gf.zone_type === 'FRIEND' ? 'text-pink-600 dark:text-pink-400' :
+                          'text-gray-600 dark:text-gray-400'
+                        }`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={ZONE_ICONS[gf.zone_type]} />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">{gf.name}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          {gf.radius_meters}m radius &middot; {gf.zone_type}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="flex gap-1">
+                        {gf.alert_on_entry && (
+                          <span className="text-[10px] px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded">Entry</span>
+                        )}
+                        {gf.alert_on_exit && (
+                          <span className="text-[10px] px-1.5 py-0.5 bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 rounded">Exit</span>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => handleToggle(gf.id, gf.is_active)}
+                        className={`w-10 h-5 rounded-full transition-colors relative ${
+                          gf.is_active ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'
+                        }`}
+                      >
+                        <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-transform ${
+                          gf.is_active ? 'left-5' : 'left-0.5'
+                        }`} />
+                      </button>
+                      <button
+                        onClick={() => startEdit(gf)}
+                        aria-label={`Edit ${gf.name}`}
+                        className="text-blue-500 hover:text-blue-700 p-1"
+                      >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => setDeleteId(gf.id)}
+                        aria-label={`Delete ${gf.name}`}
+                        className="text-red-500 hover:text-red-700 p-1"
+                      >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
             ))}
           </div>

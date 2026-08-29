@@ -1,13 +1,39 @@
 import { useState } from 'react';
-import { useRewardCatalog, useCreateRewardItem, useRewardPoints, useAwardPoints, useRedeemReward } from '../../hooks/useRewards';
+import {
+  useRewardCatalog,
+  useCreateRewardItem,
+  useRewardPoints,
+  useAwardPoints,
+  useRedeemReward,
+  useRewardRedemptions,
+  useUpdateRedemptionStatus,
+} from '../../hooks/useRewards';
 import { SkeletonCard } from '../ui/Skeleton';
+import type { RewardRedemption } from '../../types/api';
 
 interface Props {
   childId: string;
   onError: (msg: string | null) => void;
+  childName?: string;
 }
 
-export default function RewardSection({ childId, onError }: Props) {
+type StatusFilter = 'PENDING' | 'APPROVED' | 'REJECTED' | 'FULFILLED';
+
+const STATUS_TABS: { key: StatusFilter | 'ALL'; label: string }[] = [
+  { key: 'PENDING', label: 'Pending' },
+  { key: 'APPROVED', label: 'Approved' },
+  { key: 'REJECTED', label: 'Rejected' },
+  { key: 'FULFILLED', label: 'Fulfilled' },
+];
+
+const STATUS_STYLES: Record<StatusFilter, string> = {
+  PENDING: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+  APPROVED: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+  REJECTED: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+  FULFILLED: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+};
+
+export default function RewardSection({ childId, onError, childName }: Props) {
   const [showAddForm, setShowAddForm] = useState(false);
   const [newName, setNewName] = useState('');
   const [newDesc, setNewDesc] = useState('');
@@ -15,12 +41,15 @@ export default function RewardSection({ childId, onError }: Props) {
   const [showAwardForm, setShowAwardForm] = useState(false);
   const [awardPoints, setAwardPoints] = useState('50');
   const [awardReason, setAwardReason] = useState('');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('PENDING');
 
   const { data: catalog, isLoading: catalogLoading } = useRewardCatalog();
   const { data: points, isLoading: pointsLoading } = useRewardPoints(childId);
+  const { data: redemptions, isLoading: redemptionsLoading } = useRewardRedemptions(childId, statusFilter);
   const createItem = useCreateRewardItem();
   const awardPts = useAwardPoints(childId);
   const redeem = useRedeemReward(childId);
+  const updateStatus = useUpdateRedemptionStatus(childId);
 
   const handleCreateItem = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,9 +89,27 @@ export default function RewardSection({ childId, onError }: Props) {
     }
   };
 
+  const handleApprove = async (id: string) => {
+    try {
+      await updateStatus.mutateAsync({ redemptionId: id, status: 'APPROVED' });
+    } catch {
+      onError('Failed to approve redemption');
+    }
+  };
+
+  const handleReject = async (id: string) => {
+    try {
+      await updateStatus.mutateAsync({ redemptionId: id, status: 'REJECTED' });
+    } catch {
+      onError('Failed to reject redemption');
+    }
+  };
+
   if (catalogLoading || pointsLoading) return <SkeletonCard />;
 
   const totalPoints = points?.total_points ?? 0;
+  const rewardNameById = new Map((catalog ?? []).map((c) => [c.id, c.name]));
+  const redemptionList: RewardRedemption[] = redemptions ?? [];
 
   return (
     <section className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
@@ -197,6 +244,83 @@ export default function RewardSection({ childId, onError }: Props) {
             ))}
           </div>
         )}
+
+        {/* Pending Redemptions Queue */}
+        <div className="border-t border-gray-100 dark:border-gray-700 pt-4">
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="text-sm font-semibold text-gray-900 dark:text-white">Redemption Queue</h4>
+          </div>
+          <div className="flex flex-wrap gap-1 mb-3" role="tablist" aria-label="Filter redemptions by status">
+            {STATUS_TABS.map((tab) => (
+              <button
+                key={tab.key}
+                role="tab"
+                aria-selected={statusFilter === tab.key}
+                onClick={() => setStatusFilter(tab.key)}
+                className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                  statusFilter === tab.key
+                    ? 'bg-primary text-white'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {redemptionsLoading ? (
+            <div className="text-center py-6 text-sm text-gray-500 dark:text-gray-400">Loading redemptions...</div>
+          ) : redemptionList.length === 0 ? (
+            <div className="text-center py-6">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                No {statusFilter.toLowerCase()} redemptions.
+              </p>
+            </div>
+          ) : (
+            <div className="grid gap-2" data-testid="redemption-list">
+              {redemptionList.map((r) => (
+                <div
+                  key={r.id}
+                  className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 bg-gray-50 dark:bg-gray-700/30 rounded-lg border border-gray-100 dark:border-gray-700"
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                        {rewardNameById.get(r.reward_id) ?? 'Unknown reward'}
+                      </p>
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${STATUS_STYLES[r.status]}`}>
+                        {r.status}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                      {childName ?? `Child ${r.child_id.slice(0, 8)}`} &middot; {r.points_spent} points &middot; {new Date(r.redeemed_at).toLocaleDateString()}
+                    </p>
+                  </div>
+                  {r.status === 'PENDING' && (
+                    <div className="flex gap-2 shrink-0">
+                      <button
+                        onClick={() => handleApprove(r.id)}
+                        disabled={updateStatus.isPending}
+                        aria-label="Approve redemption"
+                        className="px-3 py-1.5 text-xs font-medium bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors"
+                      >
+                        Approve
+                      </button>
+                      <button
+                        onClick={() => handleReject(r.id)}
+                        disabled={updateStatus.isPending}
+                        aria-label="Reject redemption"
+                        className="px-3 py-1.5 text-xs font-medium bg-white dark:bg-gray-700 border border-red-300 dark:border-red-700 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50 transition-colors"
+                      >
+                        Reject
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </section>
   );

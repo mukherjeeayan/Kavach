@@ -21,6 +21,7 @@ import androidx.core.graphics.drawable.toBitmap
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.safeguard.parentalcontrol.data.local.entity.AppBlockRuleEntity
+import com.safeguard.parentalcontrol.security.SecureScreen
 import com.safeguard.parentalcontrol.viewmodel.appblock.AppBlockingUiEvent
 import com.safeguard.parentalcontrol.viewmodel.appblock.AppBlockingUiState
 import com.safeguard.parentalcontrol.viewmodel.appblock.AppBlockingViewModel
@@ -37,6 +38,16 @@ data class InstalledApp(
 @Composable
 fun AppBlockingScreen(
     viewModel: AppBlockingViewModel = hiltViewModel()
+) {
+    SecureScreen {
+        AppBlockingScreenContent(viewModel = viewModel)
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AppBlockingScreenContent(
+    viewModel: AppBlockingViewModel
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()

@@ -18,6 +18,8 @@ import {
   resetPasswordSchema,
   updateProfileSchema,
   changePasswordSchema,
+  deleteAccountSchema,
+  pushTokenSchema,
 } from './auth.dto';
 import * as authController from './auth.controller';
 
@@ -64,5 +66,22 @@ router.put('/password', authLimiter, authenticateJWT, validate(changePasswordSch
 
 // POST /api/v1/auth/logout-all — revoke every active session
 router.post('/logout-all', authenticateJWT, authController.logoutAll);
+
+// GET /api/v1/auth/verify-email — consume a verification token from email
+// Unauthenticated: the token in the query string IS the credential.
+router.get('/verify-email', authLimiter, authController.verifyEmail);
+
+// POST /api/v1/auth/resend-verification — issue a fresh verification email
+router.post('/resend-verification', authenticateJWT, authController.resendVerification);
+
+// POST /api/v1/auth/push-token — register an FCM push token for the
+// authenticated parent so the backend can deliver push notifications.
+router.post('/push-token', authenticateJWT, validate(pushTokenSchema), authController.registerPushToken);
+
+// GET /api/v1/auth/export-data — download every byte we hold for the parent
+router.get('/export-data', authenticateJWT, authController.exportData);
+
+// DELETE /api/v1/auth/account — permanently delete the parent + dependents
+router.delete('/account', authenticateJWT, validate(deleteAccountSchema), authController.deleteAccount);
 
 export default router;

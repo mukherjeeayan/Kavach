@@ -40,6 +40,15 @@ interface AppBlockRuleDao {
     suspend fun getRuleById(ruleId: String): AppBlockRuleEntity?
 
     /**
+     * Lookup a rule for a specific device+package combination. Used
+     * by the blocked-app overlay where the child only sees a package
+     * name (not the server-side rule id) and needs to submit an
+     * unblock request for that exact app.
+     */
+    @Query("SELECT * FROM app_block_rules WHERE device_id = :deviceId AND package_name = :packageName LIMIT 1")
+    suspend fun getRuleByPackage(deviceId: String, packageName: String): AppBlockRuleEntity?
+
+    /**
      * Observe rules where the child has requested an unblock.
      */
     @Query("SELECT * FROM app_block_rules WHERE device_id = :deviceId AND unblock_requested = 1")

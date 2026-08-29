@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useMoodLogs } from '../../hooks/useMood';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { SkeletonCard } from '../ui/Skeleton';
@@ -5,6 +6,8 @@ import { SkeletonCard } from '../ui/Skeleton';
 interface Props {
   childId: string;
 }
+
+const MOOD_PAGE_SIZE = 20;
 
 const MOOD_LABELS: Record<number, { emoji: string; label: string; color: string }> = {
   1: { emoji: '😞', label: 'Very Sad', color: '#EF4444' },
@@ -19,11 +22,15 @@ function formatDate(dateStr: string): string {
 }
 
 export default function MoodTrackingSection({ childId }: Props) {
-  const { data: logs, isLoading } = useMoodLogs(childId);
+  const [page, setPage] = useState(1);
+  const { data, isLoading } = useMoodLogs(childId, page, MOOD_PAGE_SIZE);
 
   if (isLoading) return <SkeletonCard />;
 
-  const moodLogs = logs ?? [];
+  const moodLogs = data?.data ?? [];
+  const meta = data?.meta;
+  const totalPages = meta?.total_pages ?? 0;
+
   const avgMood = moodLogs.length
     ? (moodLogs.reduce((s, l) => s + l.mood_score, 0) / moodLogs.length).toFixed(1)
     : null;
@@ -126,6 +133,28 @@ export default function MoodTrackingSection({ childId }: Props) {
                 })}
               </div>
             </div>
+
+            {meta && totalPages > 1 && (
+              <div className="flex justify-center gap-2 pt-2 border-t border-gray-100 dark:border-gray-700">
+                <button
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="px-3 py-1 text-xs border rounded-lg disabled:opacity-50"
+                >
+                  Prev
+                </button>
+                <span className="px-3 py-1 text-xs text-gray-500">
+                  Page {meta.page} of {totalPages}
+                </span>
+                <button
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages}
+                  className="px-3 py-1 text-xs border rounded-lg disabled:opacity-50"
+                >
+                  Next
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>

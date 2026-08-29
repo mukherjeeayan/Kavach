@@ -103,6 +103,19 @@ export const changePasswordSchema = z.object({
   new_password: passwordField,
 });
 
+export const deleteAccountSchema = z.object({
+  password: z
+    .string({ required_error: 'password is required' })
+    .min(1, 'password cannot be empty'),
+});
+
+export const pushTokenSchema = z.object({
+  token: z
+    .string({ required_error: 'token is required' })
+    .min(1, 'token cannot be empty'),
+  platform: z.enum(['ios', 'android', 'web']).optional(),
+});
+
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
 
@@ -114,3 +127,4 @@ export type VerifyPinInput = z.infer<typeof verifyPinSchema>;
 export type BiometricTokenInput = z.infer<typeof biometricTokenSchema>;
 export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
+export type DeleteAccountInput = z.infer<typeof deleteAccountSchema>;

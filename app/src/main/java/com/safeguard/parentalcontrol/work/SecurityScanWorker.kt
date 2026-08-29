@@ -9,19 +9,26 @@ import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.safeguard.parentalcontrol.data.local.OnboardingStore
+import com.safeguard.parentalcontrol.data.local.dao.SecurityScanDao
+import com.safeguard.parentalcontrol.data.local.entity.SecurityScanEntity
 import com.safeguard.parentalcontrol.data.remote.api.Phase2Api
 import com.safeguard.parentalcontrol.data.remote.dto.SecurityScanReportDto
 import com.safeguard.parentalcontrol.data.remote.dto.WifiLogReportDto
+import com.safeguard.parentalcontrol.security.KeyloggerDetector
 import com.safeguard.parentalcontrol.security.TamperDetector
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import java.security.MessageDigest
+import java.util.UUID
 
 /**
  * Periodic worker (every 12 hours) that performs a comprehensive
- * security scan: root detection, WiFi network analysis, and app
- * integrity verification. Reports results to the backend via
- * [Phase2Api.reportSecurityScan] and [Phase2Api.reportWifiLog].
+ * security scan: root detection, WiFi network analysis, app
+ * integrity verification, and keylogger / surveillance threat
+ * detection. Reports results to the backend via
+ * [Phase2Api.reportSecurityScan] and [Phase2Api.reportWifiLog],
+ * and persists a row to [SecurityScanEntity] for the parent
+ * dashboard.
  *
  * Stores last scan results in SharedPreferences for comparison.
  * Scheduled via [SyncScheduler.scheduleSecurityScan].
@@ -31,11 +38,13 @@ class SecurityScanWorker @AssistedInject constructor(
     @Assisted appContext: Context,
     @Assisted workerParams: WorkerParameters,
     private val phase2Api: Phase2Api,
-    private val onboardingStore: OnboardingStore
+    private val onboardingStore: OnboardingStore,
+    private val securityScanDao: SecurityScanDao
 ) : CoroutineWorker(appContext, workerParams) {
 
     override suspend fun doWork(): Result {
         val deviceId = onboardingStore.deviceId ?: return Result.success()
+        val childId = onboardingStore.childId ?: ""
 
         return try {
             val isRooted = TamperDetector.isRooted(applicationContext)
@@ -47,9 +56,16 @@ class SecurityScanWorker @AssistedInject constructor(
 
             val appIntegrityOk = checkAppIntegrity()
 
+            val keyloggerThreats = KeyloggerDetector.scanForKeyloggers(applicationContext)
+            val hasKeylogger = keyloggerThreats.isNotEmpty()
+            if (hasKeylogger) {
+                Log.w(TAG, "Keylogger threats detected: ${keyloggerThreats.size} -> " +
+                    keyloggerThreats.joinToString { "${it.packageName}/${it.type}" })
+            }
+
             val scan = SecurityScanReportDto(
                 isRooted = isRooted,
-                hasKeylogger = false,
+                hasKeylogger = hasKeylogger,
                 wifiSsid = wifiSsid,
                 wifiBssid = wifiBssid,
                 isOpenNetwork = isOpenNetwork,
@@ -68,10 +84,39 @@ class SecurityScanWorker @AssistedInject constructor(
                 phase2Api.reportWifiLog(deviceId, wifiLog)
             }
 
+            val now = System.currentTimeMillis().toString()
+            val overallResult = when {
+                isRooted -> "ROOTED"
+                !appIntegrityOk -> "TAMPERED"
+                hasKeylogger -> "KEYLOGGER_DETECTED"
+                isOpenNetwork -> "OPEN_NETWORK"
+                else -> "OK"
+            }
+            try {
+                securityScanDao.insert(
+                    SecurityScanEntity(
+                        id = UUID.randomUUID().toString(),
+                        childId = childId,
+                        deviceId = deviceId,
+                        isRooted = isRooted,
+                        hasKeylogger = hasKeylogger,
+                        wifiSsid = wifiSsid,
+                        wifiBssid = wifiBssid,
+                        isOpenNetwork = isOpenNetwork,
+                        appIntegrityOk = appIntegrityOk,
+                        scanResult = overallResult,
+                        createdAt = now
+                    )
+                )
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to persist SecurityScanEntity", e)
+            }
+
             if (scanResponse.isSuccessful && scanResponse.body()?.success == true) {
                 val prefs = applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
                 prefs.edit()
                     .putBoolean(LAST_IS_ROOTED, isRooted)
+                    .putBoolean(LAST_HAS_KEYLOGGER, hasKeylogger)
                     .putString(LAST_WIFI_SSID, wifiSsid)
                     .putString(LAST_WIFI_BSSID, wifiBssid)
                     .putBoolean(LAST_IS_OPEN, isOpenNetwork)
@@ -79,7 +124,8 @@ class SecurityScanWorker @AssistedInject constructor(
                     .putLong(LAST_SCAN_TIME, System.currentTimeMillis())
                     .apply()
 
-                Log.d(TAG, "Security scan reported: rooted=$isRooted, wifi=$wifiSsid, integrity=$appIntegrityOk")
+                Log.d(TAG, "Security scan reported: rooted=$isRooted, keylogger=$hasKeylogger, " +
+                    "wifi=$wifiSsid, integrity=$appIntegrityOk")
                 Result.success()
             } else {
                 Log.w(TAG, "Security scan report failed: HTTP ${scanResponse.code()}")
@@ -212,6 +258,7 @@ class SecurityScanWorker @AssistedInject constructor(
         private const val TAG = "SecurityScanWorker"
         private const val PREFS_NAME = "safeguard_security_scan"
         private const val LAST_IS_ROOTED = "last_is_rooted"
+        private const val LAST_HAS_KEYLOGGER = "last_has_keylogger"
         private const val LAST_WIFI_SSID = "last_wifi_ssid"
         private const val LAST_WIFI_BSSID = "last_wifi_bssid"
         private const val LAST_IS_OPEN = "last_is_open"

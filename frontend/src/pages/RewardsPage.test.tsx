@@ -1,6 +1,7 @@
 ﻿import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render, waitFor } from '@testing-library/react';
 import { renderHook } from '@testing-library/react';
+import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import RewardsPage from './RewardsPage';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useRewardCatalog } from '../hooks/useRewards';
@@ -8,12 +9,18 @@ import * as api from '../services/api';
 
 vi.mock('../services/api');
 
-function createWrapper() {
+function createWrapper(initialPath = '/children/child-1/rewards') {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   return ({ children }: { children: React.ReactNode }) => (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter initialEntries={[initialPath]}>
+        <Routes>
+          <Route path="/children/:childId/rewards" element={children} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>
   );
 }
 
@@ -23,7 +30,7 @@ describe('RewardsPage', () => {
   });
 
   it('renders Rewards page with loading state', () => {
-    const { container, unmount } = render(<RewardsPage childId="child-1" />, { wrapper: createWrapper() });
+    const { container, unmount } = render(<RewardsPage />, { wrapper: createWrapper() });
     expect(container.querySelector('[aria-hidden="true"]')).toBeInTheDocument();
     unmount();
   });
@@ -34,7 +41,11 @@ describe('RewardsPage', () => {
     ]);
 
     const { result } = renderHook(() => useRewardCatalog(), {
-      wrapper: createWrapper(),
+      wrapper: ({ children }) => (
+        <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+          {children}
+        </QueryClientProvider>
+      ),
     });
 
     await waitFor(() => {

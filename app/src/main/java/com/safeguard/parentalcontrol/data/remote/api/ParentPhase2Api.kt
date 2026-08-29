@@ -8,6 +8,8 @@ import com.safeguard.parentalcontrol.data.remote.dto.GeofenceDto
 import com.safeguard.parentalcontrol.data.remote.dto.MoodLogResponseDto
 import com.safeguard.parentalcontrol.data.remote.dto.RewardCatalogDto
 import com.safeguard.parentalcontrol.data.remote.dto.RewardPointsDto
+import com.safeguard.parentalcontrol.data.remote.dto.RewardRedemptionDto
+import com.safeguard.parentalcontrol.data.remote.dto.RewardRedemptionRequestDto
 import com.safeguard.parentalcontrol.data.remote.dto.SecurityScanDto
 import com.safeguard.parentalcontrol.data.remote.dto.SelfHarmAlertDto
 import com.safeguard.parentalcontrol.data.remote.dto.UrlFilterRuleDto
@@ -66,6 +68,16 @@ interface ParentPhase2Api {
     suspend fun getChildPoints(
         @Path("childId") childId: String
     ): Response<ApiResponse<RewardPointsDto>>
+
+    @POST("rewards/redeem")
+    suspend fun requestRedemption(
+        @Body body: RewardRedemptionRequestDto
+    ): Response<ApiResponse<RewardRedemptionDto>>
+
+    @GET("children/{childId}/rewards/redemptions")
+    suspend fun getRedemptions(
+        @Path("childId") childId: String
+    ): Response<ApiResponse<List<RewardRedemptionDto>>>
 
     @GET("children/{childId}/predictions")
     suspend fun getPredictions(
