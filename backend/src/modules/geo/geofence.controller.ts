@@ -46,7 +46,7 @@ export const checkGeofences = async (req: Request, res: Response, next: NextFunc
   try {
     const { latitude, longitude } = req.body;
     const violations = await geofenceService.checkGeofences(
-      req.params.childId, req.params.deviceId, latitude, longitude
+      req.user!.userId, req.params.deviceId, latitude, longitude
     );
     respond(res, 200, { violations }, req);
   } catch (err) { next(err); }

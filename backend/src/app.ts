@@ -18,7 +18,7 @@ import { validateEnv } from './config/validateEnv';
 validateEnv();
 
 // Shared origin config (used by both Express and Socket.IO in server.ts)
-const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || '')
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || process.env.CORS_ALLOWED_ORIGINS || '')
   .split(',')
   .map((o) => o.trim())
   .filter(Boolean);
@@ -34,12 +34,22 @@ if (process.env.NODE_ENV === 'production') {
   app.set('trust proxy', 1);
 }
 
+// Per-request CSP nonce so script-src can keep banning inline scripts
+// while still letting the dashboard inject its own bootstrap <script>
+// tag with a trusted nonce. Generated once per request and exposed to
+// downstream handlers via res.locals.cspNonce.
+app.use((req, res, next) => {
+  res.locals.cspNonce = crypto.randomBytes(16).toString('base64');
+  next();
+});
+
 // Security Middleware
 app.use(helmet({
   contentSecurityPolicy: {
+    useDefaults: false,
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+      scriptSrc: ["'self'", (req, res) => `'nonce-${(res as any).locals.cspNonce}'`],
       styleSrc: ["'self'", "'unsafe-inline'"],
       imgSrc: ["'self'", "data:", "https://api.mapbox.com", "https://*.tile.openstreetmap.org"],
       connectSrc: ["'self'", "ws:", "wss:"],
@@ -52,18 +62,20 @@ app.use(helmet({
   hsts: { maxAge: 31536000, includeSubDomains: true, preload: true },
 }));
 app.use(compression());
-// With credentials:true the origin can never be '*' — echo the request
-// origin in development, and require an explicit allowlist in production.
+// CORS: strict allowlist in production AND in test when CORS_ALLOWED_ORIGINS is set.
+// In development, allow localhost on any port and the explicit allowlist.
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production' ? ALLOWED_ORIGINS : (origin, callback) => {
-    // Allow requests with no origin (curl, mobile apps, server-to-server)
-    if (!origin) return callback(null, true);
-    // In development, allow localhost on any port
-    if (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) {
-      return callback(null, true);
-    }
-    callback(new Error('Not allowed by CORS'));
-  },
+  origin: process.env.NODE_ENV === 'production' || ALLOWED_ORIGINS.length > 0
+    ? ALLOWED_ORIGINS
+    : (origin, callback) => {
+        // Allow requests with no origin (curl, mobile apps, server-to-server)
+        if (!origin) return callback(null, true);
+        // In development, allow localhost on any port
+        if (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) {
+          return callback(null, true);
+        }
+        callback(new Error('Not allowed by CORS'));
+      },
   credentials: true,
 }));
 

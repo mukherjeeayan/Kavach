@@ -3,7 +3,7 @@
 
 import { query } from '../../config/database';
 import { NotFoundError } from '../../utils/errors';
-import { verifyChildBelongsToParent, ensureDeviceBelongsToChild } from '../children/children.service';
+import { verifyChildBelongsToParent, verifyParentCanAccessDevice, ensureDeviceBelongsToChild } from '../children/children.service';
 import { writeAuditLog } from '../shared/audit.service';
 import { sendPushToAllParents } from '../shared/pushNotificationService';
 import { toOffset, buildPaginationMeta } from '../../utils/pagination';
@@ -186,7 +186,7 @@ export const getActiveGeofencesForChild = async (childId: string) => {
  * Returns an array of geofence violations (entry/exit events).
  */
 export const checkGeofences = async (
-  childId: string,
+  parentId: string,
   deviceId: string,
   latitude: number,
   longitude: number
@@ -196,6 +196,11 @@ export const checkGeofences = async (
   zone_type: string;
   event_type: 'ENTRY' | 'EXIT';
 }>> => {
+  // Verify the device belongs to a child owned by the parent (or co-guardian)
+  const { childId } = await verifyParentCanAccessDevice(parentId, deviceId);
+  // Re-verify access to log a co-guardian access path explicitly.
+  await verifyChildBelongsToParent(childId, parentId);
+
   const geofences = await query(
     `SELECT id, name, latitude, longitude, radius_meters, zone_type, alert_on_entry, alert_on_exit
      FROM geofences

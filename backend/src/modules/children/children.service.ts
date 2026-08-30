@@ -200,6 +200,27 @@ export const ensureDeviceBelongsToChild = async (
 };
 
 /**
+ * Verify a device belongs to a child the parent can access (owner or
+ * co-guardian), and return the child's id. Used by device-scoped
+ * ingestion routes where only :deviceId is in the URL.
+ */
+export const verifyParentCanAccessDevice = async (
+  parentId: string,
+  deviceId: string
+): Promise<{ childId: string }> => {
+  const device = await query(
+    `SELECT child_id FROM devices WHERE id = $1`,
+    [deviceId]
+  );
+  if (device.rows.length === 0) {
+    throw new NotFoundError('Device not found');
+  }
+  const childId = device.rows[0].child_id as string;
+  await verifyChildBelongsToParent(childId, parentId);
+  return { childId };
+};
+
+/**
  * List all child profiles for a parent (ordered by creation time),
  * paginated.
  */

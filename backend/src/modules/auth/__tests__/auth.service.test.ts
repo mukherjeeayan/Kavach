@@ -52,6 +52,7 @@ const mockParentRowWithLockout = {
   ...mockParentRow,
   failed_login_attempts: 0,
   login_locked_until: null,
+  two_factor_enabled: false,
 };
 
 beforeEach(() => {
@@ -171,8 +172,10 @@ describe('auth.service', () => {
       const result = await authService.login('parent@example.com', 'password123');
 
       expect(result.user.id).toBe(PARENT_ID);
-      expect(result.token).toBe('signed-token');
-      expect(result.child).toEqual({ id: 'child-id', name: 'Kid', birth_date: '2015-01-01' });
+      expect('requires2fa' in result).toBe(false);
+      const session = result as { token: string; refresh_token: string; user: any; child: any };
+      expect(session.token).toBe('signed-token');
+      expect(session.child).toEqual({ id: 'child-id', name: 'Kid', birth_date: '2015-01-01' });
       // Email is normalized before lookup
       expect(mockedQuery).toHaveBeenCalledWith(
         expect.stringContaining('FROM parents WHERE email = $1'),
@@ -193,7 +196,9 @@ describe('auth.service', () => {
 
       const result = await authService.login('parent@example.com', 'password123');
 
-      expect(result.child).toBeNull();
+      expect('requires2fa' in result).toBe(false);
+      const session = result as { child: any };
+      expect(session.child).toBeNull();
     });
 
     it('should throw UnauthorizedError for a wrong password', async () => {

@@ -5,6 +5,36 @@ import { query } from '../../config/database';
 import { NotFoundError } from '../../utils/errors';
 import logger from '../../utils/logger';
 import { writeAuditLog } from '../shared/audit.service';
+import { encryptSensitiveData, decryptSensitiveData } from '../shared/encryption.service';
+
+function encryptConfig(config: Record<string, unknown> | null | undefined): string {
+  const json = JSON.stringify(config ?? {});
+  return JSON.stringify({ _encrypted: true, ct: encryptSensitiveData(json) });
+}
+
+function decryptConfigIfNeeded(raw: unknown): Record<string, unknown> {
+  if (raw == null) return {};
+  if (typeof raw === 'string') {
+    try {
+      const parsed = JSON.parse(raw);
+      return decryptConfigIfNeeded(parsed);
+    } catch {
+      return {};
+    }
+  }
+  if (typeof raw === 'object') {
+    const obj = raw as Record<string, unknown>;
+    if (obj._encrypted === true && typeof obj.ct === 'string') {
+      try {
+        return JSON.parse(decryptSensitiveData(obj.ct));
+      } catch {
+        return {};
+      }
+    }
+    return obj;
+  }
+  return {};
+}
 
 export interface CreateIntegrationInput {
   integration_type: 'SCHOOL_PORTAL' | 'CALENDAR' | 'HEALTH_APP' | 'CUSTOM';
@@ -30,7 +60,10 @@ export const listIntegrations = async (
      ORDER BY created_at DESC`,
     [parentId]
   );
-  return result.rows;
+  return result.rows.map((row) => ({
+    ...row,
+    config: decryptConfigIfNeeded(row.config),
+  }));
 };
 
 export const createIntegration = async (
@@ -41,7 +74,7 @@ export const createIntegration = async (
     `INSERT INTO integrations (parent_id, integration_type, name, config)
      VALUES ($1, $2, $3, $4)
      RETURNING ${INTEGRATION_COLUMNS}`,
-    [parentId, input.integration_type, input.name, JSON.stringify(input.config ?? {})]
+    [parentId, input.integration_type, input.name, encryptConfig(input.config)]
   );
 
   const integration = result.rows[0];
@@ -73,7 +106,7 @@ export const updateIntegration = async (
       integrationId,
       parentId,
       input.name ?? null,
-      input.config ? JSON.stringify(input.config) : null,
+      input.config !== undefined ? encryptConfig(input.config) : null,
       input.is_active === undefined ? null : input.is_active,
     ]
   );
@@ -130,23 +163,48 @@ export const syncIntegration = async (
   }
 
   const integration = result.rows[0];
+  const config = decryptConfigIfNeeded(integration.config);
 
   let syncResult: { status: 'success' | 'error'; details?: string };
 
   try {
     switch (integration.integration_type) {
-      case 'CALENDAR':
-        syncResult = await syncGoogleCalendar(integration);
+      case 'CALENDAR': {
+        const accessToken = config.access_token as string | undefined;
+        if (!accessToken) {
+          syncResult = { status: 'error', details: 'Missing access token' };
+          break;
+        }
+        syncResult = await syncGoogleCalendar({ ...integration, config: { access_token: accessToken } });
         break;
-      case 'HEALTH_APP':
-        syncResult = await syncHealthConnect(integration);
+      }
+      case 'HEALTH_APP': {
+        const accessToken = config.access_token as string | undefined;
+        if (!accessToken) {
+          syncResult = { status: 'error', details: 'Missing access token' };
+          break;
+        }
+        syncResult = await syncHealthConnect({ ...integration, config: { access_token: accessToken } });
         break;
-      case 'SCHOOL_PORTAL':
-        syncResult = await syncSchoolPortal(integration);
+      }
+      case 'SCHOOL_PORTAL': {
+        const webhookUrl = config.webhook_url as string | undefined;
+        if (!webhookUrl) {
+          syncResult = { status: 'error', details: 'Missing webhook URL' };
+          break;
+        }
+        syncResult = await syncSchoolPortal({ ...integration, config: { webhook_url: webhookUrl } });
         break;
-      case 'CUSTOM':
-        syncResult = await syncCustomWebhook(integration);
+      }
+      case 'CUSTOM': {
+        const webhookUrl = config.webhook_url as string | undefined;
+        if (!webhookUrl) {
+          syncResult = { status: 'error', details: 'Missing webhook URL' };
+          break;
+        }
+        syncResult = await syncCustomWebhook({ ...integration, config: { webhook_url: webhookUrl } });
         break;
+      }
       default:
         syncResult = { status: 'error', details: `Unknown integration type: ${integration.integration_type}` };
     }

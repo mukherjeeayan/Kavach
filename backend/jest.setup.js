@@ -16,3 +16,6 @@ process.env.FRONTEND_URL = 'http://localhost:5173';
 process.env.CORS_ORIGINS = 'http://localhost:5173';
 process.env.ALLOWED_ORIGINS = 'http://localhost:5173';
 process.env.BCRYPT_SALT_ROUNDS = '4';
+// Encryption key for sensitive columns (FCM tokens, integration config).
+// Must be at least 32 characters per encryption.service.ts.
+process.env.DATA_ENCRYPTION_KEY = 'test-data-encryption-key-for-unit-tests-only';

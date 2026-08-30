@@ -11,6 +11,7 @@ const maxRequests = parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100', 10);
 const standardRateLimitStore = createRateLimitStore('safeguard-rl:std:');
 const authRateLimitStore = createRateLimitStore('safeguard-rl:auth:');
 const deviceRateLimitStore = createRateLimitStore('safeguard-rl:dev:');
+const resendVerificationRateLimitStore = createRateLimitStore('safeguard-rl:resend:');
 
 // REDIS_URL is required (validated by validateEnv at startup).
 // The rate limiter uses a Redis-backed store for distributed counting.
@@ -70,6 +71,23 @@ export const deviceIngestionLimiter = rateLimit({
       timestamp: new Date().toISOString(),
       request_id: req.headers['x-request-id'] || 'unknown',
     });
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+/**
+ * Limiter for email verification resend (3 requests / hour per IP).
+ */
+export const resendVerificationLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: parseInt(process.env.RATE_LIMIT_RESEND_VERIFICATION_MAX || '3', 10),
+  store: resendVerificationRateLimitStore,
+  message: {
+    success: false,
+    data: {},
+    error: 'Too many verification email requests, please try again later.',
+    timestamp: new Date().toISOString(),
   },
   standardHeaders: true,
   legacyHeaders: false,

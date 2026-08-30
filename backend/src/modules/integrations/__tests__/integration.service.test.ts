@@ -71,10 +71,11 @@ describe('integration.service', () => {
 
       expect(result.id).toBe(INTEGRATION_ID);
       expect(result.name).toBe('My School Portal');
-      expect(mockedQuery).toHaveBeenCalledWith(
-        expect.stringContaining('INSERT INTO integrations'),
-        [PARENT_ID, 'SCHOOL_PORTAL', 'My School Portal', JSON.stringify({ school_id: 'SCH123' })]
-      );
+      // The config column stores an encrypted envelope (not plaintext).
+      const storedConfig = JSON.parse((mockedQuery.mock.calls[0][1] as string[])[3]);
+      expect(storedConfig._encrypted).toBe(true);
+      expect(typeof storedConfig.ct).toBe('string');
+      expect(JSON.stringify(storedConfig)).not.toContain('SCH123');
       expect(mockedAudit.writeAuditLog).toHaveBeenCalledWith(
         expect.objectContaining({ action: 'INTEGRATION_CREATED' })
       );
