@@ -13,13 +13,55 @@ import { respond, respondError } from '../../utils/response';
 /**
  * POST /api/v1/auth/login
  * Body: { email, password }
- * Returns: 200 with { token, refresh_token, user } and sets httpOnly
- * session cookies for browser clients (mobile keeps using the body).
+ *
+ * Returns one of:
+ *   * 200 with { token, refresh_token, user, child } and sets httpOnly
+ *     session cookies — normal login flow.
+ *   * 200 with { requires2fa: true, twoFactorToken, user } when the
+ *     account has 2FA enabled. The client must then POST to
+ *     /api/v1/auth/2fa/challenge with the twoFactorToken + TOTP code.
  */
 export const login = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { email, password } = req.body;
     const session = await authService.login(email, password);
+
+    if ('requires2fa' in session && session.requires2fa) {
+      // Don't set session cookies yet — we haven't proven the user is
+      // the rightful owner of the second factor.
+      respond(res, 200, session, req);
+      return;
+    }
+
+    setSessionCookies(res, session as { token: string; refresh_token: string });
+    respond(res, 200, session, req);
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * POST /api/v1/auth/2fa/challenge
+ * Body: { twoFactorToken: string, token: string }
+ *
+ * Validates the scoped twoFactorToken issued during the password
+ * step, then verifies the supplied TOTP / recovery code. On success
+ * issues real session tokens (cookies + body).
+ */
+export const loginChallenge = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { twoFactorToken, token } = req.body as {
+      twoFactorToken?: string;
+      token?: string;
+    };
+    if (!twoFactorToken || !token) {
+      return respondError(res, 400, 'twoFactorToken and token are required', req);
+    }
+    const session = await authService.complete2FAChallenge(twoFactorToken, token);
     setSessionCookies(res, session);
     respond(res, 200, session, req);
   } catch (err) {

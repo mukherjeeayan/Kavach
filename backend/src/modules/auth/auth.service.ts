@@ -23,6 +23,7 @@ import {
 } from '../shared/token.service';
 import { writeAuditLog } from '../shared/audit.service';
 import { sendEmail } from '../shared/email.service';
+import * as twoFactorService from './twoFactor.service';
 import logger from '../../utils/logger';
 
 export { UnauthorizedError };
@@ -141,15 +142,23 @@ export const register = async (
 
 /**
  * Verify parent credentials and return access + refresh tokens.
+ *
+ * If the parent has 2FA enabled, returns a `requires2fa` flag and a
+ * short-lived `twoFactorToken` instead of access/refresh tokens. The
+ * caller must then complete the challenge at /api/v1/auth/2fa/challenge.
+ *
  * Throws UnauthorizedError on any failure — no user enumeration
  * (same message whether the email or the password is wrong).
  */
 export const login = async (
   email: string,
   password: string
-): Promise<{ token: string; refresh_token: string; user: AuthUser; child: ChildProfile | null }> => {
+): Promise<
+  | { token: string; refresh_token: string; user: AuthUser; child: ChildProfile | null; requires2fa?: undefined; twoFactorToken?: undefined }
+  | { requires2fa: true; twoFactorToken: string; user: AuthUser }
+> => {
   const result = await query(
-    `SELECT id, email, name, password_hash, email_verified, failed_login_attempts, login_locked_until
+    `SELECT id, email, name, password_hash, email_verified, failed_login_attempts, login_locked_until, two_factor_enabled
      FROM parents WHERE email = $1`,
     [email.toLowerCase().trim()]
   );
@@ -194,6 +203,19 @@ export const login = async (
   };
   logger.info(`Parent logged in: ${user.id}`);
 
+  // 2FA gate: if the account has 2FA enabled, return a short-lived
+  // scoped token that the challenge endpoint will exchange for real
+  // session tokens. We never issue full session tokens until the user
+  // proves possession of the second factor.
+  if (row.two_factor_enabled === true) {
+    const twoFactorToken = signScopedToken(user.id, 'parent', 'two-factor', '5m');
+    return {
+      requires2fa: true,
+      twoFactorToken,
+      user,
+    };
+  }
+
   // Surface the first child profile (mirrors the register response) so
   // the dashboard can deep-link straight into a child's workspace.
   const childResult = await query(
@@ -204,6 +226,63 @@ export const login = async (
     [user.id]
   );
 
+  return {
+    token: signAccessToken(user.id, 'parent'),
+    refresh_token: await issueRefreshToken(user.id, crypto.randomUUID()),
+    user,
+    child: childResult.rows[0] || null,
+  };
+};
+
+/**
+ * Complete the 2FA login challenge. Verifies the scoped `twoFactorToken`
+ * (issued by `login` when the account has 2FA enabled), then validates
+ * the supplied TOTP / recovery code. On success returns the same
+ * session payload as a normal login.
+ */
+export const complete2FAChallenge = async (
+  twoFactorToken: string,
+  token: string
+): Promise<{ token: string; refresh_token: string; user: AuthUser; child: ChildProfile | null }> => {
+  let decoded: { userId: string; scope?: string };
+  try {
+    decoded = jwt.verify(twoFactorToken, process.env.JWT_SECRET!, {
+      algorithms: ['HS256'],
+    }) as { userId: string; scope?: string };
+  } catch {
+    throw new UnauthorizedError('Invalid or expired 2FA token');
+  }
+  if (decoded.scope !== 'two-factor' || !decoded.userId) {
+    throw new UnauthorizedError('Invalid 2FA token');
+  }
+
+  // Verify the TOTP code (or recovery code) against the persisted secret.
+  await twoFactorService.verify2FAChallenge(decoded.userId, token);
+
+  // Look up the user so we can return the same shape as a normal login.
+  const result = await query(
+    `SELECT id, email, name, email_verified FROM parents WHERE id = $1`,
+    [decoded.userId]
+  );
+  if (result.rows.length === 0) {
+    throw new UnauthorizedError('Invalid 2FA token');
+  }
+  const user: AuthUser = {
+    id: result.rows[0].id,
+    email: result.rows[0].email,
+    name: result.rows[0].name,
+    email_verified: result.rows[0].email_verified === true,
+  };
+
+  const childResult = await query(
+    `SELECT id, name, birth_date FROM children
+     WHERE parent_id = $1
+     ORDER BY created_at ASC
+     LIMIT 1`,
+    [user.id]
+  );
+
+  logger.info(`Parent completed 2FA login: ${user.id}`);
   return {
     token: signAccessToken(user.id, 'parent'),
     refresh_token: await issueRefreshToken(user.id, crypto.randomUUID()),

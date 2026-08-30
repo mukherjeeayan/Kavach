@@ -1,10 +1,12 @@
 // auth.routes.ts
 // Mounted at: /api/v1/auth
-// Unauthenticated by design — these endpoints create sessions.
+// Unauthenticated by design for login/register; 2FA enrollment, verify
+// and disable require a valid parent JWT so the body cannot be used to
+// attack other accounts (IDOR hardening).
 // authLimiter keeps brute-force attempts slow (5 tries / 15 min).
 
 import { Router } from 'express';
-import { authLimiter } from '../../middleware/rateLimiter';
+import { authLimiter, resendVerificationLimiter } from '../../middleware/rateLimiter';
 import { authenticateJWT } from '../../middleware/auth';
 import { validate } from '../../middleware/validate';
 import {
@@ -20,8 +22,14 @@ import {
   changePasswordSchema,
   deleteAccountSchema,
   pushTokenSchema,
+  twoFactorAuthSchema,
+  twoFactorVerifySchema,
+  twoFactorEnableSchema,
+  twoFactorRecoverySchema,
+  twoFactorChallengeSchema,
 } from './auth.dto';
 import * as authController from './auth.controller';
+import * as twoFactorController from './twoFactor.controller';
 
 const router = Router();
 
@@ -31,7 +39,70 @@ const router = Router();
 router.post('/register', authLimiter, validate(registerSchema), authController.register);
 
 // POST /api/v1/auth/login
+// Returns tokens via httpOnly cookies; frontend reads them from cookie store.
+// When the account has 2FA enabled, responds with { requires2fa, twoFactorToken }.
 router.post('/login', authLimiter, validate(loginSchema), authController.login);
+
+// POST /api/v1/auth/2fa/challenge
+// Second step of the login flow when 2FA is enabled. Validates the
+// scoped twoFactorToken issued during /login + a TOTP / recovery code,
+// then issues full session tokens.
+router.post(
+  '/2fa/challenge',
+  authLimiter,
+  validate(twoFactorChallengeSchema),
+  authController.loginChallenge
+);
+
+// POST /api/v1/auth/refresh-token
+router.post('/refresh-token', authLimiter, validate(refreshTokenSchema), authController.refreshToken);
+
+// POST /api/v1/auth/2fa/setup — generate QR code and TOTP secret for 2FA enrollment.
+// Authenticated: a parent can only enroll their own account.
+router.post(
+  '/2fa/setup',
+  authLimiter,
+  authenticateJWT,
+  validate(twoFactorAuthSchema),
+  twoFactorController.setup
+);
+
+// POST /api/v1/auth/2fa/verify — verify TOTP token during 2FA enrollment.
+// Authenticated: parentId is taken from the JWT (no IDOR via body).
+router.post(
+  '/2fa/verify',
+  authLimiter,
+  authenticateJWT,
+  validate(twoFactorVerifySchema),
+  twoFactorController.verify
+);
+
+// POST /api/v1/auth/2fa/enable — persist the TOTP secret after the user
+// proves they can produce a valid code. Authenticated.
+router.post(
+  '/2fa/enable',
+  authLimiter,
+  authenticateJWT,
+  validate(twoFactorEnableSchema),
+  twoFactorController.enable
+);
+
+// POST /api/v1/auth/2fa/disable — turn off 2FA for the authenticated parent.
+router.post(
+  '/2fa/disable',
+  authLimiter,
+  authenticateJWT,
+  twoFactorController.disable
+);
+
+// GET /api/v1/auth/2fa/recovery — get recovery codes for the authenticated parent.
+router.get(
+  '/2fa/recovery',
+  authLimiter,
+  authenticateJWT,
+  validate(twoFactorRecoverySchema),
+  twoFactorController.recovery
+);
 
 // POST /api/v1/auth/refresh-token
 router.post('/refresh-token', authLimiter, validate(refreshTokenSchema), authController.refreshToken);

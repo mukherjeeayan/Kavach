@@ -116,6 +116,49 @@ export const pushTokenSchema = z.object({
   platform: z.enum(['ios', 'android', 'web']).optional(),
 });
 
+// 2FA schemas — IDOR hardening: no parentId in the body; the
+// authenticated JWT supplies it on protected routes.
+
+export const twoFactorAuthSchema = z.object({
+  // setup() returns the secret + QR; nothing required in the body.
+  // Optional fields kept for forward compatibility.
+  secret: z.string().optional(),
+});
+
+export const twoFactorVerifySchema = z.object({
+  secret: z
+    .string({ required_error: 'TOTP secret is required' })
+    .min(1, 'TOTP secret cannot be empty'),
+  token: z
+    .string({ required_error: 'TOTP token is required' })
+    .min(1, 'TOTP token cannot be empty')
+    .regex(/^\d{6}$/, 'TOTP token must be 6 digits'),
+});
+
+export const twoFactorEnableSchema = z.object({
+  secret: z
+    .string({ required_error: 'TOTP secret is required' })
+    .min(1, 'TOTP secret cannot be empty'),
+  token: z
+    .string({ required_error: 'TOTP token is required' })
+    .min(1, 'TOTP token cannot be empty')
+    .regex(/^\d{6}$/, 'TOTP token must be 6 digits'),
+});
+
+export const twoFactorRecoverySchema = z.object({
+  // No body fields — recovery codes are looked up by the JWT user.
+});
+
+export const twoFactorChallengeSchema = z.object({
+  twoFactorToken: z
+    .string({ required_error: 'twoFactorToken is required' })
+    .min(1, 'twoFactorToken cannot be empty'),
+  token: z
+    .string({ required_error: 'TOTP token is required' })
+    .min(1, 'TOTP token cannot be empty')
+    .regex(/^\d{6}$/, 'TOTP token must be 6 digits'),
+});
+
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
 
@@ -128,3 +171,8 @@ export type BiometricTokenInput = z.infer<typeof biometricTokenSchema>;
 export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 export type DeleteAccountInput = z.infer<typeof deleteAccountSchema>;
+export type TwoFactorAuthInput = z.infer<typeof twoFactorAuthSchema>;
+export type TwoFactorVerifyInput = z.infer<typeof twoFactorVerifySchema>;
+export type TwoFactorEnableInput = z.infer<typeof twoFactorEnableSchema>;
+export type TwoFactorRecoveryInput = z.infer<typeof twoFactorRecoverySchema>;
+export type TwoFactorChallengeInput = z.infer<typeof twoFactorChallengeSchema>;
