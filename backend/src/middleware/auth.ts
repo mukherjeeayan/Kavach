@@ -6,6 +6,8 @@ import { extractAccessToken } from '../modules/shared/cookies';
 export interface JwtPayload {
   userId: string;
   role: string;
+  subscription_tier?: string;  // 'FREE' | 'TRIAL' | 'PREMIUM'
+  trial_expires_at?: string;   // ISO date string, present when tier === 'TRIAL'
   scope?: string;
 }
 
@@ -91,4 +93,70 @@ export const requireRole = (role: string) => {
     }
     next();
   };
+};
+
+/**
+ * Restrict a route to admin users only.
+ * Must be used AFTER authenticateJWT.
+ */
+export const requireAdmin = (req: Request, res: Response, next: NextFunction): void => {
+  if (!req.user || req.user.role !== 'admin') {
+    res.status(403).json({
+      success: false,
+      data: {},
+      error: 'Forbidden: Admin access required',
+      timestamp: new Date().toISOString(),
+      request_id: req.headers['x-request-id'] ?? 'unknown',
+    });
+    return;
+  }
+  next();
+};
+
+/**
+ * Require an active TRIAL or PREMIUM subscription.
+ * - FREE users: blocked (returns 403 with `requires_upgrade: true`).
+ * - TRIAL users: allowed only while `trial_expires_at` is in the future.
+ * - PREMIUM users: always allowed.
+ * Must be used AFTER authenticateJWT.
+ */
+export const requirePremium = (req: Request, res: Response, next: NextFunction): void => {
+  const user = req.user;
+  if (!user) {
+    res.status(401).json({ success: false, data: {}, error: 'Unauthorized', timestamp: new Date().toISOString(), request_id: req.headers['x-request-id'] ?? 'unknown' });
+    return;
+  }
+
+  const tier = (user.subscription_tier ?? 'FREE').toUpperCase();
+
+  if (tier === 'PREMIUM') {
+    return next();
+  }
+
+  if (tier === 'TRIAL') {
+    const expiresAt = user.trial_expires_at ? new Date(user.trial_expires_at) : null;
+    if (expiresAt && expiresAt.getTime() > Date.now()) {
+      return next();
+    }
+    // Trial expired
+    res.status(403).json({
+      success: false,
+      data: {},
+      error: 'Your free trial has expired. Please upgrade to continue using this feature.',
+      requires_upgrade: true,
+      timestamp: new Date().toISOString(),
+      request_id: req.headers['x-request-id'] ?? 'unknown',
+    });
+    return;
+  }
+
+  // FREE or unknown
+  res.status(403).json({
+    success: false,
+    data: {},
+    error: 'This feature requires a Premium subscription.',
+    requires_upgrade: true,
+    timestamp: new Date().toISOString(),
+    request_id: req.headers['x-request-id'] ?? 'unknown',
+  });
 };

@@ -38,6 +38,8 @@ tags:
   - name: Security
   - name: Voice Commands
   - name: Integrations
+  - name: Subscriptions
+  - name: Admin
 
 paths:
   /health:
@@ -3428,6 +3430,314 @@ paths:
         "404":
           description: Integration not found
 
+  # ─── Subscription Endpoints ──────────────────────────────────────────────
+  /subscriptions/feature-flags:
+    get:
+      tags: [Subscriptions]
+      summary: Get public feature flags
+      operationId: getPublicFeatureFlags
+      responses:
+        "200":
+          description: Feature flags
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Envelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/FeatureFlag"
+        "401":
+          description: Unauthorized
+
+  /subscriptions/plans:
+    get:
+      tags: [Subscriptions]
+      summary: Get available subscription plans
+      operationId: getSubscriptionPlans
+      responses:
+        "200":
+          description: Subscription plans
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Envelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/SubscriptionPlan"
+        "401":
+          description: Unauthorized
+
+  /subscriptions/checkout/razorpay:
+    post:
+      tags: [Subscriptions]
+      summary: Create a Razorpay checkout order
+      operationId: createRazorpayOrder
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                period:
+                  type: string
+                  enum: [monthly, yearly]
+                  default: monthly
+      responses:
+        "200":
+          description: Razorpay order created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Envelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/RazorpayOrderResult"
+        "401":
+          description: Unauthorized
+        "400":
+          description: Invalid period
+
+  /subscriptions/webhooks/razorpay:
+    post:
+      tags: [Subscriptions]
+      summary: Razorpay webhook receiver
+      operationId: razorpayWebhook
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          description: Webhook received
+        "400":
+          description: Invalid signature
+        "500":
+          description: Webhook secret not configured
+
+  # ─── Admin Endpoints ─────────────────────────────────────────────────────
+  /admin/stats:
+    get:
+      tags: [Admin]
+      summary: Get system statistics
+      operationId: getSystemStats
+      responses:
+        "200":
+          description: System stats
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Envelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/SystemStats"
+        "401":
+          description: Unauthorized
+        "403":
+          description: Admin role required
+
+  /admin/users:
+    get:
+      tags: [Admin]
+      summary: List all users
+      operationId: listAdminUsers
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: List of users
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Envelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/AdminUser"
+        "401":
+          description: Unauthorized
+        "403":
+          description: Admin role required
+
+  /admin/users/{userId}:
+    parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags: [Admin]
+      summary: Get user by ID
+      operationId: getAdminUserById
+      responses:
+        "200":
+          description: User details
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Envelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/AdminUser"
+        "401":
+          description: Unauthorized
+        "403":
+          description: Admin role required
+        "404":
+          description: User not found
+
+  /admin/users/{userId}/subscription:
+    parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    patch:
+      tags: [Admin]
+      summary: Update user subscription tier
+      operationId: updateUserSubscription
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tier]
+              properties:
+                tier:
+                  type: string
+                  enum: [FREE, TRIAL, PREMIUM]
+      responses:
+        "200":
+          description: Subscription updated
+        "401":
+          description: Unauthorized
+        "403":
+          description: Admin role required
+        "404":
+          description: User not found
+
+  /admin/users/{userId}/role:
+    parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    patch:
+      tags: [Admin]
+      summary: Update user role
+      operationId: updateUserRole
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [role]
+              properties:
+                role:
+                  type: string
+                  enum: [parent, child, admin]
+      responses:
+        "200":
+          description: Role updated
+        "401":
+          description: Unauthorized
+        "403":
+          description: Admin role required
+        "404":
+          description: User not found
+
+  /admin/feature-flags:
+    get:
+      tags: [Admin]
+      summary: List all feature flags
+      operationId: listAdminFeatureFlags
+      responses:
+        "200":
+          description: Feature flags
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Envelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/FeatureFlag"
+        "401":
+          description: Unauthorized
+        "403":
+          description: Admin role required
+
+  /admin/feature-flags/{key}:
+    parameters:
+      - name: key
+        in: path
+        required: true
+        schema:
+          type: string
+    patch:
+      tags: [Admin]
+      summary: Update a feature flag
+      operationId: updateFeatureFlag
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [enabled]
+              properties:
+                enabled:
+                  type: boolean
+      responses:
+        "200":
+          description: Feature flag updated
+        "401":
+          description: Unauthorized
+        "403":
+          description: Admin role required
+        "404":
+          description: Feature flag not found
+
 components:
   securitySchemes:
     bearerAuth:
@@ -4654,5 +4964,79 @@ components:
           type: object
         is_active:
           type: boolean
+
+  # ─── Subscription Schemas ────────────────────────────────────────────────
+  SubscriptionPlan:
+    type: object
+    properties:
+      id:
+        type: string
+      name:
+        type: string
+      tier:
+        type: string
+        enum: [FREE, TRIAL, PREMIUM]
+      price_monthly:
+        type: number
+      price_yearly:
+        type: number
+      features:
+        type: array
+        items:
+          type: string
+
+  RazorpayOrderResult:
+    type: object
+    properties:
+      order_id:
+        type: string
+      amount:
+        type: number
+      currency:
+        type: string
+      key:
+        type: string
+
+  FeatureFlag:
+    type: object
+    properties:
+      key:
+        type: string
+      enabled:
+        type: boolean
+      description:
+        type: string
+
+  # ─── Admin Schemas ───────────────────────────────────────────────────────
+  SystemStats:
+    type: object
+    properties:
+      total_parents:
+        type: integer
+      total_children:
+        type: integer
+      total_devices:
+        type: integer
+      active_subscriptions:
+        type: integer
+      premium_users:
+        type: integer
+
+  AdminUser:
+    type: object
+    properties:
+      id:
+        type: string
+      email:
+        type: string
+      name:
+        type: string
+      role:
+        type: string
+      subscription_tier:
+        type: string
+      created_at:
+        type: string
+        format: date-time
 
 

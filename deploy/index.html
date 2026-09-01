@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -455,7 +455,7 @@
             <h2 class="step-title">Step 4: Android Configuration</h2>
             
             <p style="color: #666; margin-bottom: 1.5rem;">
-                Setting up the Android application with BuildConfig, certificate pinning, and Firebase settings.
+                Setting up the Android application with API configuration, certificate pinning, and Firebase settings.
             </p>
 
             <div class="form-group">
@@ -469,7 +469,7 @@
             <div class="form-group" id="apiUrlGroup">
                 <label>Production API Base URL</label>
                 <input type="text" id="androidApiBaseUrl" placeholder="https://api.yourcompany.com">
-                <p style="font-size: 0.85rem; color: #666; margin-top: 0.5rem;">Required for release builds. Used to configure BuildConfig.API_BASE_URL</p>
+                <p style="font-size: 0.85rem; color: #666; margin-top: 0.5rem;">Required for release builds. Configures the API endpoint the Android app connects to.</p>
             </div>
 
             <div class="form-group" id="certPinsGroup">
@@ -479,12 +479,8 @@
             </div>
 
             <div class="form-group">
-                <label>Firebase/FCM Enable</label>
-                <div class="radio-group">
-                    <label><input type="radio" name="androidFcm" value="true" checked> Yes - Enable push notifications</label>
-                    <label><input type="radio" name="androidFcm" value="false"> No - Disable push notifications</label>
-                </div>
-                <p style="font-size: 0.85rem; color: #666; margin-top: 0.5rem;">Required for Firebase Cloud Messaging push notifications.</p>
+                <label>Firebase/FCM (Push Notifications)</label>
+                <p style="font-size: 0.85rem; color: #666; margin-top: 0.5rem;">FCM is auto-detected from the presence of <code>google-services.json</code> in <code>android/app/</code>. To enable push notifications, download <code>google-services.json</code> from Firebase Console and place it there. No toggle needed.</p>
             </div>
 
             <hr style="margin: 2rem 0; border: none; border-top: 1px solid var(--border);">
@@ -492,12 +488,11 @@
             <div class="walkthrough-section">
                 <h3>What's Being Generated</h3>
                 <ul>
-                    <li><strong>BuildConfig.API_BASE_URL:</strong> Production API endpoint embedded in Android app</li>
-                    <li><strong>BuildConfig.FCM_ENABLED:</strong> Firebase flag for push notifications</li>
-                    <li><strong>BuildConfig.CERT_PINNING_ENABLED:</strong> Certificate pinning status for security</li>
-                    <li><strong>BuildConfig.CERT_PINS:</strong> SHA-256 certificate pins for pinning validation</li>
-                    <li><strong>Android BuildConfig.cs:</strong> Written to app/obj/ directory for C#/Hilt integration</li>
-                    <li><strong>Gradle properties:</strong> May be updated with KAVACH_PINS for release builds</li>
+                    <li><strong>API_BASE_URL:</strong> Production API endpoint for the Android app</li>
+                    <li><strong>SAFEGUARD_PINS:</strong> SHA-256 certificate pins for pinning validation (release only)</li>
+                    <li><strong>FCM:</strong> Auto-detected from <code>google-services.json</code> in <code>android/app/</code></li>
+                    <li><strong>Cert pinning:</strong> Mandatory in release builds, configured via <code>SAFEGUARD_PINS</code></li>
+                    <li><strong>Output:</strong> Gradle properties for <code>android/local.properties</code> or CLI flags</li>
                 </ul>
             </div>
 
@@ -507,69 +502,62 @@
 
         <!-- Step 5: Summary & Actions -->
         <div class="step-panel" id="step5">
-            <h2 class="step-title">Step 5: Summary & Generated Configuration</h2>
+            <h2 class="step-title">Step 5: Deploy</h2>
             
             <p style="color: #666; margin-bottom: 1.5rem;">
-                Your deployment configuration is ready. Review all generated files and download them for use.
+                Your deployment script is ready. Download and run it to deploy the full stack.
             </p>
 
             <div class="walkthrough-section">
-                <h3>Generated Backend .env</h3>
-                <div class="secret-box" id="backendEnvOutput">
+                <h3>Deployment Script</h3>
+                <div class="secret-box" id="deployScriptOutput" style="max-height: 400px; overflow-y: auto; font-size: 0.75rem;">
                     <!-- Content injected here -->
                 </div>
-                <button class="btn btn-secondary" onclick="copyToClipboard('backendEnvOutput', 'backend')">Copy Backend .env</button>
-            </div>
-
-            <div class="walkthrough-section">
-                <h3>Generated Frontend .env</h3>
-                <div class="secret-box" id="frontendEnvOutput">
-                    <!-- Content injected here -->
+                <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+                    <button class="btn btn-primary" onclick="downloadDeployScript()">Download Script</button>
+                    <button class="btn btn-secondary" onclick="copyToClipboard('deployScriptOutput', 'script')">Copy to Clipboard</button>
                 </div>
-                <button class="btn btn-secondary" onclick="copyToClipboard('frontendEnvOutput', 'frontend')">Copy Frontend .env</button>
-            </div>
-
-            <div class="walkthrough-section">
-                <h3>Generated Android BuildConfig</h3>
-                <div class="secret-box" id="androidBuildConfigOutput">
-                    <!-- Content injected here -->
-                </div>
-                <button class="btn btn-secondary" onclick="copyToClipboard('androidBuildConfigOutput', 'android')">Copy Android Config</button>
             </div>
 
             <hr style="margin: 2rem 0; border: none; border-top: 1px solid var(--border);">
 
             <div class="walkthrough-section">
-                <h3>Next Steps</h3>
+                <h3>Quick Start (Run This)</h3>
+                <div class="code-block" id="quickStartCmd">
+                    <!-- Content injected here -->
+                </div>
+            </div>
+
+            <div class="walkthrough-section">
+                <h3>What the Script Does</h3>
                 <ol style="margin: 0; padding-left: 1.5rem;">
-                    <li><strong>Backend:</strong> Place generated .env in kavach/backend/ directory. Run <code>cd backend && npm install && npm run db:migrate</code></li>
-                    <li><strong>Frontend:</strong> Place generated .env in kavach/frontend/ directory. Run <code>cd frontend && npm install</code> then <code>npm run dev</code></li>
-                    <li><strong>Android:</strong> Open in Android Studio. Build -> Build Bundles / APK(s) -> Build Bundle(s). For release, provide certificate pins via gradle: <code>./gradlew assembleRelease -PKAVACH_PINS="pins"</code></li>
-                    <li><strong>Database:</strong> Ensure PostgreSQL is running with credentials from the .env file (user: postgres, password: password, db: kavach)</li>
+                    <li>Checks prerequisites (Node.js, Docker, npm)</li>
+                    <li>Writes generated .env files to backend/ and frontend/</li>
+                    <li>Installs dependencies and runs database migrations</li>
+                    <li>Starts PostgreSQL and Redis via Docker</li>
+                    <li>Builds the frontend</li>
+                    <li>Verifies all services are healthy</li>
+                    <li>Prints status summary with URLs</li>
                 </ol>
+            </div>
+
+            <div class="walkthrough-section">
+                <h3>Android Build (After Script Completes)</h3>
+                <div class="code-block" id="androidCmd">
+                    <!-- Content injected here -->
+                </div>
+                <p style="font-size: 0.85rem; color: #666; margin-top: 0.5rem;">Requires Android Studio with SDK installed. The script will output this command when it finishes.</p>
             </div>
 
             <div class="walkthrough-section">
                 <h3>Security Checklist</h3>
                 <ul style="margin: 0; padding-left: 1.2rem;">
-                    <li>✅ JWT secrets are 64-character random strings (kept secure, not committed to git)</li>
-                    <li>✅ ALLOWED_ORIGINS set to your production domain(s)</li>
-                    <li>✅ Mapbox token restricted by domain in Mapbox dashboard (never baked into frontend)</li>
-                    <li>✅ Redis configured for production rate limiting (or in-memory fallback documented)</li>
-                    <li>✅ HTTPS/SSL configured at reverse proxy/load balancer level</li>
-                    <li>✅ Android certificate pins match production server certificate</li>
-                    <li>✅ google-services.json placed in app/ if Firebase/FCM enabled</li>
-                </ul>
-            </div>
-
-            <div style="margin-top: 2rem; padding: 1.5rem; background: #e8f0fe; border-radius: 8px;">
-                <h4>Need Help?</h4>
-                <p>If you encounter issues:</p>
-                <ul style="margin: 0.5rem 0 0 1.5rem;">
-                    <li>Ensure Node.js 18+ is installed for backend</li>
-                    <li>Ensure Python/pip is available for database migrations</li>
-                    <li>Android Studio Ladybugbee (2024.1.1) or newer recommended</li>
-                    <li>PostgreSQL 16+ recommended for production</li>
+                    <li>JWT secrets are 64-character random strings (kept secure, not committed to git)</li>
+                    <li>ALLOWED_ORIGINS set to your production domain(s)</li>
+                    <li>Mapbox token restricted by domain in Mapbox dashboard</li>
+                    <li>HTTPS/SSL configured at reverse proxy/load balancer level</li>
+                    <li>Android certificate pins match production server certificate</li>
+                    <li>google-services.json placed in android/app/ if Firebase/FCM enabled</li>
                 </ul>
             </div>
 
@@ -627,15 +615,15 @@
                 const androidBuild = document.querySelector('input[name="androidBuild"]:checked').value;
                 const androidApiBaseUrl = document.getElementById('androidApiBaseUrl').value.trim();
                 const androidCertPins = document.getElementById('androidCertPins').value.trim();
-                const androidFcm = document.querySelector('input[name="androidFcm"]:checked').value;
 
                 // Step 1: Show/hide domain input
                 document.getElementById('domainGroup').style.display = (env === 'production') ? 'block' : 'none';
 
-                // Step 5: Generate all configuration files
+                // Step 5: Generate all configuration files and deploy script
                 generateBackendEnv(env, redisUrl, allowedOrigins, frontendDomain);
                 generateFrontendEnv(env, viteApiBaseUrl, viteSocketUrl, viteMapboxToken, frontendDomain);
-                generateAndroidConfig(androidBuild, androidApiBaseUrl, androidCertPins, androidFcm);
+                generateAndroidConfig(androidBuild, androidApiBaseUrl, androidCertPins);
+                generateDeployScript(env, frontendDomain, androidBuild, androidApiBaseUrl, androidCertPins);
             }
 
             // Generate a cryptographically secure 64-character secret
@@ -668,10 +656,10 @@ NODE_ENV=${env}
 DB_HOST=localhost
 DB_PORT=5432
 DB_USER=postgres
-                DB_NAME=kavach
+DB_NAME=kavach
 DB_DRIVER=pg
 
-# JWT — auto-generated secure secrets (64 chars)
+# JWT - auto-generated secure secrets (64 chars)
 JWT_SECRET=${jwtSecret}
 JWT_REFRESH_SECRET=${jwtRefreshSecret}
 JWT_EXPIRES_IN=15m
@@ -680,15 +668,36 @@ JWT_REFRESH_EXPIRES_IN=7d
 RATE_LIMIT_WINDOW_MS=900000
 RATE_LIMIT_MAX_REQUESTS=100
 
-# Redis (optional — falls back to in-memory when unset)
-${redisUrl ? redisUrl : ''}
+# Redis (falls back to in-memory when unset)
+REDIS_URL=${redisUrl || ''}
 
 ALLOWED_ORIGINS=${allowedOrigins}
+
+# Razorpay (required for subscriptions)
+# RAZORPAY_KEY_ID=rzp_test_xxx
+# RAZORPAY_KEY_SECRET=xxx
+# RAZORPAY_WEBHOOK_SECRET=xxx
 
 # Mapbox token (never bake into frontend bundle)
 # MAPBOX_PUBLIC_TOKEN=pk.xxx
 
-# Retention days (optional)
+# SMTP (optional - enables password reset emails)
+# SMTP_HOST=smtp.gmail.com
+# SMTP_PORT=587
+# SMTP_USER=you@gmail.com
+# SMTP_PASS=app-password
+# SMTP_SECURE=true
+
+# Firebase (optional - enables push notifications)
+# FIREBASE_PROJECT_ID=xxx
+# FIREBASE_CLIENT_EMAIL=xxx
+# FIREBASE_PRIVATE_KEY=xxx
+
+# Android encryption (optional)
+# DATA_ENCRYPTION_KEY=<64-char-random-string>
+# CHAMBER_KEY_ALIAS=kavach-chamber
+
+# Data retention days (optional)
 # RETENTION_LOCATION_DAYS=90
 # RETENTION_SCREEN_TIME_DAYS=365
 # RETENTION_AUDIT_DAYS=730
@@ -725,36 +734,309 @@ VITE_MAPBOX_TOKEN=${viteMapboxToken || ''}
                 document.getElementById('frontendEnvOutput').innerText = frontendEnv;
             }
 
-            // Generate Android BuildConfig
-            function generateAndroidConfig(androidBuild, androidApiBaseUrl, androidCertPins, androidFcm) {
+            // Generate Android Gradle config
+            function generateAndroidConfig(androidBuild, androidApiBaseUrl, androidCertPins) {
                 const apiBase = androidApiBaseUrl || 'https://api.yourcompany.com';
-                const fcm = androidFcm === 'true';
                 const pins = androidCertPins || '';
                 
-                const buildConfig = `// Auto-generated BuildConfig by Kavach Deployment Wizard
-// Do not edit manually — rebuild using deployment script
+                const gradleConfig = `# Kavach Auto-Generated Android Configuration
+# Mode: ${androidBuild}
+# Generated: ${new Date().toISOString().split('T')[0]}
+#
+# For release builds, pass these as Gradle properties:
+#   cd android && ./gradlew assembleRelease \\
+#     -PAPI_BASE_URL=${apiBase} \\
+#     -PSAFEGUARD_PINS="${pins || 'sha256/...'}"
+#
+# Or add to android/local.properties:
+#   API_BASE_URL=${apiBase}
+#   SAFEGUARD_PINS=${pins || 'sha256/...'}
+#
+# FCM is auto-detected from google-services.json presence.
+# Place google-services.json in android/app/ to enable FCM.
 
-// API Base URL for the application
-const string API_BASE_URL = "${apiBase}";
+# ── Required for release builds ──
+API_BASE_URL=${apiBase}
 
-// Feature flags
-const bool FCM_ENABLED = ${fcm};
+# ── Certificate pinning (release only) ──
+SAFEGUARD_PINS=${pins || ''}
 
-// Certificate pinning status
-// In release mode, these pins must match the production API server certificate
-// Set via gradle property: -PKAVACH_PINS="sha256/...,sha256/..."
-const bool CERT_PINNING_ENABLED = (${androidBuild} === 'release' && "${pins}" !== "");
-
-// Production certificate pins (set via gradle property)
-// Format: "-PKAVACH_PINS=""sha256/...,sha256/..."""
-const string CERT_PINS = "${pins}"
-
-// Build version info
-const int VERSION_CODE = 1;
-const string VERSION_NAME = "1.0";
+# ── Build version info ──
+VERSION_CODE=1
+VERSION_NAME=1.0
 `;
 
-                document.getElementById('androidBuildConfigOutput').innerText = buildConfig;
+                document.getElementById('androidBuildConfigOutput').innerText = gradleConfig;
+            }
+
+            // Generate complete deployment script
+            function generateDeployScript(env, frontendDomain, androidBuild, androidApiBaseUrl, androidCertPins) {
+                const backendEnv = document.getElementById('backendEnvOutput').innerText;
+                const frontendEnv = document.getElementById('frontendEnvOutput').innerText;
+                const apiBase = androidApiBaseUrl || 'https://api.yourcompany.com';
+                const pins = androidCertPins || '';
+
+                const isWindows = navigator.platform.indexOf('Win') > -1;
+                const scriptName = isWindows ? 'deploy.cmd' : 'deploy.sh';
+                const lineEnd = isWindows ? '\r\n' : '\n';
+
+                let script = '';
+
+                if (isWindows) {
+                    script = `@echo off
+title Kavach Deployment
+color 0A
+
+echo ============================================
+echo   Kavach Deployment Script
+echo   Mode: ${env}
+echo   Generated: ${new Date().toISOString().split('T')[0]}
+echo ============================================
+echo.
+
+:: ── Phase 1: Check Prerequisites ──
+echo [1/6] Checking prerequisites...
+
+where node >nul 2>&1
+if %ERRORLEVEL% NEQ 0 (
+    echo ERROR: Node.js is not installed. Download from https://nodejs.org
+    exit /b 1
+)
+for /f "tokens=*" %%i in ('node --version') do set NODE_VER=%%i
+echo   Node.js: %NODE_VER%
+
+where docker >nul 2>&1
+if %ERRORLEVEL% NEQ 0 (
+    echo ERROR: Docker is not installed. Download from https://docker.com
+    exit /b 1
+)
+echo   Docker: OK
+
+where npm >nul 2>&1
+if %ERRORLEVEL% NEQ 0 (
+    echo ERROR: npm is not installed.
+    exit /b 1
+)
+echo   npm: OK
+echo.
+
+:: ── Phase 2: Write Environment Files ──
+echo [2/6] Writing environment files...
+
+(
+${backendEnv.split('\n').map(l => 'echo ' + l.replace(/%/g, '%%')).join(lineEnd + ')}
+) > backend\\.env
+echo   backend\\.env written
+
+(
+${frontendEnv.split('\n').map(l => 'echo ' + l.replace(/%/g, '%%')).join(lineEnd + ')}
+) > frontend\\.env
+echo   frontend\\.env written
+echo.
+
+:: ── Phase 3: Start Database (Docker) ──
+echo [3/6] Starting PostgreSQL and Redis...
+docker compose -f deploy\\docker-compose.yml up -d
+timeout /t 5 /nobreak >nul
+echo   Database services started
+echo.
+
+:: ── Phase 4: Backend Setup ──
+echo [4/6] Setting up backend...
+cd backend
+call npm install
+if %ERRORLEVEL% NEQ 0 (
+    echo ERROR: npm install failed
+    exit /b 1
+)
+call npm run db:migrate
+if %ERRORLEVEL% NEQ 0 (
+    echo WARNING: Migration may have failed (tables may already exist)
+)
+cd ..
+echo   Backend ready
+echo.
+
+:: ── Phase 5: Frontend Build ──
+echo [5/6] Building frontend...
+cd frontend
+call npm install
+if %ERRORLEVEL% NEQ 0 (
+    echo ERROR: npm install failed
+    exit /b 1
+)
+call npm run build
+if %ERRORLEVEL% NEQ 0 (
+    echo ERROR: Frontend build failed
+    exit /b 1
+)
+cd ..
+echo   Frontend built
+echo.
+
+:: ── Phase 6: Verify ──
+echo [6/6] Verifying deployment...
+echo   Starting backend server...
+start /b cmd /c "cd backend && npm run dev"
+timeout /t 5 /nobreak >nul
+
+curl -s http://localhost:3000/health >nul 2>&1
+if %ERRORLEVEL% EQU 0 (
+    echo   Backend: HEALTHY
+) else (
+    echo   Backend: Starting (may need a moment)
+)
+
+echo.
+echo ============================================
+echo   Deployment Complete!
+echo ============================================
+echo.
+echo   Backend API:  http://localhost:3000
+echo   Frontend:     http://localhost:5173
+echo   API Docs:     http://localhost:3000/api/docs
+echo   Database:     localhost:5432
+echo.
+echo   Next: Build the Android app
+echo     cd android
+echo     gradlew.bat assembleDebug
+echo.
+echo ============================================
+`;
+                } else {
+                    script = `#!/bin/bash
+set -e
+
+echo "============================================"
+echo "  Kavach Deployment Script"
+echo "  Mode: ${env}"
+echo "  Generated: ${new Date().toISOString().split('T')[0]}"
+echo "============================================"
+echo ""
+
+# ── Phase 1: Check Prerequisites ──
+echo "[1/6] Checking prerequisites..."
+
+if ! command -v node &> /dev/null; then
+    echo "ERROR: Node.js is not installed. Download from https://nodejs.org"
+    exit 1
+fi
+echo "  Node.js: $(node --version)"
+
+if ! command -v docker &> /dev/null; then
+    echo "ERROR: Docker is not installed. Download from https://docker.com"
+    exit 1
+fi
+echo "  Docker: OK"
+
+if ! command -v npm &> /dev/null; then
+    echo "ERROR: npm is not installed."
+    exit 1
+fi
+echo "  npm: OK"
+echo ""
+
+# ── Phase 2: Write Environment Files ──
+echo "[2/6] Writing environment files..."
+
+cat > backend/.env << 'ENVEOF'
+${backendEnv}
+ENVEOF
+echo "  backend/.env written"
+
+cat > frontend/.env << 'ENVEOF'
+${frontendEnv}
+ENVEOF
+echo "  frontend/.env written"
+echo ""
+
+# ── Phase 3: Start Database (Docker) ──
+echo "[3/6] Starting PostgreSQL and Redis..."
+docker compose -f deploy/docker-compose.yml up -d
+sleep 5
+echo "  Database services started"
+echo ""
+
+# ── Phase 4: Backend Setup ──
+echo "[4/6] Setting up backend..."
+cd backend
+npm install
+npm run db:migrate || echo "  WARNING: Migration may have failed (tables may already exist)"
+cd ..
+echo "  Backend ready"
+echo ""
+
+# ── Phase 5: Frontend Build ──
+echo "[5/6] Building frontend..."
+cd frontend
+npm install
+npm run build
+cd ..
+echo "  Frontend built"
+echo ""
+
+# ── Phase 6: Verify ──
+echo "[6/6] Verifying deployment..."
+echo "  Starting backend server..."
+cd backend && npm run dev &
+BACKEND_PID=$!
+cd ..
+sleep 5
+
+if curl -s http://localhost:3000/health > /dev/null 2>&1; then
+    echo "  Backend: HEALTHY"
+else
+    echo "  Backend: Starting (may need a moment)"
+fi
+
+echo ""
+echo "============================================"
+echo "  Deployment Complete!"
+echo "============================================"
+echo ""
+echo "  Backend API:  http://localhost:3000"
+echo "  Frontend:     http://localhost:5173"
+echo "  API Docs:     http://localhost:3000/api/docs"
+echo "  Database:     localhost:5432"
+echo ""
+echo "  Next: Build the Android app"
+echo "    cd android && ./gradlew assembleDebug"
+echo ""
+echo "============================================"
+`;
+                }
+
+                document.getElementById('deployScriptOutput').innerText = script;
+
+                // Quick start command
+                const quickCmd = isWindows
+                    ? `:: Save the script above as deploy.cmd, then run:\\n deploy.cmd`
+                    : `# Save the script above as deploy.sh, then run:\\nchmod +x deploy.sh\\n./deploy.sh`;
+                document.getElementById('quickStartCmd').innerText = quickCmd;
+
+                // Android command
+                const androidGradleCmd = androidBuild === 'release'
+                    ? `cd android && ./gradlew assembleRelease -PAPI_BASE_URL=${apiBase} -PSAFEGUARD_PINS="${pins || 'sha256/...'}"`
+                    : `cd android && ./gradlew assembleDebug`;
+                document.getElementById('androidCmd').innerText = androidGradleCmd;
+            }
+
+            // Download deploy script
+            function downloadDeployScript() {
+                const script = document.getElementById('deployScriptOutput').innerText;
+                const isWindows = navigator.platform.indexOf('Win') > -1;
+                const filename = isWindows ? 'deploy.cmd' : 'deploy.sh';
+                const mimeType = isWindows ? 'text/plain' : 'text/x-shellscript';
+
+                const blob = new Blob([script], { type: mimeType });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
             }
 
             // Copy to clipboard helper

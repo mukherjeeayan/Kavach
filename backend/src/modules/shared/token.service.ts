@@ -12,8 +12,19 @@ const refreshSecret = process.env.JWT_REFRESH_SECRET as string;
 const accessExpiresIn = (process.env.JWT_EXPIRES_IN || '15m') as jwt.SignOptions['expiresIn'];
 const refreshExpiresIn = (process.env.JWT_REFRESH_EXPIRES_IN || '7d') as jwt.SignOptions['expiresIn'];
 
-export const signAccessToken = (userId: string, role: string): string =>
-  jwt.sign({ userId, role }, accessSecret, { algorithm: 'HS256', expiresIn: accessExpiresIn });
+export interface SubscriptionContext {
+  subscription_tier: string;        // 'FREE' | 'TRIAL' | 'PREMIUM'
+  trial_expires_at?: string | null; // ISO date string
+}
+
+export const signAccessToken = (userId: string, role: string, sub?: SubscriptionContext): string => {
+  const payload: Record<string, unknown> = { userId, role };
+  if (sub) {
+    payload.subscription_tier = sub.subscription_tier;
+    if (sub.trial_expires_at) payload.trial_expires_at = sub.trial_expires_at;
+  }
+  return jwt.sign(payload, accessSecret, { algorithm: 'HS256', expiresIn: accessExpiresIn });
+};
 
 /**
  * Short-lived scoped token used for secondary authentication factors

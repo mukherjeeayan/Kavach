@@ -204,6 +204,9 @@ import settingsRoutes from './modules/settings/settings.routes';
 import notificationsRoutes from './modules/notifications/notifications.routes';
 import reportsRoutes from './modules/reports/reports.routes';
 import alertsRoutes from './modules/alerts/alerts.routes';
+// ── Admin & Subscription Routes ──────────────────────────────────
+import adminRoutes from './modules/admin/admin.routes';
+import subscriptionRoutes from './modules/subscription/subscription.routes';
 
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/children/:childId/apps', appBlockingRoutes);
@@ -253,6 +256,9 @@ app.use('/api/v1/settings', settingsRoutes);
 app.use('/api/v1/notifications', notificationsRoutes);
 app.use('/api/v1/reports', reportsRoutes);
 app.use('/api/v1/children', alertsRoutes);
+// Admin & Subscription
+app.use('/api/v1/admin',        adminRoutes);
+app.use('/api/v1/subscriptions', subscriptionRoutes);
 
 
 // Global Error Handler (must be last)

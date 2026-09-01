@@ -38,6 +38,7 @@ import SecuritySection from '../components/dashboard/SecuritySection';
 import SelfHarmAlertsSection from '../components/dashboard/SelfHarmAlertsSection';
 import VoiceCommandsSection from '../components/dashboard/VoiceCommandsSection';
 import IntegrationsSection from '../components/dashboard/IntegrationsSection';
+import PremiumLockOverlay from '../components/ui/PremiumLockOverlay';
 import Toast from '../components/ui/Toast';
 import { SkeletonList } from '../components/ui/Skeleton';
 import type { RootState } from '../store/store';
@@ -149,7 +150,9 @@ export default function DashboardPage() {
               }
             />
             <AlertsSection childId={childId} />
-            <LocationsSection childId={childId} />
+            <PremiumLockOverlay featureName="Location Tracking" requiredTier="TRIAL">
+              <LocationsSection childId={childId} />
+            </PremiumLockOverlay>
 
             {devicesQuery.isLoading && <SkeletonList items={2} />}
             {devicesQuery.isError && (
@@ -304,13 +307,23 @@ export default function DashboardPage() {
             {pinUnlocked && (
               <>
                 <EmergencySOS childId={childId} onError={setActionError} />
-                <WebsiteFilterSection childId={childId} onError={setActionError} />
+                <PremiumLockOverlay featureName="Website Filtering" requiredTier="TRIAL">
+                  <WebsiteFilterSection childId={childId} onError={setActionError} />
+                </PremiumLockOverlay>
                 <DeviceHealthSection childId={childId} deviceId={selectedDeviceId} />
-                <GeofenceSection childId={childId} onError={setActionError} />
-                <CommunicationSection childId={childId} />
-                <KeywordAlertsSection childId={childId} onError={setActionError} />
+                <PremiumLockOverlay featureName="Geofencing" requiredTier="TRIAL">
+                  <GeofenceSection childId={childId} onError={setActionError} />
+                </PremiumLockOverlay>
+                <PremiumLockOverlay featureName="Communication Monitoring" requiredTier="TRIAL">
+                  <CommunicationSection childId={childId} />
+                </PremiumLockOverlay>
+                <PremiumLockOverlay featureName="Keyword Alerts" requiredTier="TRIAL">
+                  <KeywordAlertsSection childId={childId} onError={setActionError} />
+                </PremiumLockOverlay>
                 <KeywordDictionarySection onError={setActionError} />
-                <AnalyticsSection childId={childId} onError={setActionError} />
+                <PremiumLockOverlay featureName="Weekly AI Reports" requiredTier="PREMIUM">
+                  <AnalyticsSection childId={childId} onError={setActionError} />
+                </PremiumLockOverlay>
               </>
             )}
 
@@ -323,7 +336,9 @@ export default function DashboardPage() {
                   onError={setActionError}
                   childName={childrenQuery.data?.find((c) => c.id === childId)?.name}
                 />
-                <SelfHarmAlertsSection childId={childId} onError={setActionError} />
+                <PremiumLockOverlay featureName="Self-Harm Detection" requiredTier="PREMIUM">
+                  <SelfHarmAlertsSection childId={childId} onError={setActionError} />
+                </PremiumLockOverlay>
                 <VoiceCommandsSection childId={childId} />
               </>
             )}
@@ -331,9 +346,13 @@ export default function DashboardPage() {
             {/* Phase 4: AI & Advanced Features */}
             {pinUnlocked && (
               <>
-                <BehaviorPredictionSection childId={childId} />
+                <PremiumLockOverlay featureName="Behavior Predictions" requiredTier="PREMIUM">
+                  <BehaviorPredictionSection childId={childId} />
+                </PremiumLockOverlay>
                 <SecuritySection childId={childId} deviceId={selectedDeviceId} />
-                <IntegrationsSection onError={setActionError} />
+                <PremiumLockOverlay featureName="Multi-Guardian" requiredTier="PREMIUM">
+                  <IntegrationsSection onError={setActionError} />
+                </PremiumLockOverlay>
               </>
             )}
           </>

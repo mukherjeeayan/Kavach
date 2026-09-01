@@ -33,6 +33,9 @@ export interface AuthUser {
   email: string;
   name: string;
   email_verified?: boolean;
+  role?: string;
+  subscription_tier?: string;
+  trial_expires_at?: string | null;
 }
 
 const bcryptRounds = parseInt(process.env.BCRYPT_SALT_ROUNDS || '12', 10);
@@ -75,7 +78,7 @@ export const register = async (
       parentResult = await client.query(
         `INSERT INTO parents (email, password_hash, name)
          VALUES ($1, $2, $3)
-         RETURNING id, email, name`,
+         RETURNING id, email, name, role, subscription_tier, trial_expires_at`,
         [email, passwordHash, input.name.trim()]
       );
     } catch (err: any) {
@@ -112,6 +115,9 @@ export const register = async (
       email: parent.email,
       name: parent.name,
       email_verified: false,
+      role: parent.role,
+      subscription_tier: parent.subscription_tier,
+      trial_expires_at: parent.trial_expires_at,
     };
     logger.info(`Parent registered: ${user.id}`);
     if (child) {
@@ -127,7 +133,10 @@ export const register = async (
     }
 
     return {
-      token: signAccessToken(user.id, 'parent'),
+      token: signAccessToken(user.id, 'parent', {
+        subscription_tier: parent.subscription_tier,
+        trial_expires_at: parent.trial_expires_at,
+      }),
       refresh_token: await issueRefreshToken(user.id, crypto.randomUUID()),
       user,
       child,
@@ -158,7 +167,7 @@ export const login = async (
   | { requires2fa: true; twoFactorToken: string; user: AuthUser }
 > => {
   const result = await query(
-    `SELECT id, email, name, password_hash, email_verified, failed_login_attempts, login_locked_until, two_factor_enabled
+    `SELECT id, email, name, password_hash, email_verified, role, subscription_tier, trial_expires_at, failed_login_attempts, login_locked_until, two_factor_enabled
      FROM parents WHERE email = $1`,
     [email.toLowerCase().trim()]
   );
@@ -200,6 +209,9 @@ export const login = async (
     email: row.email,
     name: row.name,
     email_verified: row.email_verified === true,
+    role: row.role,
+    subscription_tier: row.subscription_tier,
+    trial_expires_at: row.trial_expires_at,
   };
   logger.info(`Parent logged in: ${user.id}`);
 
@@ -227,7 +239,10 @@ export const login = async (
   );
 
   return {
-    token: signAccessToken(user.id, 'parent'),
+    token: signAccessToken(user.id, 'parent', {
+      subscription_tier: row.subscription_tier,
+      trial_expires_at: row.trial_expires_at,
+    }),
     refresh_token: await issueRefreshToken(user.id, crypto.randomUUID()),
     user,
     child: childResult.rows[0] || null,
@@ -261,17 +276,21 @@ export const complete2FAChallenge = async (
 
   // Look up the user so we can return the same shape as a normal login.
   const result = await query(
-    `SELECT id, email, name, email_verified FROM parents WHERE id = $1`,
+    `SELECT id, email, name, email_verified, role, subscription_tier, trial_expires_at FROM parents WHERE id = $1`,
     [decoded.userId]
   );
   if (result.rows.length === 0) {
     throw new UnauthorizedError('Invalid 2FA token');
   }
+  const row = result.rows[0];
   const user: AuthUser = {
-    id: result.rows[0].id,
-    email: result.rows[0].email,
-    name: result.rows[0].name,
-    email_verified: result.rows[0].email_verified === true,
+    id: row.id,
+    email: row.email,
+    name: row.name,
+    email_verified: row.email_verified === true,
+    role: row.role,
+    subscription_tier: row.subscription_tier,
+    trial_expires_at: row.trial_expires_at,
   };
 
   const childResult = await query(
@@ -284,7 +303,10 @@ export const complete2FAChallenge = async (
 
   logger.info(`Parent completed 2FA login: ${user.id}`);
   return {
-    token: signAccessToken(user.id, 'parent'),
+    token: signAccessToken(user.id, 'parent', {
+      subscription_tier: row.subscription_tier,
+      trial_expires_at: row.trial_expires_at,
+    }),
     refresh_token: await issueRefreshToken(user.id, crypto.randomUUID()),
     user,
     child: childResult.rows[0] || null,
@@ -352,10 +374,22 @@ export const refreshAccessToken = async (
     // mechanics in one place).
     const newToken = await insertRefreshToken(client, decoded.userId, row.family_id);
 
+    // Fetch current subscription data so the refreshed access token
+    // carries the user's tier. Without this, requirePremium would treat
+    // every refreshed session as FREE.
+    const userResult = await client.query(
+      `SELECT role, subscription_tier, trial_expires_at FROM parents WHERE id = $1`,
+      [decoded.userId]
+    );
+    const userRow = userResult.rows[0];
+
     await client.query('COMMIT');
 
     return {
-      token: signAccessToken(decoded.userId, 'parent'),
+      token: signAccessToken(decoded.userId, userRow?.role ?? 'parent', {
+        subscription_tier: userRow?.subscription_tier ?? 'FREE',
+        trial_expires_at: userRow?.trial_expires_at,
+      }),
       refresh_token: newToken,
     };
   } catch (err) {
@@ -595,7 +629,7 @@ export const resetPassword = async (
 
 export const getMe = async (parentId: string): Promise<AuthUser> => {
   const result = await query(
-    `SELECT id, email, name, email_verified FROM parents WHERE id = $1`,
+    `SELECT id, email, name, email_verified, role, subscription_tier, trial_expires_at FROM parents WHERE id = $1`,
     [parentId]
   );
   const row = result.rows[0];
@@ -605,6 +639,9 @@ export const getMe = async (parentId: string): Promise<AuthUser> => {
     email: row.email,
     name: row.name,
     email_verified: row.email_verified === true,
+    role: row.role,
+    subscription_tier: row.subscription_tier,
+    trial_expires_at: row.trial_expires_at,
   };
 };
 

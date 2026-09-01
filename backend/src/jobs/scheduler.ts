@@ -5,6 +5,7 @@
 
 import { runAllRetentionPurges } from './dataRetention';
 import { purgeExpiredRefreshTokens } from './purgeRefreshTokens';
+import { expireTrials } from './expireTrials';
 import logger from '../utils/logger';
 
 const RUN_INTERVAL_MS = 24 * 60 * 60 * 1000; // daily
@@ -16,6 +17,9 @@ export const startScheduler = (): void => {
   timer = setInterval(async () => {
     await purgeExpiredRefreshTokens().catch((err) =>
       logger.error('Scheduled refresh-token purge failed', err)
+    );
+    await expireTrials().catch((err) =>
+      logger.error('Scheduled trial expiry failed', err)
     );
     await runAllRetentionPurges();
   }, RUN_INTERVAL_MS);

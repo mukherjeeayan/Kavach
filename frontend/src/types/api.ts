@@ -15,7 +15,9 @@ export interface AuthUser {
   id: string;
   name: string;
   email: string;
-  role: 'parent' | 'child' | null;
+  role: 'parent' | 'child' | 'admin' | null;
+  subscription_tier?: 'FREE' | 'TRIAL' | 'PREMIUM';
+  trial_expires_at?: string | null;
 }
 
 export interface ChildProfile {

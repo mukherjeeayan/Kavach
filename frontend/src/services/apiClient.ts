@@ -1,6 +1,14 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { clearStoredSession, getAccessToken, setAccessToken } from './session';
 
+/** Custom error class for premium-gated 403 responses. */
+export class RequiresUpgradeError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'RequiresUpgradeError';
+  }
+}
+
 // The baseUrl can be configured via environment variables. Using proxy for dev.
 const apiClient = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || '/api/v1',
@@ -106,6 +114,18 @@ apiClient.interceptors.response.use(
         if (window.location.pathname !== '/login') {
           window.location.href = '/login';
         }
+      }
+    }
+
+    // Handle 403 with requires_upgrade — premium feature gate
+    if (status === 403) {
+      const data = error.response?.data as Record<string, unknown> | undefined;
+      if (data?.requires_upgrade === true) {
+        return Promise.reject(
+          new RequiresUpgradeError(
+            (data.error as string) ?? 'This feature requires a Premium subscription.'
+          )
+        );
       }
     }
     return Promise.reject(error);

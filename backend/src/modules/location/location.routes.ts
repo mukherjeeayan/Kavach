@@ -3,7 +3,7 @@
 // Parent-facing read routes.
 
 import { Router } from 'express';
-import { authenticateJWT, requireRole } from '../../middleware/auth';
+import { authenticateJWT, requireRole, requirePremium } from '../../middleware/auth';
 import { validateParams, validateQuery } from '../../middleware/validate';
 import { uuidParams } from '../../middleware/params';
 import { locationUploadSchema, locationHistoryQuery as locHistoryQuery, currentLocationQuery as currQuery } from './location.dto';
@@ -17,6 +17,7 @@ router.use(requireRole('parent'));
 // GET /api/v1/children/:childId/locations/current
 router.get(
   '/:childId/locations/current',
+  requirePremium,
   validateParams(uuidParams('childId')),
   validateQuery(currQuery),
   locationController.getCurrent
@@ -25,6 +26,7 @@ router.get(
 // GET /api/v1/children/:childId/locations/history?from&to&limit
 router.get(
   '/:childId/locations/history',
+  requirePremium,
   validateParams(uuidParams('childId')),
   validateQuery(locHistoryQuery),
   locationController.getHistory

@@ -2,6 +2,14 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import ScreenTimeSection from './ScreenTimeSection';
 
+const mocks = vi.hoisted(() => ({
+  useSubscriptionTier: vi.fn(),
+}));
+
+vi.mock('../../store/authSlice', () => ({
+  useSubscriptionTier: (...args: unknown[]) => mocks.useSubscriptionTier(...args),
+}));
+
 vi.mock('../../hooks/usePhase1Data', () => ({
   useScreenTimeSummary: vi.fn(),
   useDailyScreenTime: vi.fn(),
@@ -49,6 +57,7 @@ const defaultSummaryData = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mocks.useSubscriptionTier.mockReturnValue('PREMIUM');
   mockSummary.mockReturnValue({
     data: defaultSummaryData,
     isLoading: false,

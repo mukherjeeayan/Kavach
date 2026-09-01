@@ -6,8 +6,20 @@ import jwt from 'jsonwebtoken';
 const JWT_SECRET = process.env.JWT_SECRET || 'test-access-secret';
 
 /** Generate a valid JWT access token for testing. */
-export function signTestToken(userId: string, role = 'parent'): string {
-  return jwt.sign({ userId, role }, JWT_SECRET, { expiresIn: '1h', algorithm: 'HS256' });
+export function signTestToken(
+  userId: string,
+  role = 'parent',
+  subscription?: { subscription_tier?: string; trial_expires_at?: string }
+): string {
+  const payload: Record<string, unknown> = { userId, role };
+  if (subscription) {
+    if (subscription.subscription_tier) payload.subscription_tier = subscription.subscription_tier;
+    if (subscription.trial_expires_at) payload.trial_expires_at = subscription.trial_expires_at;
+  } else {
+    // Default to premium for tests so requirePremium passes
+    payload.subscription_tier = 'PREMIUM';
+  }
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: '1h', algorithm: 'HS256' });
 }
 
 /** A valid parent UUID used across tests. */

@@ -115,37 +115,37 @@ export default function SettingsPage() {
   }, [settingsError, updateSettings]);
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="bg-white shadow-sm">
+    <div className="min-h-screen bg-background dark:bg-gray-900">
+      <header className="bg-white dark:bg-gray-800 shadow-sm">
         <div className="max-w-3xl mx-auto px-6 py-4 flex items-center justify-between">
           <Link to="/dashboard" className="text-xl font-bold text-primary">
             SafeGuard
           </Link>
-          <Link to="/dashboard" className="text-sm text-gray-600 hover:text-primary">
+          <Link to="/dashboard" className="text-sm text-gray-600 dark:text-gray-400 hover:text-primary dark:hover:text-blue-400">
             Back to Dashboard
           </Link>
         </div>
       </header>
 
       <main className="max-w-3xl mx-auto px-6 py-8 space-y-8">
-        <h1 className="text-2xl font-bold text-gray-900">Account Settings</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Account Settings</h1>
 
         {/* Profile Section */}
-        <section className="bg-white rounded-lg border p-6">
-          <h2 className="text-lg font-semibold mb-4">Profile</h2>
+        <section className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+          <h2 className="text-lg font-semibold mb-4 dark:text-white">Profile</h2>
           <form onSubmit={handleUpdateName} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700">Name</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Name</label>
               <input
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="mt-1 block w-full rounded-md border border-gray-300 p-2 text-sm shadow-sm focus:border-primary focus:ring focus:ring-primary focus:ring-opacity-50"
+                className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white p-2 text-sm shadow-sm focus:border-primary focus:ring focus:ring-primary focus:ring-opacity-50"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Email</label>
-              <p className="mt-1 text-sm text-gray-500">{user?.email}</p>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Email</label>
+              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{user?.email}</p>
             </div>
             {nameStatus === 'success' && (
               <p className="text-sm text-green-600">Name updated successfully.</p>
@@ -164,34 +164,34 @@ export default function SettingsPage() {
         </section>
 
         {/* Password Section */}
-        <section className="bg-white rounded-lg border p-6">
-          <h2 className="text-lg font-semibold mb-4">Change Password</h2>
+        <section className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+          <h2 className="text-lg font-semibold mb-4 dark:text-white">Change Password</h2>
           <form onSubmit={handleChangePassword} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700">Current Password</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Current Password</label>
               <input
                 type="password"
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
-                className="mt-1 block w-full rounded-md border border-gray-300 p-2 text-sm shadow-sm focus:border-primary focus:ring focus:ring-primary focus:ring-opacity-50"
+                className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white p-2 text-sm shadow-sm focus:border-primary focus:ring focus:ring-primary focus:ring-opacity-50"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">New Password</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">New Password</label>
               <input
                 type="password"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                className="mt-1 block w-full rounded-md border border-gray-300 p-2 text-sm shadow-sm focus:border-primary focus:ring focus:ring-primary focus:ring-opacity-50"
+                className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white p-2 text-sm shadow-sm focus:border-primary focus:ring focus:ring-primary focus:ring-opacity-50"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Confirm New Password</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Confirm New Password</label>
               <input
                 type="password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className="mt-1 block w-full rounded-md border border-gray-300 p-2 text-sm shadow-sm focus:border-primary focus:ring focus:ring-primary focus:ring-opacity-50"
+                className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white p-2 text-sm shadow-sm focus:border-primary focus:ring focus:ring-primary focus:ring-opacity-50"
               />
             </div>
             {newPassword && confirmPassword && newPassword !== confirmPassword && (
@@ -214,14 +214,14 @@ export default function SettingsPage() {
         </section>
 
         {/* PIN Section */}
-        <section className="bg-white rounded-lg border p-6">
-          <h2 className="text-lg font-semibold mb-4">Parental PIN</h2>
-          <p className="text-sm text-gray-500 mb-4">
+        <section className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+          <h2 className="text-lg font-semibold mb-4 dark:text-white">Parental PIN</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
             The PIN is used to unlock management sections on the dashboard.
           </p>
           <form onSubmit={handleSetPin} className="space-y-4">
             <div>
-              <label htmlFor="new-pin" className="block text-sm font-medium text-gray-700">New PIN (4-6 digits)</label>
+              <label htmlFor="new-pin" className="block text-sm font-medium text-gray-700 dark:text-gray-300">New PIN (4-6 digits)</label>
               <input
                 id="new-pin"
                 type="password"
@@ -231,11 +231,11 @@ export default function SettingsPage() {
                 value={pin}
                 onChange={(e) => setPin(e.target.value)}
                 placeholder="Enter PIN"
-                className="mt-1 block w-48 rounded-md border border-gray-300 p-2 text-sm shadow-sm focus:border-primary focus:ring focus:ring-primary focus:ring-opacity-50"
+                className="mt-1 block w-48 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white p-2 text-sm shadow-sm focus:border-primary focus:ring focus:ring-primary focus:ring-opacity-50"
               />
             </div>
             <div>
-              <label htmlFor="confirm-pin" className="block text-sm font-medium text-gray-700">Confirm PIN</label>
+              <label htmlFor="confirm-pin" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Confirm PIN</label>
               <input
                 id="confirm-pin"
                 type="password"
@@ -245,7 +245,7 @@ export default function SettingsPage() {
                 value={confirmPin}
                 onChange={(e) => setConfirmPin(e.target.value)}
                 placeholder="Confirm PIN"
-                className="mt-1 block w-48 rounded-md border border-gray-300 p-2 text-sm shadow-sm focus:border-primary focus:ring focus:ring-primary focus:ring-opacity-50"
+                className="mt-1 block w-48 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white p-2 text-sm shadow-sm focus:border-primary focus:ring focus:ring-primary focus:ring-opacity-50"
               />
             </div>
             {pin && confirmPin && pin !== confirmPin && (
@@ -271,26 +271,26 @@ export default function SettingsPage() {
         </section>
 
         {/* Notification Settings Section */}
-        <section className="bg-white rounded-lg border p-6">
-          <h2 className="text-lg font-semibold mb-4">Notification Preferences</h2>
+        <section className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+          <h2 className="text-lg font-semibold mb-4 dark:text-white">Notification Preferences</h2>
           {settingsLoading ? (
             <div className="space-y-4">
-              <div className="h-10 bg-gray-100 rounded animate-pulse" />
-              <div className="h-10 bg-gray-100 rounded animate-pulse" />
-              <div className="h-10 bg-gray-100 rounded animate-pulse" />
+              <div className="h-10 bg-gray-100 dark:bg-gray-700 rounded animate-pulse" />
+              <div className="h-10 bg-gray-100 dark:bg-gray-700 rounded animate-pulse" />
+              <div className="h-10 bg-gray-100 dark:bg-gray-700 rounded animate-pulse" />
             </div>
           ) : (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-900">Enable Notifications</p>
-                  <p className="text-sm text-gray-500">Receive push notifications for alerts</p>
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">Enable Notifications</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Receive push notifications for alerts</p>
                 </div>
                 <button
                   onClick={() => handleToggle('notifications_enabled', !settings?.notifications_enabled)}
                   disabled={settingsSaving}
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    settings?.notifications_enabled ? 'bg-blue-600' : 'bg-gray-200'
+                    settings?.notifications_enabled ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'
                   }`}
                 >
                   <span
@@ -303,8 +303,8 @@ export default function SettingsPage() {
 
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-900">Screen Time Alerts</p>
-                  <p className="text-sm text-gray-500">Get notified when screen time limits are reached</p>
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">Screen Time Alerts</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Get notified when screen time limits are reached</p>
                 </div>
                 <button
                   onClick={() => handleToggle('screen_time_alerts', !settings?.screen_time_alerts)}
@@ -323,8 +323,8 @@ export default function SettingsPage() {
 
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-900">Location Alerts</p>
-                  <p className="text-sm text-gray-500">Get notified about geofence entries/exits</p>
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">Location Alerts</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Get notified about geofence entries/exits</p>
                 </div>
                 <button
                   onClick={() => handleToggle('location_alerts', !settings?.location_alerts)}
@@ -343,8 +343,8 @@ export default function SettingsPage() {
 
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-900">Communication Alerts</p>
-                  <p className="text-sm text-gray-500">Get notified about flagged communications</p>
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">Communication Alerts</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Get notified about flagged communications</p>
                 </div>
                 <button
                   onClick={() => handleToggle('communication_alerts', !settings?.communication_alerts)}
@@ -363,8 +363,8 @@ export default function SettingsPage() {
 
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-900">SOS Alerts</p>
-                  <p className="text-sm text-gray-500">Get notified immediately for emergency SOS events</p>
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">SOS Alerts</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Get notified immediately for emergency SOS events</p>
                 </div>
                 <button
                   onClick={() => handleToggle('sos_alerts', !settings?.sos_alerts)}
@@ -383,8 +383,8 @@ export default function SettingsPage() {
 
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-900">Self-Harm Alerts</p>
-                  <p className="text-sm text-gray-500">Get notified about potential self-harm content</p>
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">Self-Harm Alerts</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Get notified about potential self-harm content</p>
                 </div>
                 <button
                   onClick={() => handleToggle('self_harm_alerts', !settings?.self_harm_alerts)}
@@ -401,18 +401,18 @@ export default function SettingsPage() {
                 </button>
               </div>
 
-              <div className="border-t pt-4 mt-4">
+              <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-900">Email Digest</p>
-                    <p className="text-sm text-gray-500">Receive email summaries of activity</p>
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">Email Digest</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Receive email summaries of activity</p>
                   </div>
                   <button
                     onClick={() => handleToggle('email_digest_enabled', !settings?.email_digest_enabled)}
                     disabled={settingsSaving}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                      settings?.email_digest_enabled ? 'bg-blue-600' : 'bg-gray-200'
-                    }`}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    settings?.email_digest_enabled ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'
+                  }`}
                   >
                     <span
                       className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
@@ -423,12 +423,12 @@ export default function SettingsPage() {
                 </div>
                 {settings?.email_digest_enabled && (
                   <div className="mt-3 ml-4">
-                    <label className="text-sm text-gray-600">Digest Frequency</label>
+                    <label className="text-sm text-gray-600 dark:text-gray-400">Digest Frequency</label>
                     <select
                       value={settings?.digest_frequency || 'DAILY'}
                       onChange={(e) => handleSaveSettings({ digest_frequency: e.target.value as 'DAILY' | 'WEEKLY' })}
                       disabled={settingsSaving}
-                      className="ml-2 rounded-md border border-gray-300 p-1 text-sm"
+                      className="ml-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white p-1 text-sm"
                     >
                       <option value="DAILY">Daily</option>
                       <option value="WEEKLY">Weekly</option>
@@ -437,18 +437,18 @@ export default function SettingsPage() {
                 )}
               </div>
 
-              <div className="border-t pt-4 mt-4">
+              <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-900">Do Not Disturb</p>
-                    <p className="text-sm text-gray-500">Silence notifications during specific hours</p>
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">Do Not Disturb</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Silence notifications during specific hours</p>
                   </div>
                   <button
                     onClick={() => handleToggle('dnd_enabled', !settings?.dnd_enabled)}
                     disabled={settingsSaving}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                      settings?.dnd_enabled ? 'bg-blue-600' : 'bg-gray-200'
-                    }`}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    settings?.dnd_enabled ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'
+                  }`}
                   >
                     <span
                       className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
@@ -460,23 +460,23 @@ export default function SettingsPage() {
                 {settings?.dnd_enabled && (
                   <div className="mt-3 ml-4 flex gap-4">
                     <div>
-                      <label className="text-sm text-gray-600">Start Time</label>
+                      <label className="text-sm text-gray-600 dark:text-gray-400">Start Time</label>
                       <input
                         type="time"
                         value={settings?.dnd_start_time || '22:00'}
                         onChange={(e) => handleSaveSettings({ dnd_start_time: e.target.value })}
                         disabled={settingsSaving}
-                        className="ml-2 rounded-md border border-gray-300 p-1 text-sm"
+                        className="ml-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white p-1 text-sm"
                       />
                     </div>
                     <div>
-                      <label className="text-sm text-gray-600">End Time</label>
+                      <label className="text-sm text-gray-600 dark:text-gray-400">End Time</label>
                       <input
                         type="time"
                         value={settings?.dnd_end_time || '07:00'}
                         onChange={(e) => handleSaveSettings({ dnd_end_time: e.target.value })}
                         disabled={settingsSaving}
-                        className="ml-2 rounded-md border border-gray-300 p-1 text-sm"
+                        className="ml-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white p-1 text-sm"
                       />
                     </div>
                   </div>
@@ -487,12 +487,12 @@ export default function SettingsPage() {
         </section>
 
         {/* Danger Zone */}
-        <section className="bg-white rounded-lg border border-red-200 p-6">
-          <h2 className="text-lg font-semibold text-red-700 mb-4">Danger Zone</h2>
+        <section className="bg-white dark:bg-gray-800 rounded-lg border border-red-200 dark:border-red-800 p-6">
+          <h2 className="text-lg font-semibold text-red-700 dark:text-red-400 mb-4">Danger Zone</h2>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-900">Sign out of all devices</p>
-              <p className="text-sm text-gray-500">This will revoke your session on all devices.</p>
+              <p className="text-sm font-medium text-gray-900 dark:text-white">Sign out of all devices</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">This will revoke your session on all devices.</p>
             </div>
             <button
               onClick={() => setConfirmLogoutAll(true)}

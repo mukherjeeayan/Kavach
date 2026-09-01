@@ -1,10 +1,13 @@
-.gradle/
-.idea/
+# Build artifacts
 build/
-app/build/
-backend/build/
-frontend/build/
-local.properties
+.gradle/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
 
 # Node
 node_modules/
@@ -15,6 +18,7 @@ backend/.env
 frontend/.env
 frontend/.env.local
 frontend/.env.*.local
+.env
 
 # Firebase config (contains API keys)
 **/google-services.json
@@ -26,29 +30,22 @@ coverage/
 
 # Logs
 *.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
 
 # OS files
 .DS_Store
 Thumbs.db
 Desktop.ini
 
-# IDE
-.vscode/
-*.swp
-*.swo
-*~
-
 # Android
-app/schemas/
+android/app/build/
+android/local.properties
+android/.gradle/
+android/.kotlin/
 *.hprof
 
 # Build artifacts
 *.tgz
 *.tar.gz
 
-# Not part of Kavach - separate projects
-Dashboard Application/
-Kavach/
+# Docker
+docker-compose.override.yml

@@ -13,7 +13,9 @@ export interface AuthUser {
   id: string;
   name: string;
   email: string;
-  role: 'parent' | 'child' | null;
+  role: 'parent' | 'child' | 'admin' | null;
+  subscription_tier?: 'FREE' | 'TRIAL' | 'PREMIUM';
+  trial_expires_at?: string | null;
 }
 
 interface AuthState {
@@ -57,4 +59,27 @@ export const useAuth = () => {
 export const useRole = (role: 'parent' | 'child') => {
   const { user } = useAuth();
   return user?.role === role;
+};
+
+// Check if user is admin
+export const useIsAdmin = () => {
+  const { user } = useAuth();
+  return user?.role === 'admin';
+};
+
+// Check if user has active premium subscription
+export const useIsPremium = () => {
+  const { user } = useAuth();
+  if (!user) return false;
+  if (user.subscription_tier === 'PREMIUM') return true;
+  if (user.subscription_tier === 'TRIAL' && user.trial_expires_at) {
+    return new Date(user.trial_expires_at).getTime() > Date.now();
+  }
+  return false;
+};
+
+// Get current subscription tier (defaults to FREE)
+export const useSubscriptionTier = (): 'FREE' | 'TRIAL' | 'PREMIUM' => {
+  const { user } = useAuth();
+  return user?.subscription_tier ?? 'FREE';
 };

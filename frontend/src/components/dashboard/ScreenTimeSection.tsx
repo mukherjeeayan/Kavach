@@ -5,6 +5,7 @@ import {
   useScreenTimeSummary,
 } from '../../hooks/usePhase1Data';
 import { SkeletonChart, SkeletonStats, SkeletonTable } from '../ui/Skeleton';
+import PremiumLockOverlay from '../ui/PremiumLockOverlay';
 
 // Lazy load the entire chart for better code splitting
 const ScreenTimeChart = lazy(() => import('./ScreenTimeChart'));
@@ -151,63 +152,65 @@ export default function ScreenTimeSection({ childId, limitMinutes }: ScreenTimeS
             </div>
           </div>
 
-          {data && data.daily.length > 0 && (
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700 mb-4">
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Per day</p>
-              <div className="h-48 sm:h-40">
-                <Suspense fallback={<ChartLoader />}>
-                  <ScreenTimeChart
-                    data={data.daily}
-                    limitMinutes={limitMinutes}
-                  />
-                </Suspense>
+          <PremiumLockOverlay featureName="Screen Time Analytics" requiredTier="TRIAL">
+            {data && data.daily.length > 0 && (
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700 mb-4">
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Per day</p>
+                <div className="h-48 sm:h-40">
+                  <Suspense fallback={<ChartLoader />}>
+                    <ScreenTimeChart
+                      data={data.daily}
+                      limitMinutes={limitMinutes}
+                    />
+                  </Suspense>
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50 dark:bg-gray-700 text-left text-gray-500 dark:text-gray-400">
-                  <tr>
-                    <th className="px-4 py-2 font-medium">App</th>
-                    <th className="px-4 py-2 font-medium hidden sm:table-cell">Category</th>
-                    <th className="px-4 py-2 font-medium text-right">Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(data?.by_app ?? []).map((app) => (
-                    <tr key={app.app_package} className="border-t border-gray-200 dark:border-gray-700">
-                      <td className="px-4 py-2 font-mono text-gray-900 dark:text-gray-100">{app.app_package}</td>
-                      <td className="px-4 py-2 text-gray-500 dark:text-gray-400 hidden sm:table-cell">{app.app_category}</td>
-                      <td className="px-4 py-2 text-right font-medium text-gray-900 dark:text-gray-100">
-                        {formatDuration(app.total_seconds)}
-                      </td>
+            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50 dark:bg-gray-700 text-left text-gray-500 dark:text-gray-400">
+                    <tr>
+                      <th className="px-4 py-2 font-medium">App</th>
+                      <th className="px-4 py-2 font-medium hidden sm:table-cell">Category</th>
+                      <th className="px-4 py-2 font-medium text-right">Total</th>
                     </tr>
-                  ))}
-                  {(data?.by_app ?? []).length === 0 &&
-                    daily.data &&
-                    daily.data.length > 0 &&
-                    daily.data.map((row) => (
-                      <tr key={row.app_package} className="border-t border-gray-200 dark:border-gray-700">
-                        <td className="px-4 py-2 font-mono text-gray-900 dark:text-gray-100">{row.app_package}</td>
-                        <td className="px-4 py-2 text-gray-500 dark:text-gray-400 hidden sm:table-cell">{row.app_category ?? '—'}</td>
+                  </thead>
+                  <tbody>
+                    {(data?.by_app ?? []).map((app) => (
+                      <tr key={app.app_package} className="border-t border-gray-200 dark:border-gray-700">
+                        <td className="px-4 py-2 font-mono text-gray-900 dark:text-gray-100">{app.app_package}</td>
+                        <td className="px-4 py-2 text-gray-500 dark:text-gray-400 hidden sm:table-cell">{app.app_category}</td>
                         <td className="px-4 py-2 text-right font-medium text-gray-900 dark:text-gray-100">
-                          {formatDuration(row.total_seconds)}
+                          {formatDuration(app.total_seconds)}
                         </td>
                       </tr>
                     ))}
-                  {(data?.by_app ?? []).length === 0 && (daily.data ?? []).length === 0 && (
-                    <tr>
-                      <td colSpan={3} className="px-4 py-8 text-center text-gray-400 dark:text-gray-500">
-                        No usage recorded yet - it appears after the child uses the device.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+                    {(data?.by_app ?? []).length === 0 &&
+                      daily.data &&
+                      daily.data.length > 0 &&
+                      daily.data.map((row) => (
+                        <tr key={row.app_package} className="border-t border-gray-200 dark:border-gray-700">
+                          <td className="px-4 py-2 font-mono text-gray-900 dark:text-gray-100">{row.app_package}</td>
+                          <td className="px-4 py-2 text-gray-500 dark:text-gray-400 hidden sm:table-cell">{row.app_category ?? '—'}</td>
+                          <td className="px-4 py-2 text-right font-medium text-gray-900 dark:text-gray-100">
+                            {formatDuration(row.total_seconds)}
+                          </td>
+                        </tr>
+                      ))}
+                    {(data?.by_app ?? []).length === 0 && (daily.data ?? []).length === 0 && (
+                      <tr>
+                        <td colSpan={3} className="px-4 py-8 text-center text-gray-400 dark:text-gray-500">
+                          No usage recorded yet - it appears after the child uses the device.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
+          </PremiumLockOverlay>
         </>
       )}
     </section>

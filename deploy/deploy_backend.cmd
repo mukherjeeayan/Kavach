@@ -1,4 +1,4 @@
-@echo off
+﻿@echo off
 title Kavach Backend Deployment Wizard
 color 0A
 
@@ -76,7 +76,7 @@ DB_USER=postgres
 DB_NAME=kavach
 DB_DRIVER=pg
 
-# JWT — auto-generated secure secrets (64 chars)
+# JWT ΓÇö auto-generated secure secrets (64 chars)
 JWT_SECRET=%jwt_secret%
 JWT_REFRESH_SECRET=%jwt_refresh_secret%
 JWT_EXPIRES_IN=15m
@@ -85,7 +85,7 @@ JWT_REFRESH_EXPIRES_IN=7d
 RATE_LIMIT_WINDOW_MS=900000
 RATE_LIMIT_MAX_REQUESTS=100
 
-# Redis (optional — falls back to in-memory when unset)
+# Redis (optional ΓÇö falls back to in-memory when unset)
 
 ALLOWED_ORIGINS=%allowed_origins%
 

@@ -25,6 +25,8 @@ const SOSPage = lazy(() => import('./pages/SOSPage'));
 const VoiceCommandsPage = lazy(() => import('./pages/VoiceCommandsPage'));
 const ChildSetupScreen = lazy(() => import('./screens/ChildSetupScreen'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
+const SubscriptionPage = lazy(() => import('./pages/SubscriptionPage'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -85,6 +87,14 @@ function App() {
                   element={
                     <RoleProtectedRoute role="parent">
                       <SettingsPage />
+                    </RoleProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/subscription"
+                  element={
+                    <RoleProtectedRoute role="parent">
+                      <SubscriptionPage />
                     </RoleProtectedRoute>
                   }
                 />
@@ -165,6 +175,14 @@ function App() {
                   element={
                     <RoleProtectedRoute role="parent">
                       <VoiceCommandsPage />
+                    </RoleProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/admin"
+                  element={
+                    <RoleProtectedRoute role="parent">
+                      <AdminDashboard />
                     </RoleProtectedRoute>
                   }
                 />

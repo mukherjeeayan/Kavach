@@ -1,7 +1,7 @@
 # Kavach: Your Digital Bodyguard 🛡️
 
 ## What is this app?
-Kavach is a **parental control app** that helps parents keep kids safe online. Think of it like a digital bodyguard for your phone or tablet!
+Kavach is a **parental control platform** that helps parents keep kids safe online. Think of it like a digital bodyguard for your phone or tablet!
 
 ## 👨‍👩‍👧‍👦 For Parents
 As a parent, you can:
@@ -10,9 +10,14 @@ As a parent, you can:
 - **Set screen time limits** — Like a timer for how long they can use the tablet
 - **Track location** — Know where your child is (with their permission!)
 - **Set safe zones** — Get alerts when they leave the park or school area
-- **See screen time reports** — Find out which apps they use most
+- **Monitor communications** — SMS and call monitoring with cyberbullying detection
+- **Filter websites** — Block inappropriate content automatically
+- **Get AI-powered insights** — Behavior predictions and weekly AI reports
 - **Get emergency alerts** — If they tap the SOS button, you get notified instantly
 - **Track mood** — Kids can log how they're feeling each day
+- **Detect self-harm keywords** — Critical alerts for concerning behavior
+- **Voice commands** — Control features hands-free
+- **Keyword alerts** — Real-time notifications for flagged content
 
 ## 👧👦 For Kids (The Safe Part)
 Kavach keeps you safe without being mean! You can:
@@ -21,7 +26,7 @@ Kavach keeps you safe without being mean! You can:
 - **Use SOS button** — If something feels wrong, tap it and tell a parent
 - **See geofences** — Virtual boundaries on a map (like an invisible fence)
 - **Log screen time** — So parents can see balance, not just restrictions
-- ** Earn rewards** — Good behavior gets points toward fun stuff!
+- **Earn rewards** — Good behavior gets points toward fun stuff!
 
 ## 🔒 Is it safe?
 Yes! Kavach follows strict privacy rules and is built to be **COPPA and GDPR-K compliant**:
@@ -38,42 +43,63 @@ Yes! Kavach follows strict privacy rules and is built to be **COPPA and GDPR-K c
 3. **Connect them** — Parent and kid link the devices
 4. **Start protecting!** — Parents choose what rules to set
 
-## 🌟 Cool Features
+## 🌟 Feature Overview
 
 | Feature | What it does |
 |---------|-------------|
-| **App Blocker** | Prevents opening games during homework time |
-| **Screen Timer** | Shows how long you've been using apps |
-| **Location Tracker** | Shows where you are on a map (parents only) |
-| **Geofences** | Alerts if you leave a safe area (like school) |
-| **SOS Button** | Emergency tap to notify parents instantly |
-| **Mood Log** | Daily emoji how-are-you feeling check-in |
-| **Reward Points** | Good behavior earns points for fun privileges |
-| **Website Filter** | Blocks bad websites automatically |
+| **Location Tracking** | Real-time GPS tracking with location history |
+| **Geofencing** | Safe zone alerts when entering/leaving areas |
+| **Screen Time** | Daily limits and per-app usage caps |
+| **App Blocking** | Prevents opening apps during homework time |
+| **Communication Monitoring** | SMS/call monitoring with cyberbullying detection |
+| **URL Filtering** | Blocks inappropriate websites automatically |
+| **Behavior Predictions** | AI-powered insights into digital habits |
+| **Self-Harm Detection** | Keyword-based critical alert system |
+| **Mood Tracking** | Daily emoji check-in for emotional wellness |
+| **Rewards** | Points-based system for good behavior |
+| **SOS** | One-touch emergency alert with location sharing |
+| **Voice Commands** | Hands-free feature control |
+| **Keyword Alerts** | Real-time notifications for flagged content |
+| **Weekly AI Reports** | Comprehensive weekly summaries with insights |
+| **Multi-Guardian** | Share monitoring with co-guardians |
+| **Admin Panel** | User management and feature flags |
 
-## 🛠️ Tech Stuff (For the curious)
+## 💳 Subscription & Payments
 
-Kavach is built by a team of developers using:
-- **Android** for the phone app
-- **Node.js + TypeScript** for the backend server
-- **React + TypeScript** for the parent dashboard web app
-- **PostgreSQL** database to store data securely
-- **Encryption** to keep all data private
+Kavach uses **Razorpay** for web-based payment processing:
+- **7-day free trial** for new users
+- **Monthly and yearly plans** available
+- **Three tiers**: FREE, TRIAL, PREMIUM
+- Premium features are gated behind subscription tiers
+- No Google Play Store billing — all payments handled via the web dashboard
 
-## 📞 Need Help?
+## 🛠️ Tech Stack
 
-If you have questions or issues:
-- Tell your parent
-- Check the app's help section
-- Contact through the app's settings
+Kavach is built using:
 
-## 📜 Quick Rules
+- **Backend:** Node.js + Express + TypeScript
+- **Frontend:** React + Vite + TypeScript
+- **Mobile:** Kotlin + Jetpack Compose (Android)
+- **Database:** PostgreSQL
+- **Cache:** Redis
+- **Deployment:** Docker + Docker Compose
+- **CI/CD:** GitHub Actions
 
-1. **Always be honest** about where you are and what you're doing
-2. **Ask permission** before downloading new apps
-3. **Use the SOS button only for real emergencies**
-4. **Log your mood** daily to help parents understand how you're feeling
-5. **Respect the screen time limits** set by parents (they're for your benefit!)
+## 🧪 Testing
+
+- **Backend:** 643 tests across 58 test suites
+- **Frontend:** 515 tests across 75 test files
+
+## 🚀 Deployment
+
+Kavach supports multiple deployment options:
+- **Docker Compose** — Development and production environments
+- **AWS ECS Fargate** — Scalable cloud deployment
+- **Kubernetes** — Container orchestration
+
+## 📜 License
+
+MIT License
 
 ---
 

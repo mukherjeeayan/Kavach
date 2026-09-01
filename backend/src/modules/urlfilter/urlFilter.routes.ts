@@ -2,7 +2,7 @@
 // Mounted at: /api/v1/children (mergeParams exposes :childId)
 
 import { Router } from 'express';
-import { authenticateJWT, requireRole } from '../../middleware/auth';
+import { authenticateJWT, requireRole, requirePremium } from '../../middleware/auth';
 import { validate, validateParams } from '../../middleware/validate';
 import { uuidParams, childAndUuidParams } from '../../middleware/params';
 import { createUrlFilterSchema, updateUrlFilterSchema } from './urlFilter.dto';
@@ -18,6 +18,7 @@ router.use(requireRole('parent'));
 // GET /api/v1/children/:childId/url-filters
 router.get(
   '/:childId/url-filters',
+  requirePremium,
   validateParams(uuidParams('childId')),
   urlFilterController.listRules
 );
@@ -25,6 +26,7 @@ router.get(
 // POST /api/v1/children/:childId/url-filters
 router.post(
   '/:childId/url-filters',
+  requirePremium,
   validateParams(uuidParams('childId')),
   validate(createUrlFilterSchema),
   urlFilterController.createRule
@@ -33,6 +35,7 @@ router.post(
 // PUT /api/v1/children/:childId/url-filters/:ruleId
 router.put(
   '/:childId/url-filters/:ruleId',
+  requirePremium,
   validateParams(childAndUuidParams('ruleId')),
   validate(updateUrlFilterSchema),
   urlFilterController.updateRule
@@ -41,6 +44,7 @@ router.put(
 // DELETE /api/v1/children/:childId/url-filters/:ruleId
 router.delete(
   '/:childId/url-filters/:ruleId',
+  requirePremium,
   validateParams(childAndUuidParams('ruleId')),
   urlFilterController.deleteRule
 );
@@ -48,6 +52,7 @@ router.delete(
 // GET /api/v1/children/:childId/url-filters/sync (device-side: get active rules)
 router.get(
   '/:childId/url-filters/sync',
+  requirePremium,
   validateParams(uuidParams('childId')),
   async (req, res, next) => {
     try {

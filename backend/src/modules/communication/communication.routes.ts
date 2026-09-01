@@ -2,7 +2,7 @@
 // SMS/Call monitoring + keyword alerts.
 
 import { Router } from 'express';
-import { authenticateJWT, requireRole } from '../../middleware/auth';
+import { authenticateJWT, requireRole, requirePremium } from '../../middleware/auth';
 import { validate, validateParams } from '../../middleware/validate';
 import { uuidParams, childAndUuidParams } from '../../middleware/params';
 import { requireConsent } from '../../middleware/consent';
@@ -38,6 +38,7 @@ export const communicationParentRouter = (() => {
   // GET /api/v1/children/:childId/communications?flagged=true&page=1&limit=50
   router.get(
     '/:childId/communications',
+    requirePremium,
     validateParams(uuidParams('childId')),
     commController.listCommunications
   );
@@ -45,6 +46,7 @@ export const communicationParentRouter = (() => {
   // GET /api/v1/children/:childId/keyword-alerts?unreviewed=true
   router.get(
     '/:childId/keyword-alerts',
+    requirePremium,
     validateParams(uuidParams('childId')),
     commController.listKeywordAlerts
   );
@@ -52,6 +54,7 @@ export const communicationParentRouter = (() => {
   // PUT /api/v1/children/:childId/keyword-alerts/:alertId/review
   router.put(
     '/:childId/keyword-alerts/:alertId/review',
+    requirePremium,
     validateParams(childAndUuidParams('alertId')),
     commController.reviewKeywordAlert
   );

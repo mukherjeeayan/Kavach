@@ -2,7 +2,7 @@
 // Behavior predictions: list active + trigger generation.
 
 import { Router } from 'express';
-import { authenticateJWT, requireRole } from '../../middleware/auth';
+import { authenticateJWT, requireRole, requirePremium } from '../../middleware/auth';
 import { validateParams } from '../../middleware/validate';
 import { uuidParams } from '../../middleware/params';
 import * as predictionController from './prediction.controller';
@@ -15,6 +15,7 @@ export const predictionParentRouter = (() => {
   // GET /api/v1/children/:childId/predictions
   router.get(
     '/:childId/predictions',
+    requirePremium,
     validateParams(uuidParams('childId')),
     predictionController.listPredictions
   );
@@ -22,6 +23,7 @@ export const predictionParentRouter = (() => {
   // POST /api/v1/children/:childId/predictions/generate
   router.post(
     '/:childId/predictions/generate',
+    requirePremium,
     validateParams(uuidParams('childId')),
     predictionController.generatePredictions
   );

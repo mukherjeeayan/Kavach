@@ -732,3 +732,121 @@ export const updateChildPhone = async (childId: string, phone: string): Promise<
   );
   return response.data.data!;
 };
+
+// ── Admin API ──────────────────────────────────────────────────
+
+export interface AdminUser {
+  id: string;
+  email: string;
+  name: string;
+  role: string;
+  subscription_tier: string;
+  trial_expires_at: string | null;
+  subscription_updated_at: string | null;
+  created_at: string;
+  child_count: number;
+  payment_count: number;
+}
+
+export interface AdminFeatureFlag {
+  id: string;
+  key: string;
+  description: string | null;
+  is_enabled: boolean;
+  required_tier: string;
+  updated_at: string;
+}
+
+export interface AdminSystemStats {
+  total_users: number;
+  free_users: number;
+  active_trial_users: number;
+  expired_trial_users: number;
+  premium_users: number;
+  admin_users: number;
+  new_users_7d: number;
+  new_users_30d: number;
+}
+
+export const fetchAdminStats = async (): Promise<AdminSystemStats> => {
+  const response = await apiClient.get<ApiResponse<AdminSystemStats>>('/admin/stats');
+  return response.data.data!;
+};
+
+export const fetchAdminUsers = async (
+  page = 1, limit = 20, search?: string
+): Promise<{ users: AdminUser[]; total: number }> => {
+  const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+  if (search) params.set('search', search);
+  const response = await apiClient.get<ApiResponse<{ users: AdminUser[]; total: number }>>(
+    `/admin/users?${params}`
+  );
+  return response.data.data!;
+};
+
+export const fetchAdminUserById = async (userId: string): Promise<AdminUser> => {
+  const response = await apiClient.get<ApiResponse<AdminUser>>(`/admin/users/${userId}`);
+  return response.data.data!;
+};
+
+export const updateAdminUserSubscription = async (
+  userId: string, tier: string, trial_days?: number
+): Promise<AdminUser> => {
+  const response = await apiClient.patch<ApiResponse<AdminUser>>(
+    `/admin/users/${userId}/subscription`, { tier, trial_days }
+  );
+  return response.data.data!;
+};
+
+export const updateAdminUserRole = async (
+  userId: string, role: string
+): Promise<AdminUser> => {
+  const response = await apiClient.patch<ApiResponse<AdminUser>>(
+    `/admin/users/${userId}/role`, { role }
+  );
+  return response.data.data!;
+};
+
+export const fetchAdminFeatureFlags = async (): Promise<AdminFeatureFlag[]> => {
+  const response = await apiClient.get<ApiResponse<AdminFeatureFlag[]>>('/admin/feature-flags');
+  return response.data.data ?? [];
+};
+
+export const updateAdminFeatureFlag = async (
+  key: string, patch: { is_enabled?: boolean; required_tier?: string }
+): Promise<AdminFeatureFlag> => {
+  const response = await apiClient.patch<ApiResponse<AdminFeatureFlag>>(
+    `/admin/feature-flags/${key}`, patch
+  );
+  return response.data.data!;
+};
+
+// ── Subscription / Payment API ──────────────────────────────────────────────
+
+export interface SubscriptionPlan {
+  name: string;
+  price_monthly: number;
+  price_yearly: number;
+  currency: string;
+}
+
+export interface RazorpayOrderResponse {
+  order_id: string;
+  amount: number;
+  currency: string;
+  key: string;
+}
+
+export const fetchSubscriptionPlans = async (): Promise<Record<string, SubscriptionPlan>> => {
+  const response = await apiClient.get<ApiResponse<Record<string, SubscriptionPlan>>>('/subscriptions/plans');
+  return response.data.data ?? {};
+};
+
+export const createRazorpayOrder = async (
+  period: 'monthly' | 'yearly' = 'monthly'
+): Promise<RazorpayOrderResponse> => {
+  const response = await apiClient.post<ApiResponse<RazorpayOrderResponse>>(
+    '/subscriptions/checkout/razorpay', { period }
+  );
+  return response.data.data!;
+};

@@ -2,7 +2,7 @@
 // Mounted at: /api/v1/children (mergeParams exposes :childId)
 
 import { Router } from 'express';
-import { authenticateJWT, requireRole } from '../../middleware/auth';
+import { authenticateJWT, requireRole, requirePremium } from '../../middleware/auth';
 import { validate, validateParams, validateQuery } from '../../middleware/validate';
 import { uuidParams, childAndUuidParams, paginationQuery } from '../../middleware/params';
 import { createGeofenceSchema, updateGeofenceSchema, checkGeofenceSchema } from './geofence.dto';
@@ -16,6 +16,7 @@ router.use(requireRole('parent'));
 // GET /api/v1/children/:childId/geofences
 router.get(
   '/:childId/geofences',
+  requirePremium,
   validateParams(uuidParams('childId')),
   validateQuery(paginationQuery),
   geofenceController.listGeofences
@@ -24,6 +25,7 @@ router.get(
 // POST /api/v1/children/:childId/geofences
 router.post(
   '/:childId/geofences',
+  requirePremium,
   validateParams(uuidParams('childId')),
   validate(createGeofenceSchema),
   geofenceController.createGeofence
@@ -32,6 +34,7 @@ router.post(
 // POST /api/v1/children/:childId/geofences/check
 router.post(
   '/:childId/geofences/check',
+  requirePremium,
   validateParams(uuidParams('childId')),
   validate(checkGeofenceSchema),
   geofenceController.checkGeofencesForChild
@@ -40,6 +43,7 @@ router.post(
 // PUT /api/v1/children/:childId/geofences/:geofenceId
 router.put(
   '/:childId/geofences/:geofenceId',
+  requirePremium,
   validateParams(childAndUuidParams('geofenceId')),
   validate(updateGeofenceSchema),
   geofenceController.updateGeofence
@@ -48,6 +52,7 @@ router.put(
 // DELETE /api/v1/children/:childId/geofences/:geofenceId
 router.delete(
   '/:childId/geofences/:geofenceId',
+  requirePremium,
   validateParams(childAndUuidParams('geofenceId')),
   geofenceController.deleteGeofence
 );
