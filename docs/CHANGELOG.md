@@ -19,6 +19,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Trial expiry background job (daily scheduler)
 - Refresh token now preserves subscription context
 - Tests for AdminDashboard, SubscriptionPage, and PremiumLockOverlay
+- **AI Provider Settings** — Users can connect their own AI provider (OpenAI, Gemini, Anthropic) with encrypted API key storage
+- **AI-powered Weekly Reports** — Reports include AI-generated narrative summaries when a provider is configured
+- **AI-powered Behavior Insights** — Predictions include contextual AI insights
+- **Model Discovery** — Fetch available models directly from each provider's API
+- **AI Settings in Registration** — Optional AI provider setup during account registration
+- **AI Settings Page** — `/ai-settings` route with provider selection, masked key display, and update flow
+- **Backend AI module** — Multi-provider AI service abstraction with OpenAI/Gemini/Anthropic adapters
+- **Backend AI settings module** — CRUD for provider settings with AES-256-GCM encrypted key storage
 
 ### Fixed
 - Critical: PremiumLockOverlay now correctly enforces tier access (TRIAL users cannot see PREMIUM features)
@@ -30,6 +38,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 - Razorpay is now the sole payment gateway (Stripe and Google Play removed)
 - Subscription upgrade link added to dashboard header navigation
+
+### Documentation
+- Consolidated docs: TESTING.md (merged BACKEND_TESTING, FRONTEND_TESTING, ANDROID_TESTING, MANUAL_TESTING_RUNBOOK)
+- Consolidated docs: DEPLOYMENT.md (merged DEPLOYMENT, DEPLOYMENT_GUIDE, QUICK_START)
+- Consolidated docs: SECURITY.md (merged SECURITY, SECURITY_AUDIT, BACKEND_SECURITY)
+- Consolidated docs: LEGAL.md (merged PRIVACY_POLICY, TERMS_OF_SERVICE, DPDP_COMPLIANCE_AUDIT)
+- Added AI endpoints to API.md
+- Updated test counts in README and docs
 
 ## [0.1.0] - 2026-08-01
 

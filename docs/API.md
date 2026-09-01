@@ -243,6 +243,24 @@ All admin routes require `role: admin` in the JWT.
 
 ---
 
+## AI Settings
+
+All AI routes require `role: parent` in the JWT. Users provide their own API keys which are encrypted at rest.
+
+| Method | Path | Description |
+|---|---|---|
+| GET | `/ai/settings` | List all configured AI providers (returns masked keys) |
+| PUT | `/ai/settings` | Create or update AI provider `{ provider, api_key, model }` |
+| DELETE | `/ai/settings/:provider` | Remove a provider (`openai`, `gemini`, or `anthropic`) |
+| POST | `/ai/test` | Test a provider connection `{ provider }` |
+| POST | `/ai/models/fetch` | Fetch available models from a provider `{ provider, api_key }` |
+
+**Supported providers:** `openai` (gpt-4o-mini, gpt-4o, etc.), `gemini` (gemini-1.5-flash, etc.), `anthropic` (claude-sonnet-4, etc.)
+
+When AI is configured, weekly reports include an AI-generated narrative summary and predictions include AI-powered behavioral insights.
+
+---
+
 ## Misc
 
 `GET /health` — liveness with real DB check (200 / 503).

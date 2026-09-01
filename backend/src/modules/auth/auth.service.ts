@@ -50,6 +50,9 @@ export interface RegisterInput {
   password: string;
   child_name?: string;
   birth_date?: string;
+  ai_provider?: 'openai' | 'gemini' | 'anthropic';
+  ai_api_key?: string;
+  ai_model?: string;
 }
 
 export interface ChildProfile {
@@ -105,6 +108,17 @@ export const register = async (
         `INSERT INTO audit_logs (actor_id, target_child_id, action, resource_type, details)
          VALUES ($1, $2, 'CREATE_CHILD', 'children', $3)`,
         [parent.id, newChild.id, JSON.stringify({ name: newChild.name })]
+      );
+    }
+
+    // Store AI settings if provided during registration
+    if (input.ai_provider && input.ai_api_key && input.ai_model) {
+      const { encryptSensitiveData } = await import('../shared/encryption.service');
+      const encryptedKey = encryptSensitiveData(input.ai_api_key);
+      await client.query(
+        `INSERT INTO ai_settings (user_id, provider, api_key_enc, model)
+         VALUES ($1, $2, $3, $4)`,
+        [parent.id, input.ai_provider, encryptedKey, input.ai_model]
       );
     }
 

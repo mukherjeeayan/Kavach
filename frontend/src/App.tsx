@@ -27,6 +27,7 @@ const ChildSetupScreen = lazy(() => import('./screens/ChildSetupScreen'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
 const SubscriptionPage = lazy(() => import('./pages/SubscriptionPage'));
+const AiSettingsPage = lazy(() => import('./pages/AiSettingsPage'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -105,6 +106,14 @@ function App() {
                   element={
                     <RoleProtectedRoute role="parent">
                       <SubscriptionPage />
+                    </RoleProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/ai-settings"
+                  element={
+                    <RoleProtectedRoute role="parent">
+                      <AiSettingsPage />
                     </RoleProtectedRoute>
                   }
                 />

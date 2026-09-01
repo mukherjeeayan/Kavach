@@ -1,37 +1,77 @@
 # Deployment Guide
 
-This document describes how to deploy Kavach to a production environment.
+## Quick Start (3 Steps)
 
-## Architecture Overview
+1. **Run the Wizard** — Open `deploy/index.html` in your browser. Follow the 6-step wizard.
+2. **Download & Run the Script** — Wizard auto-generates `deploy.sh` / `deploy.cmd`. The script handles everything: deps, DB, migrations, builds, verification.
+3. **Build Android** — `cd android && ./gradlew assembleDebug` (or open in Android Studio)
+
+## The Deployment Wizard
+
+Open `deploy/index.html` in any browser (Chrome, Firefox, Edge, Safari).
+
+### Wizard Steps
+
+| Step | What it generates |
+|------|-------------------|
+| 1. Environment & Mode | Dev/Prod/Local mode selection |
+| 2. Backend Configuration | JWT secrets (64-char), DB config, rate limiting, CORS |
+| 3. Frontend Configuration | API URL, Socket.io URL, Mapbox token |
+| 4. Android Configuration | API base URL, certificate pinning, Firebase |
+| 5. Admin Panel Configuration | Admin access key, panel URL |
+| 6. Summary & Deploy | Generated .env files, BuildConfig, deploy script |
+
+**Download the script** and run it — no manual steps required.
+
+### Security Reminders
+
+- ✅ DO save JWT secrets (64-char strings) in a password manager
+- ✅ DO restrict Mapbox token by domain in Mapbox dashboard
+- ✅ DO set ALLOWED_ORIGINS to your actual domain(s)
+- ❌ DON'T commit .env files to version control
+- ❌ DON'T share JWT secrets
+- ❌ DON'T bake Mapbox token into frontend bundle permanently
+
+### Common Issues
+
+| Problem | Quick Fix |
+|---------|-----------|
+| "PostgreSQL connection failed" | Ensure Docker is running. Default: user=postgres, password=password, db=kavach |
+| "Module not found" errors | Run `npm install` in respective directory |
+| "Map not showing" | Get Mapbox token from mapbox.com, restrict by domain |
+| "Android build fails" | Open Android Studio, ensure `google-services.json` is in `android/app/` |
+| "Socket.io not connecting" | Ensure both backend and frontend are running |
+
+## Production Architecture
 
 ```
-                    ┌──────────────┐
-                    │   CloudFront │  (CDN + WAF + DDoS protection)
-                    │   + ACM SSL  │
-                    └──────┬───────┘
-                           │
-                    ┌──────▼───────┐
-                    │  ALB / Nginx │  (TLS termination, rate limiting)
-                    └──────┬───────┘
-                           │
-              ┌────────────┼────────────┐
-              │            │            │
-        ┌─────▼─────┐ ┌────▼────┐ ┌─────▼─────┐
-        │  Frontend │ │ Backend │ │  Backend  │  (ECS Fargate / k8s)
-        │  (nginx)  │ │  Node   │ │  (replica)│
-        └───────────┘ └────┬────┘ └───────────┘
-                           │
-                ┌──────────┼──────────┐
-                │          │          │
-          ┌─────▼────┐ ┌───▼────┐ ┌───▼────┐
-          │ Postgres │ │ Redis  │ │  S3    │  (backups)
-          │   RDS    │ │ElastiC.│ │ bucket │
-          └──────────┘ └────────┘ └────────┘
+┌──────────────┐
+│   CloudFront │  (CDN + WAF + DDoS protection)
+│   + ACM SSL  │
+└──────┬───────┘
+       │
+┌──────▼───────┐
+│  ALB / Nginx │  (TLS termination, rate limiting)
+└──────┬───────┘
+       │
+┌──────┼────────────┐
+│      │            │
+┌─────▼─────┐ ┌────▼────┐ ┌─────▼─────┐
+│ Frontend  │ │ Backend │ │  Backend  │  (ECS Fargate / k8s)
+│ (nginx)   │ │  Node   │ │  (replica)│
+└───────────┘ └────┬────┘ └───────────┘
+                  │
+       ┌──────────┼──────────┐
+       │          │          │
+ ┌─────▼────┐ ┌───▼────┐ ┌───▼────┐
+ │ Postgres │ │ Redis  │ │  S3    │  (backups)
+ │   RDS    │ │ElastiC.│ │ bucket │
+ └──────────┘ └────────┘ └────────┘
 ```
 
-## Infrastructure Requirements
+### Sizing
 
-### Minimum Production Sizing
+**Minimum Production Sizing:**
 
 | Component | vCPU | RAM | Storage | Notes |
 |-----------|------|-----|---------|-------|
@@ -40,7 +80,7 @@ This document describes how to deploy Kavach to a production environment.
 | Postgres  | 2    | 8GB | 100GB   | gp3, 3000 IOPS |
 | Redis     | 1    | 2GB | -       | cache.t4g.medium |
 
-### Recommended Sizing (100k children, 50k parents)
+**Recommended (100k children, 50k parents):**
 
 | Component | vCPU | RAM | Storage | Notes |
 |-----------|------|-----|---------|-------|
@@ -59,7 +99,6 @@ This document describes how to deploy Kavach to a production environment.
 - [ ] Penetration test completed
 - [ ] Privacy policy published with real company details
 - [ ] Terms of service published
-- [ ] Privacy policy placeholders replaced
 - [ ] Razorpay payment integration configured and tested
 - [ ] Legal review of DPDP/GDPR compliance
 
@@ -85,6 +124,11 @@ This document describes how to deploy Kavach to a production environment.
 | `SMTP_PASSWORD` | SMTP password | (use secrets manager) |
 | `FIREBASE_PROJECT_ID` | Firebase project | `kavach-prod` |
 | `FIREBASE_PRIVATE_KEY` | Firebase service account key | (use secrets manager) |
+| `RAZORPAY_KEY_ID` | Razorpay key | `rzp_live_xxx` |
+| `RAZORPAY_KEY_SECRET` | Razorpay secret | (use secrets manager) |
+| `RAZORPAY_WEBHOOK_SECRET` | Razorpay webhook | (use secrets manager) |
+| `ADMIN_ACCESS_KEY` | Admin panel access key | (generated by wizard) |
+| `DATA_ENCRYPTION_KEY` | Symmetric key for AI API keys (>= 32 chars) | (generate with `openssl rand -hex 32`) |
 
 ### Frontend (Build-time)
 
@@ -93,33 +137,30 @@ This document describes how to deploy Kavach to a production environment.
 | `VITE_API_URL` | Backend API base URL | `https://api.kavach.com/api/v1` |
 | `VITE_MAPBOX_TOKEN` | Mapbox access token | `pk.xxx` |
 
-## Deployment Steps
+### Admin Panel (Build-time)
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `VITE_API_URL` | Backend API base URL | `https://api.kavach.com/api/v1` |
+| `VITE_ADMIN_ACCESS_KEY` | Admin panel access key | (must match backend `ADMIN_ACCESS_KEY`) |
+
+## Deployment Options
 
 ### Option A: Docker Compose (Single Server / Staging)
 
 ```bash
-# 1. Clone the repository
 git clone https://github.com/kavach/kavach.git
 cd kavach
-
-# 2. Copy and edit environment file
 cp .env.prod.example .env.prod
 # Edit .env.prod with real secrets
-
-# 3. Start services
 docker compose -f deploy/docker-compose.prod.yml --env-file .env.prod up -d
-
-# 4. Run migrations
 docker compose -f deploy/docker-compose.prod.yml exec backend npm run db:migrate
-
-# 5. Verify
 curl https://api.kavach.com/health
 ```
 
 ### Option B: AWS ECS Fargate (Production)
 
 ```bash
-# 1. Build and push images
 cd backend
 docker build -t $ECR_REGISTRY/kavach-backend:$VERSION .
 docker push $ECR_REGISTRY/kavach-backend:$VERSION
@@ -128,13 +169,12 @@ cd ../frontend
 docker build -t $ECR_REGISTRY/kavach-frontend:$VERSION .
 docker push $ECR_REGISTRY/kavach-frontend:$VERSION
 
-# 2. Update ECS service
 aws ecs update-service \
   --cluster kavach-prod \
   --service kavach-backend \
   --force-new-deployment
 
-# 3. Run migrations via ECS Run Task
+# Run migrations via ECS Run Task
 aws ecs run-task \
   --cluster kavach-prod \
   --task-definition kavach-migrate \
@@ -143,67 +183,79 @@ aws ecs run-task \
 
 ### Option C: Kubernetes
 
-> **Note:** Kubernetes manifests are not included in the repository.
-> Adapt the Docker Compose configuration or ECS task definitions for your
-> Kubernetes cluster. The backend Docker image is compatible with any
-> container orchestrator.
+Kubernetes manifests are not included in the repository. Adapt the Docker Compose configuration or ECS task definitions for your Kubernetes cluster. The backend Docker image is compatible with any container orchestrator.
 
-## Database Migrations
+## Database
 
-Migrations are tracked in `schema_migrations` table. Run them before deploying new code:
+### Migrations
+
+Migrations are tracked in `schema_migrations` table:
 
 ```bash
-# Manual
-npm run db:migrate
-
-# In Docker
-docker compose exec backend npm run db:migrate
-
-# In Kubernetes
-kubectl create job --from=cronjob/kavach-migrate kavach-migrate-manual
+npm run db:migrate                                    # Manual
+docker compose exec backend npm run db:migrate        # In Docker
+kubectl create job --from=cronjob/kavach-migrate kavach-migrate-manual  # In k8s
 ```
 
-## Backups
-
-### Automated Backups
+### Backups
 
 - **Postgres**: Enable RDS automated backups with 7-day retention (minimum)
 - **Manual snapshot**: Daily `pg_dump` to S3 with 30-day retention
 - **Cross-region**: Replicate to second region for DR
 
-### Backup Script
-
-Create a backup script (e.g., `backup.sh`):
-
 ```bash
 #!/bin/bash
-# Daily backup script - run via cron
+# Daily backup script
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 pg_dump -h $DB_HOST -U $DB_USER -d $DB_NAME | \
   gzip | \
   aws s3 cp - s3://$BACKUP_BUCKET/db/kavach_${TIMESTAMP}.sql.gz
 ```
 
-Set up cron:
 ```cron
 0 2 * * * /opt/kavach/deploy/backup.sh >> /var/log/kavach-backup.log 2>&1
 ```
 
-### Restore Test
-
-Test restore quarterly:
+### Restore Test (Quarterly)
 
 ```bash
-# Download latest backup
 aws s3 cp s3://$BACKUP_BUCKET/db/kavach_latest.sql.gz /tmp/
-
-# Restore to test database
 createdb kavach_restore_test
 gunzip -c /tmp/kavach_latest.sql.gz | psql kavach_restore_test
-
-# Verify
 psql kavach_restore_test -c "SELECT COUNT(*) FROM parents;"
 ```
+
+## Security Essentials
+
+### JWT Secrets (Critical)
+
+Two 64-character secrets:
+- `JWT_SECRET` — Protects access tokens
+- `JWT_REFRESH_SECRET` — Protects refresh tokens
+
+Save in a password manager. Never share. Never commit to version control.
+
+### CORS Origins
+
+`ALLOWED_ORIGINS` — comma-separated list of allowed origins.
+
+- **Development**: `http://localhost:5173`
+- **Production**: `https://app.yourcompany.com`
+- **Local with Android emulator**: `http://localhost:5173,http://10.0.2.2:5173`
+
+### Mapbox Token (Optional)
+
+Get from [mapbox.com](https://www.mapbox.com). **Restrict by domain** in Mapbox dashboard. The token is served at runtime from the backend API, not baked into the frontend bundle.
+
+### Certificate Pinning (Android Release Only)
+
+Set SHA-256 certificate pins in `android/local.properties`. Get pins from your production server's certificate.
+
+### Firebase/FCM (Optional)
+
+1. Create project at [console.firebase.google.com](https://console.firebase.google.com)
+2. Add Android app
+3. Download `google-services.json` and place in `android/app/`
 
 ## Monitoring
 
@@ -233,29 +285,23 @@ psql kavach_restore_test -c "SELECT COUNT(*) FROM parents;"
 
 ## SSL/TLS
 
-Use Let's Encrypt via certbot (already in deploy/docker-compose) or AWS ACM:
+Use Let's Encrypt via certbot (already in `deploy/docker-compose`) or AWS ACM:
 
 ```bash
-# Let's Encrypt via certbot
 certbot certonly --nginx -d api.kavach.com -d app.kavach.com
-# Auto-renewal is enabled via certbot.timer systemd unit
 ```
 
-Ensure HSTS is enabled (already in Helmet config).
+Auto-renewal enabled via certbot.timer systemd unit. HSTS is enabled in Helmet config.
 
 ## Scaling
 
 ### Horizontal Scaling
 
-Backend is stateless (except for Socket.IO rooms). Scale by:
-- Adding more ECS tasks / k8s replicas
-- ALB distributes traffic
+Backend is stateless (except for Socket.IO rooms). Scale by adding more ECS tasks / k8s replicas behind an ALB.
 
 ### Vertical Scaling
 
-Monitor:
-- Postgres CPU and memory → upgrade RDS instance
-- Backend memory → upgrade task size if >85%
+Monitor Postgres CPU/memory and backend memory. Upgrade RDS instance or task size when >85% utilization.
 
 ### Database Scaling
 
@@ -281,7 +327,7 @@ docker push $ECR_REGISTRY/kavach-backend:$GOOD_VERSION
 aws ecs update-service --force-new-deployment
 ```
 
-Database rollbacks: NEVER roll back migrations. Instead, write a forward fix.
+**Database rollbacks**: NEVER roll back migrations. Instead, write a forward fix.
 
 ## Post-Deployment Verification
 

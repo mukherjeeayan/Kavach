@@ -78,6 +78,9 @@ const registerSchema = yup.object({
       !value || /^\d{4}-\d{2}-\d{2}$/.test(value)
     )
     .optional(),
+  ai_provider: yup.string().oneOf(['openai', 'gemini', 'anthropic']).optional(),
+  ai_api_key: yup.string().max(512).optional(),
+  ai_model: yup.string().max(100).optional(),
 });
 
 type RegisterFormData = {
@@ -86,6 +89,9 @@ type RegisterFormData = {
   password: string;
   child_name?: string;
   birth_date?: string;
+  ai_provider?: string;
+  ai_api_key?: string;
+  ai_model?: string;
 };
 
 export const useRegister = () => {
@@ -123,6 +129,9 @@ export const useRegister = () => {
         password: data.password,
         child_name: data.child_name || undefined,
         birth_date: data.birth_date || undefined,
+        ai_provider: data.ai_provider || undefined,
+        ai_api_key: data.ai_api_key || undefined,
+        ai_model: data.ai_model || undefined,
       });
       dispatch(setSession(session));
       navigate('/dashboard', { replace: true });

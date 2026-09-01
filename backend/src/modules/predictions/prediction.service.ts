@@ -1,11 +1,12 @@
 // prediction.service.ts
-// Rule-based behavior prediction engine. Analyzes screen time patterns,
-// app usage, and communication flags to generate risk assessments.
+// Behavior prediction engine. Uses rule-based analysis with optional
+// AI-powered insights when the user has an AI provider configured.
 
 import { query } from '../../config/database';
 import { NotFoundError } from '../../utils/errors';
 import { verifyChildBelongsToParent } from '../children/children.service';
 import { writeAuditLog } from '../shared/audit.service';
+import { generateAiResponse, hasAiConfig } from '../ai/ai.service';
 
 export type PredictionType =
   | 'HIGH_RISK_TIME'
@@ -279,4 +280,53 @@ export const listPredictions = async (
   );
 
   return result.rows as unknown as PredictionRecord[];
+};
+
+/**
+ * Generate an AI-powered behavioral insight summary for a child.
+ * Returns null if no AI provider is configured.
+ */
+export const generateAiInsight = async (
+  parentId: string,
+  childId: string
+): Promise<string | null> => {
+  try {
+    if (!(await hasAiConfig(parentId))) return null;
+
+    const predictions = await query(
+      `SELECT prediction_type, risk_score, confidence, prediction_data
+       FROM behavior_predictions
+       WHERE child_id = $1 AND is_active = TRUE
+       ORDER BY created_at DESC LIMIT 10`,
+      [childId]
+    );
+
+    const screenTime = await query(
+      `SELECT date_recorded, SUM(seconds)::int AS total_seconds
+       FROM screen_time_logs stl JOIN devices d ON d.id = stl.device_id
+       WHERE d.child_id = $1 AND date_recorded >= CURRENT_DATE - INTERVAL '7 days'
+       GROUP BY date_recorded ORDER BY date_recorded DESC`,
+      [childId]
+    );
+
+    const alertCount = await query(
+      `SELECT severity, COUNT(*)::int AS count
+       FROM keyword_alerts WHERE child_id = $1
+         AND created_at >= CURRENT_DATE - INTERVAL '7 days'
+       GROUP BY severity`,
+      [childId]
+    );
+
+    const prompt = `You are a child safety analyst. Based on this data, provide a brief AI insight (2-4 sentences) about the child's digital behavior this week. Be supportive and actionable.
+
+Recent predictions: ${JSON.stringify(predictions.rows)}
+Screen time (last 7 days): ${JSON.stringify(screenTime.rows)}
+Keyword alerts: ${JSON.stringify(alertCount.rows)}
+
+Write a caring, specific insight for the parent.`;
+
+    return await generateAiResponse(parentId, prompt);
+  } catch {
+    return null;
+  }
 };

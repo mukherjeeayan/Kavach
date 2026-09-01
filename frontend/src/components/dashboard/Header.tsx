@@ -89,6 +89,12 @@ export default function Header({ user, onLogout }: HeaderProps) {
             Settings
           </Link>
           <Link
+            to="/ai-settings"
+            className="text-sm text-gray-600 dark:text-gray-300 hover:text-primary dark:hover:text-blue-400 transition-colors"
+          >
+            AI
+          </Link>
+          <Link
             to="/subscription"
             className="text-sm text-gray-600 dark:text-gray-300 hover:text-primary dark:hover:text-blue-400 transition-colors"
           >

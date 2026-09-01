@@ -75,6 +75,10 @@ export const registerSchema = z.object({
       message: 'birth_date cannot be in the future',
     })
     .optional(),
+  // Optional AI provider setup during registration
+  ai_provider: z.enum(['openai', 'gemini', 'anthropic']).optional(),
+  ai_api_key: z.string().min(1).max(512).optional(),
+  ai_model: z.string().min(1).max(100).optional(),
 });
 
 export const forgotPasswordSchema = z.object({
