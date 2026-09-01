@@ -31,6 +31,7 @@
     "jsonwebtoken": "^9.0.2",
     "nodemailer": "^9.0.5",
     "pg": "^8.11.3",
+    "razorpay": "^2.9.5",
     "socket.io": "^4.7.2",
     "swagger-ui-express": "^5.0.1",
     "winston": "^3.11.0",

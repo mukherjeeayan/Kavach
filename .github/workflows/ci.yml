@@ -95,3 +95,20 @@ jobs:
         run: ./gradlew :app:assembleDebug --console=plain
       - name: Unit tests
         run: ./gradlew :app:testDebugUnitTest --console=plain
+
+  admin-panel:
+    name: Admin Panel (build + lint)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: admin-panel
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: admin-panel/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      - run: npm run lint

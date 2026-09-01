@@ -129,9 +129,46 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
+  build-admin-panel:
+    name: Build Admin Panel Docker Image
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image-tag: ${{ steps.meta.outputs.tags }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-admin-panel
+          tags: |
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+            type=sha
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: admin-panel
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
   deploy-staging:
     name: Deploy to Staging
-    needs: [build-backend, build-frontend]
+    needs: [build-backend, build-frontend, build-admin-panel]
     if: github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'staging'
     runs-on: ubuntu-latest
     environment: staging
@@ -154,13 +191,13 @@ jobs:
             git pull origin main
             docker compose -f deploy/docker-compose.prod.yml pull
             docker compose -f deploy/docker-compose.prod.yml up -d --remove-orphans
-            docker compose -f deploy/docker-compose.prod.yml exec -T backend npm run migrate
+            docker compose -f deploy/docker-compose.prod.yml exec -T backend npm run db:migrate
             docker image prune -f
           EOF
 
   deploy-production:
     name: Deploy to Production
-    needs: [build-backend, build-frontend]
+    needs: [build-backend, build-frontend, build-admin-panel]
     if: github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production' || github.event_name == 'release'
     runs-on: ubuntu-latest
     environment: production
@@ -183,7 +220,7 @@ jobs:
             git pull origin main
             docker compose -f deploy/docker-compose.prod.yml pull
             docker compose -f deploy/docker-compose.prod.yml up -d --remove-orphans
-            docker compose -f deploy/docker-compose.prod.yml exec -T backend npm run migrate
+            docker compose -f deploy/docker-compose.prod.yml exec -T backend npm run db:migrate
             docker image prune -f
           EOF
 

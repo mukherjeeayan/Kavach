@@ -58,6 +58,7 @@ services:
       FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID:-}
       FIREBASE_CLIENT_EMAIL: ${FIREBASE_CLIENT_EMAIL:-}
       FIREBASE_PRIVATE_KEY: ${FIREBASE_PRIVATE_KEY:-}
+      ADMIN_ACCESS_KEY: ${ADMIN_ACCESS_KEY:?ADMIN_ACCESS_KEY is required}
     depends_on:
       postgres:
         condition: service_healthy
@@ -72,6 +73,20 @@ services:
       context: ..
       dockerfile: frontend/Dockerfile
     container_name: kavach-frontend
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - kavach-network
+
+  admin-panel:
+    build:
+      context: ..
+      dockerfile: admin-panel/Dockerfile
+    container_name: kavach-admin-panel
+    environment:
+      VITE_ADMIN_ACCESS_KEY: ${ADMIN_ACCESS_KEY:?ADMIN_ACCESS_KEY is required}
+      VITE_API_URL: http://backend:3000
     depends_on:
       - backend
     restart: unless-stopped

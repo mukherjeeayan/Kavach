@@ -18,6 +18,7 @@ backend/.env
 frontend/.env
 frontend/.env.local
 frontend/.env.*.local
+admin-panel/.env
 .env
 
 # Firebase config (contains API keys)

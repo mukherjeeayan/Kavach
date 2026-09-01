@@ -66,6 +66,16 @@ const envSchema = z.object({
 
   // ─── Encryption ────────────────────────────────────────────────────
   CHAMBER_KEY_ALIAS: z.string().default('kavach-chamber-key'),
+
+  // ─── Admin panel ──────────────────────────────────────────────────
+  ADMIN_ACCESS_KEY: process.env.NODE_ENV === 'production'
+    ? z.string().min(1, 'ADMIN_ACCESS_KEY is required in production')
+    : z.string().optional(),
+
+  // ─── Razorpay (subscriptions) ─────────────────────────────────────
+  RAZORPAY_KEY_ID: z.string().optional(),
+  RAZORPAY_KEY_SECRET: z.string().optional(),
+  RAZORPAY_WEBHOOK_SECRET: z.string().optional(),
 });
 
 /**
