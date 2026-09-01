@@ -323,11 +323,12 @@
             <div class="progress-fill" id="progressFill"></div>
         </div>
         <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-medium);">
-            <span>Step 1 of 5</span>
-            <span>Step 2 of 5</span>
-            <span>Step 3 of 5</span>
-            <span>Step 4 of 5</span>
-            <span>Step 5 of 5</span>
+            <span>Step 1 of 6</span>
+            <span>Step 2 of 6</span>
+            <span>Step 3 of 6</span>
+            <span>Step 4 of 6</span>
+            <span>Step 5 of 6</span>
+            <span>Step 6 of 6</span>
         </div>
 
         <!-- Tab Navigation -->
@@ -336,7 +337,8 @@
             <button onclick="showStep(2)">Backend Configuration</button>
             <button onclick="showStep(3)">Frontend Configuration</button>
             <button onclick="showStep(4)">Android Configuration</button>
-            <button onclick="showStep(5)">Summary & Generate</button>
+            <button onclick="showStep(5)">Admin Panel</button>
+            <button onclick="showStep(6)">Summary & Deploy</button>
         </div>
 
         <!-- Step 1: Environment & Mode -->
@@ -497,12 +499,59 @@
             </div>
 
             <button class="btn btn-secondary" onclick="prevStep(4, 3)">Back</button>
-            <button class="btn btn-primary" onclick="nextStep(5)">Generate Summary & Download</button>
+            <button class="btn btn-primary" onclick="nextStep(5)">Continue to Admin Panel Setup</button>
         </div>
 
-        <!-- Step 5: Summary & Actions -->
+        <!-- Step 5: Admin Panel Setup -->
         <div class="step-panel" id="step5">
-            <h2 class="step-title">Step 5: Deploy</h2>
+            <h2 class="step-title">Step 5: Admin Panel Setup</h2>
+
+            <p style="color: #666; margin-bottom: 1.5rem;">
+                The admin panel is a separate app for managing users, subscriptions, and feature flags.
+                It is hidden from end users and requires a shared access key.
+            </p>
+
+            <div class="walkthrough-section">
+                <h3>How It Works</h3>
+                <ul style="margin: 0; padding-left: 1.2rem;">
+                    <li>An <strong>ADMIN_ACCESS_KEY</strong> is shared between the backend and admin panel</li>
+                    <li>Non-admin users are blocked at the route level in the main frontend</li>
+                    <li>Admin users access it via a <strong>triple-click on the logo</strong> in the header</li>
+                    <li>The admin panel won't load without the access key configured</li>
+                </ul>
+            </div>
+
+            <div class="form-group">
+                <label>Admin Panel Port</label>
+                <input type="text" id="adminPanelPort" placeholder="5174" value="5174">
+                <p style="font-size: 0.85rem; color: #666; margin-top: 0.5rem;">Default is 5174 to avoid conflicts with the main frontend (5173).</p>
+            </div>
+
+            <div class="form-group">
+                <label>Admin Email (for first admin user)</label>
+                <input type="email" id="adminEmail" placeholder="admin@yourcompany.com">
+                <p style="font-size: 0.85rem; color: #666; margin-top: 0.5rem;">This email will be pre-configured as the first admin. You'll register this account after deployment.</p>
+            </div>
+
+            <hr style="margin: 2rem 0; border: none; border-top: 1px solid var(--border);">
+
+            <div class="walkthrough-section">
+                <h3>What's Generated</h3>
+                <ul style="margin: 0; padding-left: 1.2rem;">
+                    <li><strong>ADMIN_ACCESS_KEY:</strong> Added to backend .env (auto-generated 64-char secret)</li>
+                    <li><strong>VITE_ADMIN_ACCESS_KEY:</strong> Added to admin-panel .env (same key)</li>
+                    <li><strong>VITE_API_URL:</strong> Backend API URL for the admin panel</li>
+                    <li>Admin panel included in the deploy script (npm install + npm run dev)</li>
+                </ul>
+            </div>
+
+            <button class="btn btn-secondary" onclick="prevStep(5, 4)">Back</button>
+            <button class="btn btn-primary" onclick="nextStep(6)">Generate Summary & Deploy</button>
+        </div>
+
+        <!-- Step 6: Summary & Actions -->
+        <div class="step-panel" id="step6">
+            <h2 class="step-title">Step 6: Deploy</h2>
             
             <p style="color: #666; margin-bottom: 1.5rem;">
                 Your deployment script is ready. Download and run it to deploy the full stack.
@@ -519,6 +568,14 @@
                 </div>
             </div>
 
+            <div class="walkthrough-section">
+                <h3>Admin Panel .env</h3>
+                <div class="secret-box" id="adminPanelEnvOutput" style="max-height: 200px; overflow-y: auto; font-size: 0.8rem;">
+                    <!-- Content injected here -->
+                </div>
+                <button class="btn btn-secondary" style="margin-top: 0.5rem;" onclick="copyToClipboard('adminPanelEnvOutput', 'admin env')">Copy</button>
+            </div>
+
             <hr style="margin: 2rem 0; border: none; border-top: 1px solid var(--border);">
 
             <div class="walkthrough-section">
@@ -532,10 +589,11 @@
                 <h3>What the Script Does</h3>
                 <ol style="margin: 0; padding-left: 1.5rem;">
                     <li>Checks prerequisites (Node.js, Docker, npm)</li>
-                    <li>Writes generated .env files to backend/ and frontend/</li>
+                    <li>Writes generated .env files to backend/, frontend/, and admin-panel/</li>
                     <li>Installs dependencies and runs database migrations</li>
                     <li>Starts PostgreSQL and Redis via Docker</li>
                     <li>Builds the frontend</li>
+                    <li>Sets up the admin panel</li>
                     <li>Verifies all services are healthy</li>
                     <li>Prints status summary with URLs</li>
                 </ol>
@@ -553,11 +611,13 @@
                 <h3>Security Checklist</h3>
                 <ul style="margin: 0; padding-left: 1.2rem;">
                     <li>JWT secrets are 64-character random strings (kept secure, not committed to git)</li>
+                    <li>ADMIN_ACCESS_KEY shared between backend and admin-panel (auto-generated)</li>
                     <li>ALLOWED_ORIGINS set to your production domain(s)</li>
                     <li>Mapbox token restricted by domain in Mapbox dashboard</li>
                     <li>HTTPS/SSL configured at reverse proxy/load balancer level</li>
                     <li>Android certificate pins match production server certificate</li>
                     <li>google-services.json placed in android/app/ if Firebase/FCM enabled</li>
+                    <li>Admin panel deployed on a separate port/subdomain, not publicly linked</li>
                 </ul>
             </div>
 
@@ -568,7 +628,7 @@
         <script>
             // State management
             let currentStep = 1;
-            const totalSteps = 5;
+            const totalSteps = 6;
             const envMode = {
                 development: { domain: 'localhost:5173', redis: '', cors: 'http://localhost:5173' },
                 production: { domain: '', redis: 'redis://localhost:6379', cors: '' },
@@ -615,15 +675,18 @@
                 const androidBuild = document.querySelector('input[name="androidBuild"]:checked').value;
                 const androidApiBaseUrl = document.getElementById('androidApiBaseUrl').value.trim();
                 const androidCertPins = document.getElementById('androidCertPins').value.trim();
+                const adminPanelPort = document.getElementById('adminPanelPort').value.trim() || '5174';
+                const adminEmail = document.getElementById('adminEmail').value.trim();
 
                 // Step 1: Show/hide domain input
                 document.getElementById('domainGroup').style.display = (env === 'production') ? 'block' : 'none';
 
-                // Step 5: Generate all configuration files and deploy script
+                // Steps 5-6: Generate all configuration files and deploy script
                 generateBackendEnv(env, redisUrl, allowedOrigins, frontendDomain);
                 generateFrontendEnv(env, viteApiBaseUrl, viteSocketUrl, viteMapboxToken, frontendDomain);
                 generateAndroidConfig(androidBuild, androidApiBaseUrl, androidCertPins);
-                generateDeployScript(env, frontendDomain, androidBuild, androidApiBaseUrl, androidCertPins);
+                generateAdminPanelEnv(env, adminPanelPort, adminEmail, frontendDomain);
+                generateDeployScript(env, frontendDomain, androidBuild, androidApiBaseUrl, androidCertPins, adminPanelPort);
             }
 
             // Generate a cryptographically secure 64-character secret
@@ -637,6 +700,7 @@
             function generateBackendEnv(env, redisUrl, allowedOrigins, frontendDomain) {
                 let jwtSecret = generateSecret();
                 let jwtRefreshSecret = generateSecret();
+                let adminAccessKey = generateSecret();
                 
                 if (env === 'production') {
                     allowedOrigins = 'https://' + frontendDomain + ',http://' + frontendDomain;
@@ -701,6 +765,9 @@ ALLOWED_ORIGINS=${allowedOrigins}
 # RETENTION_LOCATION_DAYS=90
 # RETENTION_SCREEN_TIME_DAYS=365
 # RETENTION_AUDIT_DAYS=730
+
+# Admin panel access key (auto-generated, shared with admin-panel app)
+ADMIN_ACCESS_KEY=${adminAccessKey}
 `;
 
                 document.getElementById('backendEnvOutput').innerText = backendEnv;
@@ -769,12 +836,35 @@ VERSION_NAME=1.0
                 document.getElementById('androidBuildConfigOutput').innerText = gradleConfig;
             }
 
+            // Generate Admin Panel .env
+            function generateAdminPanelEnv(env, adminPanelPort, adminEmail, frontendDomain) {
+                const adminAccessKey = generateSecret();
+                let apiUrl = 'http://localhost:3000';
+                if (env === 'production') {
+                    apiUrl = 'http://' + frontendDomain + ':3000';
+                } else if (env === 'local') {
+                    apiUrl = 'http://10.0.2.2:3000';
+                }
+
+                const adminEnv = `# Kavach Admin Panel Environment
+# Generated: ${new Date().toISOString().split('T')[0]}
+# IMPORTANT: VITE_ADMIN_ACCESS_KEY must match ADMIN_ACCESS_KEY in backend/.env
+
+VITE_ADMIN_ACCESS_KEY=${adminAccessKey}
+VITE_API_URL=${apiUrl}
+VITE_PORT=${adminPanelPort}
+`;
+                document.getElementById('adminPanelEnvOutput').innerText = adminEnv;
+            }
+
             // Generate complete deployment script
-            function generateDeployScript(env, frontendDomain, androidBuild, androidApiBaseUrl, androidCertPins) {
+            function generateDeployScript(env, frontendDomain, androidBuild, androidApiBaseUrl, androidCertPins, adminPanelPort) {
                 const backendEnv = document.getElementById('backendEnvOutput').innerText;
                 const frontendEnv = document.getElementById('frontendEnvOutput').innerText;
+                const adminPanelEnv = document.getElementById('adminPanelEnvOutput').innerText;
                 const apiBase = androidApiBaseUrl || 'https://api.yourcompany.com';
                 const pins = androidCertPins || '';
+                const adminPort = adminPanelPort || '5174';
 
                 const isWindows = navigator.platform.indexOf('Win') > -1;
                 const scriptName = isWindows ? 'deploy.cmd' : 'deploy.sh';
@@ -832,6 +922,11 @@ echo   backend\\.env written
 ${frontendEnv.split('\n').map(l => 'echo ' + l.replace(/%/g, '%%')).join(lineEnd + ')}
 ) > frontend\\.env
 echo   frontend\\.env written
+
+(
+${adminPanelEnv.split('\n').map(l => 'echo ' + l.replace(/%/g, '%%')).join(lineEnd + ')}
+) > admin-panel\\.env
+echo   admin-panel\\.env written
 echo.
 
 :: ── Phase 3: Start Database (Docker) ──
@@ -858,7 +953,7 @@ echo   Backend ready
 echo.
 
 :: ── Phase 5: Frontend Build ──
-echo [5/6] Building frontend...
+echo [5/7] Building frontend...
 cd frontend
 call npm install
 if %ERRORLEVEL% NEQ 0 (
@@ -874,8 +969,20 @@ cd ..
 echo   Frontend built
 echo.
 
-:: ── Phase 6: Verify ──
-echo [6/6] Verifying deployment...
+:: ── Phase 6: Admin Panel Setup ──
+echo [6/7] Setting up admin panel...
+cd admin-panel
+call npm install
+if %ERRORLEVEL% NEQ 0 (
+    echo ERROR: npm install failed
+    exit /b 1
+)
+cd ..
+echo   Admin panel ready
+echo.
+
+:: ── Phase 7: Verify ──
+echo [7/7] Verifying deployment...
 echo   Starting backend server...
 start /b cmd /c "cd backend && npm run dev"
 timeout /t 5 /nobreak >nul
@@ -894,8 +1001,11 @@ echo ============================================
 echo.
 echo   Backend API:  http://localhost:3000
 echo   Frontend:     http://localhost:5173
+echo   Admin Panel:  http://localhost:${adminPort}
 echo   API Docs:     http://localhost:3000/api/docs
 echo   Database:     localhost:5432
+echo.
+echo   To start the admin panel:  cd admin-panel ^&^& npm run dev
 echo.
 echo   Next: Build the Android app
 echo     cd android
@@ -948,17 +1058,22 @@ cat > frontend/.env << 'ENVEOF'
 ${frontendEnv}
 ENVEOF
 echo "  frontend/.env written"
+
+cat > admin-panel/.env << 'ENVEOF'
+${adminPanelEnv}
+ENVEOF
+echo "  admin-panel/.env written"
 echo ""
 
 # ── Phase 3: Start Database (Docker) ──
-echo "[3/6] Starting PostgreSQL and Redis..."
+echo "[3/7] Starting PostgreSQL and Redis..."
 docker compose -f deploy/docker-compose.yml up -d
 sleep 5
 echo "  Database services started"
 echo ""
 
 # ── Phase 4: Backend Setup ──
-echo "[4/6] Setting up backend..."
+echo "[4/7] Setting up backend..."
 cd backend
 npm install
 npm run db:migrate || echo "  WARNING: Migration may have failed (tables may already exist)"
@@ -967,7 +1082,7 @@ echo "  Backend ready"
 echo ""
 
 # ── Phase 5: Frontend Build ──
-echo "[5/6] Building frontend..."
+echo "[5/7] Building frontend..."
 cd frontend
 npm install
 npm run build
@@ -975,8 +1090,16 @@ cd ..
 echo "  Frontend built"
 echo ""
 
-# ── Phase 6: Verify ──
-echo "[6/6] Verifying deployment..."
+# ── Phase 6: Admin Panel Setup ──
+echo "[6/7] Setting up admin panel..."
+cd admin-panel
+npm install
+cd ..
+echo "  Admin panel ready"
+echo ""
+
+# ── Phase 7: Verify ──
+echo "[7/7] Verifying deployment..."
 echo "  Starting backend server..."
 cd backend && npm run dev &
 BACKEND_PID=$!
@@ -996,8 +1119,12 @@ echo "============================================"
 echo ""
 echo "  Backend API:  http://localhost:3000"
 echo "  Frontend:     http://localhost:5173"
+echo "  Admin Panel:  http://localhost:${adminPort}"
 echo "  API Docs:     http://localhost:3000/api/docs"
 echo "  Database:     localhost:5432"
+echo ""
+echo "  To start the admin panel:  cd admin-panel && npm run dev"
+echo ""
 echo ""
 echo "  Next: Build the Android app"
 echo "    cd android && ./gradlew assembleDebug"
