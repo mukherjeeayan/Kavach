@@ -17,6 +17,7 @@ export const loginSchema = z.object({
     .string({ required_error: 'email is required' })
     .email('email must be a valid email address'),
   password: passwordField,
+  access_key: z.string().optional(),
 });
 
 export const refreshTokenSchema = z.object({

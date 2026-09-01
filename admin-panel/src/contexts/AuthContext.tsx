@@ -34,7 +34,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const login = async (email: string, password: string) => {
-    const res = await api.post('/auth/login', { email, password });
+    const accessKey = import.meta.env.VITE_ADMIN_ACCESS_KEY;
+    if (!accessKey) throw new Error('Admin panel not configured');
+
+    const res = await api.post('/auth/login', { email, password, access_key: accessKey });
     const { user: u } = res.data.data as { token: string; user: AdminUser };
     if (u.role !== 'admin') throw new Error('Access denied: Admin role required');
     setToken('cookie');

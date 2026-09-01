@@ -63,14 +63,32 @@ function AppRoutes() {
   );
 }
 
+const ADMIN_ACCESS_KEY = import.meta.env.VITE_ADMIN_ACCESS_KEY as string | undefined;
+
+function AccessGate({ children }: { children: React.ReactNode }) {
+  if (!ADMIN_ACCESS_KEY) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'system-ui' }}>
+        <div style={{ textAlign: 'center', padding: 40 }}>
+          <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 8 }}>Access Denied</h1>
+          <p style={{ color: '#666' }}>Admin panel is not configured. Set VITE_ADMIN_ACCESS_KEY to enable.</p>
+        </div>
+      </div>
+    );
+  }
+  return <>{children}</>;
+}
+
 export default function App() {
   return (
     <BrowserRouter>
       <QueryClientProvider client={queryClient}>
         <ErrorBoundary>
-          <AuthProvider>
-            <AppRoutes />
-          </AuthProvider>
+          <AccessGate>
+            <AuthProvider>
+              <AppRoutes />
+            </AuthProvider>
+          </AccessGate>
         </ErrorBoundary>
       </QueryClientProvider>
     </BrowserRouter>

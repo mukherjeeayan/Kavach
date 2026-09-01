@@ -4,9 +4,10 @@ import { MemoryRouter } from 'react-router-dom';
 import Header from './Header';
 import type { AuthUser, Notification } from '../../types/api';
 
-const { mockedUseNotifications, mockedUseSubscriptionTier } = vi.hoisted(() => ({
+const { mockedUseNotifications, mockedUseSubscriptionTier, mockedUseIsAdmin } = vi.hoisted(() => ({
   mockedUseNotifications: vi.fn(),
   mockedUseSubscriptionTier: vi.fn(),
+  mockedUseIsAdmin: vi.fn(),
 }));
 
 vi.mock('../../hooks/useNotifications', () => ({
@@ -15,6 +16,7 @@ vi.mock('../../hooks/useNotifications', () => ({
 
 vi.mock('../../store/authSlice', () => ({
   useSubscriptionTier: (...args: unknown[]) => mockedUseSubscriptionTier(...args),
+  useIsAdmin: (...args: unknown[]) => mockedUseIsAdmin(...args),
 }));
 
 const user: AuthUser = {
@@ -48,6 +50,7 @@ describe('Header notification badge', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockedUseSubscriptionTier.mockReturnValue('FREE');
+    mockedUseIsAdmin.mockReturnValue(false);
   });
 
   it('does not show badge when there are no unread notifications', () => {

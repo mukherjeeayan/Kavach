@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Provider } from 'react-redux';
 import { store } from './store/store';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
-import { useRole } from './store/authSlice';
+import { useRole, useIsAdmin } from './store/authSlice';
 import { Skeleton } from './components/ui/Skeleton';
 
 // Lazy load page components for code splitting
@@ -58,6 +58,16 @@ const RoleProtectedRoute = ({ role, children }: { role: 'parent' | 'child'; chil
 
   if (!hasMatchingRole) {
     return <Navigate to="/login" replace />;
+  }
+  return children;
+};
+
+// Admin-only route — only users with role='admin' can access
+const AdminRoute = ({ children }: { children: ReactElement }) => {
+  const isAdmin = useIsAdmin();
+
+  if (!isAdmin) {
+    return <Navigate to="/dashboard" replace />;
   }
   return children;
 };
@@ -181,9 +191,9 @@ function App() {
                 <Route
                   path="/admin"
                   element={
-                    <RoleProtectedRoute role="parent">
+                    <AdminRoute>
                       <AdminDashboard />
-                    </RoleProtectedRoute>
+                    </AdminRoute>
                   }
                 />
                 <Route path="*" element={<NotFoundPage />} />

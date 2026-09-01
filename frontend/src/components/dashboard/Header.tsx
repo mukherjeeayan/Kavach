@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import type { AuthUser } from '../../types/api';
 import { useNotifications } from '../../hooks/useNotifications';
-import { useSubscriptionTier } from '../../store/authSlice';
+import { useSubscriptionTier, useIsAdmin } from '../../store/authSlice';
 
 interface HeaderProps {
   user: AuthUser | null;
@@ -15,6 +15,10 @@ export default function Header({ user, onLogout }: HeaderProps) {
   const unreadCount = (notifications ?? []).filter((n) => !n.is_read).length;
   const badgeText = unreadCount > 99 ? '99+' : String(unreadCount);
   const tier = useSubscriptionTier();
+  const isAdmin = useIsAdmin();
+  const navigate = useNavigate();
+  const logoClickCount = useRef(0);
+  const logoClickTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [darkMode, setDarkMode] = useState(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem('darkMode') === 'true' ||
@@ -33,17 +37,33 @@ export default function Header({ user, onLogout }: HeaderProps) {
     localStorage.setItem('darkMode', String(darkMode));
   }, [darkMode]);
 
+  // Secret admin access: triple-click the logo (only works for admin users)
+  const handleLogoClick = () => {
+    if (!isAdmin) return;
+    logoClickCount.current += 1;
+    if (logoClickCount.current === 3) {
+      logoClickCount.current = 0;
+      if (logoClickTimer.current) clearTimeout(logoClickTimer.current);
+      navigate('/admin');
+      return;
+    }
+    if (logoClickTimer.current) clearTimeout(logoClickTimer.current);
+    logoClickTimer.current = setTimeout(() => {
+      logoClickCount.current = 0;
+    }, 600);
+  };
+
   return (
     <header className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
-        <Link to="/dashboard" className="flex items-center gap-2">
+        <div className="flex items-center gap-2 cursor-pointer select-none" onClick={handleLogoClick} role="presentation">
           <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
             <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
             </svg>
           </div>
           <h1 className="text-lg font-bold text-primary dark:text-blue-400 hidden sm:block">Kavach</h1>
-        </Link>
+        </div>
 
         {/* Desktop nav */}
         <div className="hidden sm:flex items-center gap-4">

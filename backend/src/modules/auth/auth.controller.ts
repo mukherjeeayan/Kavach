@@ -23,8 +23,17 @@ import { respond, respondError } from '../../utils/response';
  */
 export const login = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, access_key } = req.body;
     const session = await authService.login(email, password);
+
+    // Require access_key for admin logins (blocks unauthorized admin-panel access)
+    if ('user' in session && (session as { user?: { role?: string } }).user?.role === 'admin') {
+      const adminAccessKey = process.env.ADMIN_ACCESS_KEY;
+      if (adminAccessKey && access_key !== adminAccessKey) {
+        respondError(res, 403, 'Admin access key required', req);
+        return;
+      }
+    }
 
     if ('requires2fa' in session && session.requires2fa) {
       // Don't set session cookies yet — we haven't proven the user is
