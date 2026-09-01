@@ -13,6 +13,7 @@ import com.safeguard.parentalcontrol.data.remote.dto.RegisterDeviceRequest
 import com.safeguard.parentalcontrol.data.remote.dto.RegisterDeviceResponse
 import com.safeguard.parentalcontrol.data.remote.dto.SetPinRequest
 import com.safeguard.parentalcontrol.data.remote.dto.VerifyPinRequest
+import com.safeguard.parentalcontrol.data.remote.dto.UpdatePhoneRequest
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET

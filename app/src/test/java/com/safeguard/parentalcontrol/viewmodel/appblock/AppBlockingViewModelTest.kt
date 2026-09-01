@@ -123,6 +123,7 @@ class AppBlockingViewModelTest {
             override fun getBlockedAppsFlow(deviceId: String) = flowOf(emptyList<AppBlockRuleEntity>())
             override fun getAllRulesFlow(deviceId: String) = flowOf(emptyList<AppBlockRuleEntity>())
             override suspend fun getBlockedAppsSnapshot(deviceId: String) = emptyList<AppBlockRuleEntity>()
+            override suspend fun getRuleByPackage(deviceId: String, packageName: String): AppBlockRuleEntity? = null
             override fun getUnblockRequestsFlow(deviceId: String) = flowOf(emptyList<AppBlockRuleEntity>())
             override suspend fun syncFromServer(childId: String, deviceId: String) = true
             override suspend fun blockApp(

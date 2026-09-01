@@ -1,8 +1,8 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, Route } from '@playwright/test';
 
 const API = '**/api/v1';
 
-function mockLogin(route: any, overrides: Record<string, unknown> = {}) {
+function mockLogin(route: Route, overrides: Record<string, unknown> = {}) {
   return route.fulfill({
     status: 200,
     contentType: 'application/json',

@@ -19,7 +19,7 @@ interface Props {
 
 type StatusFilter = 'PENDING' | 'APPROVED' | 'REJECTED' | 'FULFILLED';
 
-const STATUS_TABS: { key: StatusFilter | 'ALL'; label: string }[] = [
+const STATUS_TABS: { key: StatusFilter; label: string }[] = [
   { key: 'PENDING', label: 'Pending' },
   { key: 'APPROVED', label: 'Approved' },
   { key: 'REJECTED', label: 'Rejected' },

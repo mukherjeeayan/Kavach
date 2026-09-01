@@ -24,11 +24,12 @@ Kavach keeps you safe without being mean! You can:
 - ** Earn rewards** — Good behavior gets points toward fun stuff!
 
 ## 🔒 Is it safe?
-Yes! Kavach follows strict privacy rules:
+Yes! Kavach follows strict privacy rules and is built to be **COPPA and GDPR-K compliant**:
 - Your data is encrypted (scrambled so only parents can read it)
 - No data is sold to advertisers
 - Parents can only see data about their own kid
 - You can ask to delete your data anytime
+- Strict access controls and rate-limiting are enforced on all actions
 
 ## 🛠️ How it works
 

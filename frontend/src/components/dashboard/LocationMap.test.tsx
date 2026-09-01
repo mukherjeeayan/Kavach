@@ -39,7 +39,7 @@ describe('LocationMap', () => {
     const { findByText } = render(
       <LocationMap
         points={[
-          { id: 'p1', latitude: 13.0827, longitude: 80.2707, recorded_at: '2026-08-29T10:00:00Z', accuracy_m: 10 },
+          { id: 'p1', latitude: 13.0827, longitude: 80.2707, recorded_at: '2026-08-29T10:00:00Z', accuracy_m: 10, child_id: 'c1', device_id: 'd1', speed_kmh: 0 },
         ]}
       />
     );
@@ -51,7 +51,7 @@ describe('LocationMap', () => {
     const { container } = render(
       <LocationMap
         points={[
-          { id: 'p1', latitude: 13.0827, longitude: 80.2707, recorded_at: '2026-08-29T10:00:00Z' },
+          { id: 'p1', latitude: 13.0827, longitude: 80.2707, recorded_at: '2026-08-29T10:00:00Z', accuracy_m: 10, child_id: 'c1', device_id: 'd1', speed_kmh: 0 },
         ]}
       />
     );
@@ -63,7 +63,7 @@ describe('LocationMap', () => {
     const { container } = render(
       <LocationMap
         points={[
-          { id: 'p1', latitude: 13.0827, longitude: 80.2707, recorded_at: '2026-08-29T10:00:00Z' },
+          { id: 'p1', latitude: 13.0827, longitude: 80.2707, recorded_at: '2026-08-29T10:00:00Z', accuracy_m: 10, child_id: 'c1', device_id: 'd1', speed_kmh: 0 },
         ]}
       />
     );

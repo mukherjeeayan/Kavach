@@ -78,23 +78,32 @@ class KidsHomeViewModel @Inject constructor(
     private val childId: String get() = onboardingStore.childId ?: ""
     private val deviceId: String get() = onboardingStore.deviceId ?: ""
 
+    private data class Combine1(
+        val blocked: List<AppBlockRuleEntity>,
+        val locks: List<ScheduledLockEntity>,
+        val screenTime: List<ScreenTimeDailyEntity>,
+        val locations: List<LocationEntryEntity>
+    )
+
     val uiState: StateFlow<KidsHomeState> = combine(
-        appBlockRuleDao.getAllRulesFlow(deviceId),
-        scheduledLockDao.getAll(),
-        screenTimeDao.flowByDate(todayKey()),
-        locationDao.flowRecent(),
+        combine(
+            appBlockRuleDao.getAllRulesFlow(deviceId),
+            scheduledLockDao.getAll(),
+            screenTimeDao.flowByDate(todayKey()),
+            locationDao.flowRecent()
+        ) { b, l, s, loc -> Combine1(b, l, s, loc) },
         geofenceDao.getActiveGeofences(),
         _isLoading,
         _error
-    ) { blocked, locks, screenTime, locations, geofences, loading, error ->
-        val totalMinutes = screenTime.sumOf { it.seconds } / 60
+    ) { c1, geofences, loading, error ->
+        val totalMinutes = c1.screenTime.sumOf { it.seconds } / 60
         KidsHomeState(
             childName = onboardingStore.childName ?: "Child",
             deviceId = deviceId,
-            blockedApps = blocked,
-            scheduledLocks = locks,
-            screenTimeToday = screenTime,
-            recentLocations = locations,
+            blockedApps = c1.blocked,
+            scheduledLocks = c1.locks,
+            screenTimeToday = c1.screenTime,
+            recentLocations = c1.locations,
             geofences = geofences,
             totalScreenTimeMinutes = totalMinutes,
             isLoading = loading,

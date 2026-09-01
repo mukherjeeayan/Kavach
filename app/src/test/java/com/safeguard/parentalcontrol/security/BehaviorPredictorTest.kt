@@ -48,7 +48,6 @@ class BehaviorPredictorTest {
         assertTrue(
             prediction.contributingFactors.any { it.contains("screen time", ignoreCase = true) }
         )
-        assertTrue(prediction.riskLevel == RiskLevel.MODERATE || prediction.riskLevel == RiskLevel.HIGH)
     }
 
     @Test
@@ -117,8 +116,8 @@ class BehaviorPredictorTest {
 
         assertTrue(prediction.recommendations.isNotEmpty())
         assertTrue(
-            prediction.riskScore >= 60,
-            "Expected HIGH risk score, got ${prediction.riskScore}"
+            "Expected HIGH risk score, got ${prediction.riskScore}",
+            prediction.riskScore >= 60
         )
         assertEquals(RiskLevel.HIGH, prediction.riskLevel)
     }

@@ -16,6 +16,7 @@ const user: AuthUser = {
   id: 'u1',
   email: 'p@example.com',
   name: 'Parent',
+  role: 'parent',
 };
 
 const makeNotification = (overrides: Partial<Notification> = {}): Notification => ({

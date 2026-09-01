@@ -127,6 +127,7 @@ object SelfHarmDetector {
         "cut myself",
         "cutting myself",
         "hurt myself",
+        "hurting myself",
         "harming myself",
         "overdose",
         "jump off",

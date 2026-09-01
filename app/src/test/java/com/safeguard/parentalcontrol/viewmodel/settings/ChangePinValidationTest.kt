@@ -31,6 +31,9 @@ class ChangePinValidationTest {
     @Mock private lateinit var onboardingStore: OnboardingStore
     @Mock private lateinit var parentPinStore: ParentPinStore
 
+    @Mock private lateinit var dpm: android.app.admin.DevicePolicyManager
+    @Mock private lateinit var pm: android.content.pm.PackageManager
+
     private val dispatcher = UnconfinedTestDispatcher()
 
     @Before
@@ -39,6 +42,10 @@ class ChangePinValidationTest {
         Dispatchers.setMain(dispatcher)
         whenever(onboardingStore.childName).thenReturn(null)
         whenever(tokenStore.parentName).thenReturn(null)
+        whenever(context.getSystemService(Context.DEVICE_POLICY_SERVICE)).thenReturn(dpm)
+        whenever(dpm.isAdminActive(any())).thenReturn(false)
+        whenever(context.packageManager).thenReturn(pm)
+        whenever(pm.getPackageInfo(any<String>(), any<Int>())).thenReturn(android.content.pm.PackageInfo())
     }
 
     @After
