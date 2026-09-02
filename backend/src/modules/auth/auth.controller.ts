@@ -111,11 +111,11 @@ export const getGoogleAuthUrl = async (req: Request, res: Response) => {
     (process.env.APP_URL ? `${process.env.APP_URL}/auth/google/callback` : `${req.protocol}://${req.get('host')}/auth/google/callback`);
 
   if (!clientId) {
-    return res.json({
+    return respond(res, 200, {
       configured: false,
       message: 'Google Client ID not configured',
       demoAvailable: true,
-    });
+    }, req);
   }
 
   const state = crypto.randomBytes(16).toString('hex');
@@ -130,11 +130,11 @@ export const getGoogleAuthUrl = async (req: Request, res: Response) => {
   });
 
   const url = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
-  return res.json({
+  return respond(res, 200, {
     configured: true,
     url,
     redirect_uri: redirectUri,
-  });
+  }, req);
 };
 
 /**
@@ -194,7 +194,7 @@ export const handleGoogleCallback = async (req: Request, res: Response) => {
     const session = await authService.authenticateWithGoogle({
       googleId,
       email,
-      name,
+      name: name || email.split('@')[0],
       avatarUrl,
     });
 

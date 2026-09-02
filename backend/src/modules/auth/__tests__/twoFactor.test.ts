@@ -51,7 +51,7 @@ jest.mock('../../shared/email.service', () => ({
   sendPasswordResetEmail: jest.fn().mockResolvedValue(undefined),
 }));
 
-jest.mock('bcrypt', () => ({
+jest.mock('bcryptjs', () => ({
   hash: jest.fn().mockResolvedValue('hashed-password'),
   compare: jest.fn(),
 }));
@@ -70,7 +70,7 @@ jest.mock('../../../middleware/rateLimiter', () => ({
 
 import app from '../../../app';
 import pool, { query } from '../../../config/database';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import * as twoFactorService from '../twoFactor.service';
 
 const mockedQuery = query as jest.MockedFunction<typeof query>;

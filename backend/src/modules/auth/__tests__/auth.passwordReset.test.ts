@@ -37,7 +37,7 @@ jest.mock('../../shared/token.service', () => ({
   verifyRefreshToken: jest.fn(),
 }));
 
-jest.mock('bcrypt', () => ({
+jest.mock('bcryptjs', () => ({
   hash: jest.fn().mockResolvedValue('hashed-new-password'),
   compare: jest.fn(),
 }));
@@ -59,7 +59,7 @@ jest.mock('../../shared/email.service', () => ({
 
 import app from '../../../app';
 import pool, { query } from '../../../config/database';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import * as emailService from '../../shared/email.service';
 
 const mockedQuery = query as jest.MockedFunction<typeof query>;

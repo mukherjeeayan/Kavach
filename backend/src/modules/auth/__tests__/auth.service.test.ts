@@ -20,7 +20,7 @@ jest.mock('../../../utils/logger', () => ({
   debug: jest.fn(),
 }));
 
-jest.mock('bcrypt', () => ({
+jest.mock('bcryptjs', () => ({
   hash: jest.fn().mockResolvedValue('hashed-password'),
   compare: jest.fn(),
 }));
@@ -166,7 +166,7 @@ describe('auth.service', () => {
           rows: [{ id: 'child-id', name: 'Kid', birth_date: '2015-01-01' }],
         } as any); // SELECT children (first child)
 
-      const bcrypt = jest.requireMock('bcrypt');
+      const bcrypt = jest.requireMock('bcryptjs');
       bcrypt.compare.mockResolvedValueOnce(true);
 
       const result = await authService.login('parent@example.com', 'password123');
@@ -191,7 +191,7 @@ describe('auth.service', () => {
         .mockResolvedValueOnce({ rows: [] } as any) // UPDATE clear failed_login_attempts
         .mockResolvedValueOnce({ rows: [] } as any); // SELECT children (empty)
 
-      const bcrypt = jest.requireMock('bcrypt');
+      const bcrypt = jest.requireMock('bcryptjs');
       bcrypt.compare.mockResolvedValueOnce(true);
 
       const result = await authService.login('parent@example.com', 'password123');
@@ -207,7 +207,7 @@ describe('auth.service', () => {
           rows: [{ ...mockParentRowWithLockout, password_hash: 'hashed-password' }],
         } as any) // SELECT parents
         .mockResolvedValueOnce({ rows: [] } as any); // UPDATE increment failed_login_attempts
-      const bcrypt = jest.requireMock('bcrypt');
+      const bcrypt = jest.requireMock('bcryptjs');
       bcrypt.compare.mockResolvedValueOnce(false);
 
       await expect(

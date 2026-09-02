@@ -1,22 +1,24 @@
-import tsParser from "@typescript-eslint/parser";
-import tsPlugin from "@typescript-eslint/eslint-plugin";
+import tseslint from "typescript-eslint";
 import reactHooksPlugin from "eslint-plugin-react-hooks";
 
-export default [
+export default tseslint.config(
   {
     ignores: [
-      "dist/**",
-      "node_modules/**",
-      "backend/**",
-      "admin-panel/**",
+      "**/dist/**",
+      "**/node_modules/**",
       "**/*.test.ts",
       "**/*.test.tsx",
     ],
   },
   {
-    files: ["frontend/src/**/*.{ts,tsx}"],
+    files: ["**/*.{ts,tsx}"],
+    extends: [
+      ...tseslint.configs.recommended,
+    ],
+    plugins: {
+      "react-hooks": reactHooksPlugin,
+    },
     languageOptions: {
-      parser: tsParser,
       parserOptions: {
         ecmaVersion: "latest",
         sourceType: "module",
@@ -24,10 +26,6 @@ export default [
           jsx: true,
         },
       },
-    },
-    plugins: {
-      "@typescript-eslint": tsPlugin,
-      "react-hooks": reactHooksPlugin,
     },
     linterOptions: {
       reportUnusedDisableDirectives: "off",
@@ -39,4 +37,4 @@ export default [
       "react-hooks/exhaustive-deps": "warn",
     },
   },
-];
+);

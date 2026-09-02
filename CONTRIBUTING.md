@@ -45,14 +45,22 @@ Thank you for your interest in contributing to Kavach! This document provides gu
 
 ```
 kavach/
-├── backend/          # Node.js/Express REST API
+├── .env.example        # Environment variable template
+├── package.json        # Root monorepo config
+├── scripts/
+│   └── dev-server.ts   # Dev server entry point (npm run dev)
+├── backend/            # Node.js/Express REST API
 │   ├── src/
-│   │   ├── modules/  # Feature modules (auth, children, location, etc.)
+│   │   ├── modules/    # Feature modules (auth, children, location, etc.)
 │   │   ├── middleware/
 │   │   ├── db/
 │   │   └── jobs/
 │   └── tests/
-├── frontend/         # React + Vite SPA
+├── frontend/           # React + Vite SPA
+│   ├── eslint.config.js
+│   ├── vite.config.ts
+│   ├── postcss.config.js
+│   ├── tailwind.config.js
 │   ├── src/
 │   │   ├── pages/
 │   │   ├── components/
@@ -60,10 +68,13 @@ kavach/
 │   │   ├── services/
 │   │   └── store/
 │   └── e2e/
-├── android/          # Android (Kotlin/Jetpack Compose)
+├── android/            # Android (Kotlin/Jetpack Compose)
+│   ├── metadata.json   # App metadata
 │   └── app/src/main/java/com/safeguard/parentalcontrol/
-├── admin-panel/      # Admin React app (Vite)
-└── docs/             # Documentation
+├── admin-panel/        # Admin React app (Vite)
+├── deploy/             # Deployment configs (Docker, nginx)
+├── docs/               # Documentation
+└── loadtest/           # Load testing scripts
 ```
 
 ## Development Workflow

@@ -15,14 +15,14 @@ if (!process.env.DB_DRIVER && !process.env.DATABASE_URL && !process.env.DB_PASSW
   process.env.DB_DRIVER = 'pg-mem';
 }
 
-import app from './backend/src/app';
-import logger from './backend/src/utils/logger';
-import pool from './backend/src/config/database';
-import { ruleEvents } from './backend/src/utils/socketHub';
-import { startScheduler, stopScheduler } from './backend/src/jobs/scheduler';
-import { contentScanner } from './backend/src/utils/contentScanner';
-import { startTelemetryWorker } from './backend/src/workers/telemetryWorker';
-import { initializeDatabase } from './backend/src/config/initDb';
+import app from '../backend/src/app';
+import logger from '../backend/src/utils/logger';
+import pool from '../backend/src/config/database';
+import { ruleEvents } from '../backend/src/utils/socketHub';
+import { startScheduler, stopScheduler } from '../backend/src/jobs/scheduler';
+import { contentScanner } from '../backend/src/utils/contentScanner';
+import { startTelemetryWorker } from '../backend/src/workers/telemetryWorker';
+import { initializeDatabase } from '../backend/src/config/initDb';
 
 const PORT = 3000;
 const expressApp = ((app as any).default || app) as express.Application;

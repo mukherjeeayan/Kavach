@@ -42,7 +42,7 @@ jest.mock('../../shared/audit.service', () => ({
   writeAuditLog: jest.fn().mockResolvedValue(undefined),
 }));
 
-jest.mock('bcrypt', () => ({
+jest.mock('bcryptjs', () => ({
   hash: jest.fn().mockResolvedValue('hashed-password'),
   compare: jest.fn(),
 }));
@@ -56,7 +56,7 @@ jest.mock('jsonwebtoken', () => ({
 const mockedQuery = query as jest.MockedFunction<typeof query>;
 const mockedConnect = pool.connect as jest.MockedFunction<() => Promise<any>>;
 const mockedSendEmail = sendEmail as jest.MockedFunction<typeof sendEmail>;
-const bcrypt = jest.requireMock('bcrypt');
+const bcrypt = jest.requireMock('bcryptjs');
 
 const PARENT_ID = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 const TOKEN_ID = 'cccccccc-cccc-cccc-cccc-cccccccccccc';

@@ -5,20 +5,21 @@
   "description": "Kavach — AI-powered parental control platform",
   "type": "module",
   "scripts": {
-    "dev": "tsx server.ts",
-    "build": "vite build --config frontend/vite.config.ts && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",
+    "dev": "tsx scripts/dev-server.ts",
+    "build": "vite build --config frontend/vite.config.ts && esbuild scripts/dev-server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",
     "start": "node dist/server.cjs",
     "build:frontend": "vite build --config frontend/vite.config.ts",
-    "lint": "eslint \"frontend/src/**/*.{ts,tsx}\""
+    "lint": "eslint --config frontend/eslint.config.js \"frontend/src/**/*.{ts,tsx}\""
   },
   "dependencies": {
     "@google/genai": "^0.2.0",
     "@hookform/resolvers": "^3.3.4",
     "@reduxjs/toolkit": "^2.0.1",
     "@tanstack/react-query": "^5.17.0",
+    "@types/bcryptjs": "^2.4.6",
     "ahocorasick": "^1.0.2",
     "axios": "^1.6.5",
-    "bcryptjs": "^2.4.3",
+    "bcryptjs": "^3.0.3",
     "compression": "^1.8.1",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
@@ -51,7 +52,6 @@
     "zod": "^3.22.4"
   },
   "devDependencies": {
-    "@types/bcryptjs": "^2.4.6",
     "@types/compression": "^1.8.1",
     "@types/cookie-parser": "^1.4.10",
     "@types/cors": "^2.8.17",

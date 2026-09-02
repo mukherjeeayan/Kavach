@@ -27,7 +27,7 @@ jest.mock('../../shared/token.service', () => ({
   verifyRefreshToken: jest.fn(),
 }));
 
-jest.mock('bcrypt', () => ({
+jest.mock('bcryptjs', () => ({
   hash: jest.fn().mockResolvedValue('hashed-password'),
   compare: jest.fn(),
 }));
@@ -41,7 +41,7 @@ jest.mock('../../../middleware/rateLimiter', () => ({
 
 import app from '../../../app';
 import pool, { query } from '../../../config/database';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import * as tokenService from '../../shared/token.service';
 
 const mockedQuery = query as jest.MockedFunction<typeof query>;

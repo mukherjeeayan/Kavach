@@ -20,6 +20,16 @@ jest.mock('../utils/logger', () => ({
 import request from 'supertest';
 
 describe('CSP - no unsafe-inline / unsafe-eval in script-src', () => {
+  const originalEnv = process.env.NODE_ENV;
+
+  beforeAll(() => {
+    process.env.NODE_ENV = 'production';
+  });
+
+  afterAll(() => {
+    process.env.NODE_ENV = originalEnv;
+  });
+
   it('produces a Content-Security-Policy header without unsafe-inline or unsafe-eval', async () => {
     const app = (await import('../app')).default;
     const res = await request(app).get('/health');
