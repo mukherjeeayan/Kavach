@@ -11,7 +11,7 @@
 // This script is idempotent — it uses ON CONFLICT DO NOTHING so it can be
 // re-run safely. Do NOT run in production.
 
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import { query } from '../config/database';
 import pool from '../config/database';
 import logger from '../utils/logger';

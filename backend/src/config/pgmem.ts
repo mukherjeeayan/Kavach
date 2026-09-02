@@ -33,6 +33,8 @@ let holder: PgMemHolder | null = null;
 function makeIdExplicit(sql: string, values: unknown[]): { sql: string; values: unknown[] } {
   const match = sql.match(/^\s*INSERT\s+INTO\s+(\S+)\s*\(([^)]*)\)/i);
   if (!match || match.index === undefined) return { sql, values };
+  const table = match[1].toLowerCase().replace(/['"`]/g, '');
+  if (['schema_migrations', 'spatial_ref_sys'].includes(table)) return { sql, values };
   const columns = match[2]
     .split(',')
     .map((c) => c.trim().toLowerCase());

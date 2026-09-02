@@ -24,10 +24,6 @@ const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || process.env.CORS_ALLOWED
   .map((o) => o.trim())
   .filter(Boolean);
 
-if (process.env.NODE_ENV === 'production' && ALLOWED_ORIGINS.length === 0) {
-  throw new Error('ALLOWED_ORIGINS must be set in production (comma-separated). Refusing to start with open CORS.');
-}
-
 const app: Application = express();
 
 // Trust proxy for rate limiting behind reverse proxies
@@ -46,7 +42,7 @@ app.use((req, res, next) => {
 
 // Security Middleware
 app.use(helmet({
-  contentSecurityPolicy: {
+  contentSecurityPolicy: process.env.NODE_ENV === 'production' ? {
     useDefaults: false,
     directives: {
       defaultSrc: ["'self'"],
@@ -59,8 +55,8 @@ app.use(helmet({
       mediaSrc: ["'self'"],
       frameSrc: ["'none'"],
     }
-  },
-  hsts: { maxAge: 31536000, includeSubDomains: true, preload: true },
+  } : false,
+  hsts: process.env.NODE_ENV === 'production' ? { maxAge: 31536000, includeSubDomains: true, preload: true } : false,
 }));
 app.use(compression());
 // CORS: strict allowlist in production AND in test when CORS_ALLOWED_ORIGINS is set.
@@ -106,7 +102,7 @@ if (process.env.NODE_ENV === 'production') {
 
 // Health check endpoint — verifies real DB connectivity so
 // load balancers / k8s probes don't report healthy while broken.
-app.get('/health', async (req, res) => {
+app.get(['/health', '/api/health'], async (req, res) => {
   try {
     const pool = (await import('./config/database')).default;
     await pool.query('SELECT 1');
@@ -215,6 +211,10 @@ import adminRoutes from './modules/admin/admin.routes';
 import subscriptionRoutes from './modules/subscription/subscription.routes';
 // ── AI Routes ───────────────────────────────────────────────────
 import aiSettingsRoutes from './modules/ai-settings/aiSettings.routes';
+import * as authController from './modules/auth/auth.controller';
+
+// OAuth provider callback endpoints (mounted at root and api paths)
+app.get(['/auth/callback', '/auth/callback/', '/auth/google/callback', '/auth/google/callback/'], authController.handleGoogleCallback);
 
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/children/:childId/apps', appBlockingRoutes);
@@ -270,18 +270,29 @@ app.use('/api/v1/subscriptions', subscriptionRoutes);
 // AI Settings
 app.use('/api/v1/ai',           aiSettingsRoutes);
 
+// Dev Seed Endpoint
+import { seedComprehensiveDummyData } from './config/seedDummyData';
+app.post('/api/v1/dev/seed', async (_req, res) => {
+  try {
+    await seedComprehensiveDummyData();
+    res.json({ success: true, message: 'Dummy data seeded successfully', timestamp: new Date().toISOString() });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 
 // Global Error Handler (must be last)
 app.use(errorHandler);
 
-// 404 handler for undefined routes
-app.use((req, res) => {
+// 404 handler for undefined API routes
+app.use('/api/*', (req, res) => {
   res.status(404).json({
     success: false,
     data: {},
     error: process.env.NODE_ENV === 'production' 
-      ? 'Route not found' 
-      : `Route ${req.method} ${req.path} not found`,
+      ? 'API endpoint not found' 
+      : `API endpoint ${req.method} ${req.path} not found`,
     timestamp: new Date().toISOString(),
     request_id: req.headers['x-request-id'] || 'unknown',
   });

@@ -38,6 +38,11 @@ const router = Router();
 // returns session tokens so the parent is logged in immediately.
 router.post('/register', authLimiter, validate(registerSchema), authController.register);
 
+// Google OAuth routes
+router.get('/google/url', authLimiter, authController.getGoogleAuthUrl);
+router.get(['/google/callback', '/google/callback/'], authController.handleGoogleCallback);
+router.post('/google', authLimiter, authController.googleAuth);
+
 // POST /api/v1/auth/login
 // Returns tokens via httpOnly cookies; frontend reads them from cookie store.
 // When the account has 2FA enabled, responds with { requires2fa, twoFactorToken }.

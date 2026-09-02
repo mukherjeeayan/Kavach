@@ -5,26 +5,26 @@ import { getPgMem } from './pgmem';
 
 dotenv.config();
 
-// DB_DRIVER=pg-mem swaps the real PostgreSQL connection for an
-// in-memory emulation (used by the e2e suite on machines without
-// Docker/Postgres). The same pg-mem pool is returned to the test
-// bootstrap so migrations and queries run against one database.
-const pool: Pool =
-  process.env.DB_DRIVER === 'pg-mem'
-    ? getPgMem().pool
-    : new Pool({
-        host: process.env.DB_HOST,
-        port: parseInt(process.env.DB_PORT || '5432'),
-        user: process.env.DB_USER,
-        password: process.env.DB_PASSWORD,
-        database: process.env.DB_NAME,
-        max: 20,
-        idleTimeoutMillis: 30000,
-        connectionTimeoutMillis: 5000,
-        ssl: process.env.NODE_ENV === 'production' 
-          ? { rejectUnauthorized: false }
-          : undefined,
-      });
+// DB_DRIVER=postgres uses a real PostgreSQL connection.
+// Defaults to in-memory emulation (pg-mem) for standalone container/preview runtime.
+const usePgMem = process.env.DB_DRIVER !== 'postgres';
+
+const pool: Pool = usePgMem
+  ? (getPgMem().pool as unknown as Pool)
+  : new Pool({
+      connectionString: process.env.DATABASE_URL,
+      host: process.env.DB_HOST || 'localhost',
+      port: parseInt(process.env.DB_PORT || '5432'),
+      user: process.env.DB_USER || 'postgres',
+      password: process.env.DB_PASSWORD,
+      database: process.env.DB_NAME || 'kavach',
+      max: 20,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 5000,
+      ssl: process.env.NODE_ENV === 'production' 
+        ? { rejectUnauthorized: false }
+        : undefined,
+    });
 
 pool.on('error', (err) => {
   // A transient idle-client error must not kill the whole process —

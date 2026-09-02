@@ -1,0 +1,6 @@
+{
+  "name": "Kavach",
+  "description": "AI-powered parental control and child safety monitoring platform.",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

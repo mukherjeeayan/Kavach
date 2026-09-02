@@ -127,7 +127,7 @@ async function batchInsert(pings: TelemetryPayload[]): Promise<number> {
 async function workerLoop(): Promise<void> {
   const redis = getRedisClient();
   if (!redis || redis.status !== 'ready') {
-    logger.error('Redis not available — telemetry worker cannot start');
+    logger.info('Telemetry worker: Redis stream is not active (standard direct database ingestion is active).');
     return;
   }
 

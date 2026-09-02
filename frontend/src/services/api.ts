@@ -71,6 +71,23 @@ export const register = async (payload: RegisterPayload): Promise<LoginPayload> 
   return response.data.data!;
 };
 
+export interface GoogleAuthPayload {
+  email: string;
+  name?: string;
+  googleId?: string;
+  avatarUrl?: string;
+}
+
+export const getGoogleAuthUrl = async (): Promise<{ configured: boolean; url?: string; demoAvailable?: boolean }> => {
+  const response = await apiClient.get<any>('/auth/google/url');
+  return response.data?.data || response.data;
+};
+
+export const googleAuth = async (payload: GoogleAuthPayload): Promise<LoginPayload> => {
+  const response = await apiClient.post<ApiResponse<LoginPayload>>('/auth/google', payload);
+  return response.data.data!;
+};
+
 /** Revokes the refresh token server-side and clears session cookies. Idempotent; call on sign-out. */
 export const logout = async (): Promise<void> => {
   await apiClient.post('/auth/logout');

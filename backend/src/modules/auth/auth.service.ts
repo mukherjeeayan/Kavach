@@ -2,7 +2,7 @@
 // Credential verification, registration, and session orchestration.
 // Token mechanics live in ../shared/token.service.
 
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import pool, { query } from '../../config/database';
@@ -324,6 +324,105 @@ export const complete2FAChallenge = async (
     refresh_token: await issueRefreshToken(user.id, crypto.randomUUID()),
     user,
     child: childResult.rows[0] || null,
+  };
+};
+
+export interface GoogleAuthInput {
+  googleId?: string;
+  email: string;
+  name: string;
+  avatarUrl?: string;
+}
+
+/**
+ * Authenticate or register a parent account via Google OAuth.
+ * If parent exists, logs them in. If not, registers them seamlessly.
+ */
+export const authenticateWithGoogle = async (
+  input: GoogleAuthInput
+): Promise<{ token: string; refresh_token: string; user: AuthUser; child: ChildProfile | null; isNewUser: boolean }> => {
+  const email = input.email.toLowerCase().trim();
+  const name = (input.name || email.split('@')[0]).trim();
+  const googleId = input.googleId || null;
+  const avatarUrl = input.avatarUrl || null;
+
+  const existingRes = await query(
+    `SELECT id, email, name, email_verified, role, subscription_tier, trial_expires_at, google_id, avatar_url
+     FROM parents WHERE email = $1 OR (google_id IS NOT NULL AND google_id = $2) LIMIT 1`,
+    [email, googleId]
+  );
+
+  let userRow = existingRes.rows[0];
+  let isNewUser = false;
+
+  if (userRow) {
+    // Existing parent: mark email verified and update google_id/avatar if applicable
+    await query(
+      `UPDATE parents 
+       SET email_verified = true,
+           google_id = COALESCE(google_id, $2),
+           avatar_url = COALESCE($3, avatar_url),
+           failed_login_attempts = 0,
+           login_locked_until = NULL
+       WHERE id = $1`,
+      [userRow.id, googleId, avatarUrl]
+    ).catch(() => {});
+
+    userRow.email_verified = true;
+  } else {
+    isNewUser = true;
+    const dummyPassword = crypto.randomBytes(32).toString('hex');
+    const dummyPasswordHash = await bcrypt.hash(dummyPassword, 10);
+
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const insertRes = await client.query(
+        `INSERT INTO parents (email, password_hash, name, google_id, avatar_url, email_verified, role, subscription_tier, trial_expires_at)
+         VALUES ($1, $2, $3, $4, $5, true, 'parent', 'TRIAL', NOW() + INTERVAL '14 days')
+         RETURNING id, email, name, email_verified, role, subscription_tier, trial_expires_at`,
+        [email, dummyPasswordHash, name, googleId, avatarUrl]
+      );
+      userRow = insertRes.rows[0];
+
+      await client.query('COMMIT');
+    } catch (insertErr) {
+      await client.query('ROLLBACK');
+      throw insertErr;
+    } finally {
+      client.release();
+    }
+  }
+
+  const user: AuthUser = {
+    id: userRow.id,
+    email: userRow.email,
+    name: userRow.name,
+    email_verified: true,
+    role: userRow.role,
+    subscription_tier: userRow.subscription_tier,
+    trial_expires_at: userRow.trial_expires_at,
+  };
+
+  const childResult = await query(
+    `SELECT id, name, birth_date FROM children
+     WHERE parent_id = $1
+     ORDER BY created_at ASC
+     LIMIT 1`,
+    [user.id]
+  );
+
+  logger.info(`Parent authenticated via Google OAuth: ${user.id} (isNewUser: ${isNewUser})`);
+
+  return {
+    token: signAccessToken(user.id, 'parent', {
+      subscription_tier: userRow.subscription_tier,
+      trial_expires_at: userRow.trial_expires_at,
+    }),
+    refresh_token: await issueRefreshToken(user.id, crypto.randomUUID()),
+    user,
+    child: childResult.rows[0] || null,
+    isNewUser,
   };
 };
 

@@ -2,12 +2,11 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
 
-// https://vitejs.dev/config/
 export default defineConfig({
-  root: path.resolve(__dirname),
+  root: path.resolve(__dirname, 'frontend'),
   plugins: [react()],
   build: {
-    outDir: path.resolve(__dirname, 'dist'),
+    outDir: path.resolve(__dirname, 'frontend/dist'),
     emptyOutDir: true,
     rollupOptions: {
       output: {
@@ -22,18 +21,7 @@ export default defineConfig({
     },
   },
   server: {
-    port: 5173,
-    proxy: {
-      '/api': {
-        target: 'http://localhost:3000',
-        changeOrigin: true,
-      },
-      // Socket.IO needs websocket upgrade support in the dev proxy
-      '/socket.io': {
-        target: 'http://localhost:3000',
-        changeOrigin: true,
-        ws: true,
-      }
-    }
+    host: '0.0.0.0',
+    port: 3000,
   }
 })

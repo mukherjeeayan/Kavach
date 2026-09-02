@@ -69,7 +69,8 @@ describe('LoginPage', () => {
 
     expect(screen.getByLabelText('Email')).toBeInTheDocument();
     expect(screen.getByLabelText('Password')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^sign in$/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /register with google/i })).toBeInTheDocument();
     expect(screen.getByText('Forgot your password?')).toBeInTheDocument();
     expect(screen.getByText('Create an account')).toBeInTheDocument();
   });
