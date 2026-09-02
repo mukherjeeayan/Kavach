@@ -32,17 +32,7 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        
-        // Hilt configuration for Room
-        javaCompileOptions {
-            annotationProcessorOptions {
-                arguments += mapOf(
-                    "room.schemaLocation" to "$projectDir/schemas",
-                    "room.incremental" to "true",
-                    "room.expandProjection" to "true"
-                )
-            }
-        }
+
     }
 
     // Product flavors for dual distribution:
@@ -130,6 +120,11 @@ android {
     }
 }
 
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
+    arg("room.incremental", "true")
+}
+
 dependencies {
     val composeBomVersion = "2024.02.00"
     val lifecycleVersion = "2.7.0"
@@ -201,6 +196,10 @@ dependencies {
 
     // Google Play Services (Location)
     implementation("com.google.android.gms:play-services-location:21.1.0")
+
+    // Google Play In-App Billing
+    implementation("com.android.billingclient:billing:6.2.1")
+    implementation("com.android.billingclient:billing-ktx:6.2.1")
 
     // Unit Testing
     testImplementation("junit:junit:4.13.2")

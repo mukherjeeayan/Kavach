@@ -80,7 +80,7 @@ npm run dev         # Starts at http://localhost:5173
 
 ## 7. Testing
 
-### Backend (643 tests, 58 suites)
+### Backend (644 tests, 58 suites, 22 skipped)
 
 ```bash
 cd backend
@@ -89,13 +89,27 @@ npm run test:unit  # Unit tests only
 npm run test:integration  # Integration tests (requires DB)
 ```
 
-### Frontend (515 tests, 75 files)
+### Frontend (507 tests, 73 files, 2 failed)
 
 ```bash
 cd frontend
 npx vitest run          # All tests
 npx vitest run --watch  # Watch mode
 npx vitest run --coverage # With coverage report
+```
+
+### Load Testing (k6)
+
+```bash
+# Auth endpoints
+cd loadtest
+k6 run auth-load-test.js
+
+# Telemetry ingestion (requires AUTH_TOKEN)
+k6 run --env AUTH_TOKEN=<jwt> telemetry-load-test.js
+
+# Geofence checking (requires AUTH_TOKEN)
+k6 run --env AUTH_TOKEN=<jwt> geofence-load-test.js
 ```
 
 ### Android
@@ -109,18 +123,44 @@ cd android
 ## 8. Architecture overview
 
 Backend: Express.js with TypeScript, REST API, JWT authentication, PostgreSQL + Redis
-Frontend: React with Vite, TypeScript, React Query, Redux Toolkit
-Android: Kotlin + Jetpack Compose, Hilt for DI, Room for local storage
-Communication: HTTPS for REST, WSS for real-time updates
+Frontend: React with Vite, TypeScript, React Query, Redux Toolkit, React-Leaflet + OpenStreetMap
+Android: Kotlin + Jetpack Compose, Hilt for DI, Room for local storage, StrongBox-backed ECDH
+Communication: HTTPS for REST, WSS for real-time updates (Redis Pub/Sub adapter for scaling)
+
+Key Security Features:
+- ECDH P-256 key exchange for QR code device pairing
+- Offline-first rule sync via IndexedDB
+- SMS fallback for emergency SOS alerts
+- Kiosk mode for scheduled locks and screen time limits
+- Tamper-proof audit chain with verification endpoint
+- Cryptographic key deletion on account termination
 
 ## 9. Project structure
 
 ```
 kavach/
 ├── backend/              # Node.js/Express backend
+│   ├── src/config/       # Database, Redis, Sentry, metrics, Socket.IO adapter
+│   ├── src/modules/      # Feature modules (auth, children, devices, geo, etc.)
+│   └── scripts/          # Dev server entry point
 ├── frontend/             # React/Vite web dashboard
+│   ├── src/components/   # UI components (DevicePairingQR, etc.)
+│   ├── src/hooks/        # React hooks (useRealtimeRules, etc.)
+│   ├── src/utils/        # Crypto, offline sync, push notifications
+│   └── public/sw.js      # Service worker for push notifications
 ├── android/              # Kotlin/Jetpack Compose app
-├── deploy/               # Docker configs, deployment wizard
+│   ├── app/src/main/java/com/safeguard/parentalcontrol/
+│   │   ├── provisioning/ # KeyExchange, QR pairing
+│   │   ├── service/      # LocationService, SmsFallbackService, KioskActivity
+│   │   └── security/     # SafeGuardDeviceAdminReceiver
+│   └── app/build.gradle.kts  # Billing SDK, product flavors
+├── deploy/               # Deployment configs
+│   ├── docker-compose.prod.yml  # Docker Compose stack
+│   ├── ecs/              # AWS ECS Fargate (CloudFormation, task/service definitions)
+│   ├── kubernetes/       # K8s manifests (namespace, secrets, postgres, redis, backend, frontend, ingress)
+│   ├── oracle-cloud/     # Oracle Cloud Always-Free (setup, backup scripts)
+│   └── nginx.conf        # Nginx reverse proxy config
+├── loadtest/             # k6 load test scripts
 ├── db/                   # PostgreSQL migrations
 ├── docs/                 # Documentation
 └── .github/              # GitHub Actions workflows

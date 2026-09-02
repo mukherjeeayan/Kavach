@@ -22,74 +22,74 @@ import retrofit2.http.Path
 
 interface ParentPhase2Api {
 
-    @GET("children/{childId}/url-filters")
+    @GET("api/v1/children/{childId}/url-filters")
     suspend fun getUrlFilters(
         @Path("childId") childId: String
     ): Response<ApiResponse<List<UrlFilterRuleDto>>>
 
-    @POST("children/{childId}/url-filters")
+    @POST("api/v1/children/{childId}/url-filters")
     suspend fun createUrlFilter(
         @Path("childId") childId: String,
         @Body body: CreateUrlFilterDto
     ): Response<ApiResponse<UrlFilterRuleDto>>
 
-    @DELETE("children/{childId}/url-filters/{ruleId}")
+    @DELETE("api/v1/children/{childId}/url-filters/{ruleId}")
     suspend fun deleteUrlFilter(
         @Path("childId") childId: String,
         @Path("ruleId") ruleId: String
     ): Response<ApiResponse<Unit>>
 
-    @GET("children/{childId}/geofences")
+    @GET("api/v1/children/{childId}/geofences")
     suspend fun getGeofences(
         @Path("childId") childId: String
     ): Response<ApiResponse<List<GeofenceDto>>>
 
-    @POST("children/{childId}/geofences")
+    @POST("api/v1/children/{childId}/geofences")
     suspend fun createGeofence(
         @Path("childId") childId: String,
         @Body body: CreateGeofenceDto
     ): Response<ApiResponse<GeofenceDto>>
 
-    @DELETE("children/{childId}/geofences/{geofenceId}")
+    @DELETE("api/v1/children/{childId}/geofences/{geofenceId}")
     suspend fun deleteGeofence(
         @Path("childId") childId: String,
         @Path("geofenceId") geofenceId: String
     ): Response<ApiResponse<Unit>>
 
-    @GET("children/{childId}/mood")
+    @GET("api/v1/children/{childId}/mood")
     suspend fun getMoodLogs(
         @Path("childId") childId: String
     ): Response<ApiResponse<List<MoodLogResponseDto>>>
 
-    @GET("rewards/catalog")
+    @GET("api/v1/rewards/catalog")
     suspend fun getRewardCatalog(): Response<ApiResponse<List<RewardCatalogDto>>>
 
-    @GET("children/{childId}/rewards/points")
+    @GET("api/v1/children/{childId}/rewards/points")
     suspend fun getChildPoints(
         @Path("childId") childId: String
     ): Response<ApiResponse<RewardPointsDto>>
 
-    @POST("rewards/redeem")
+    @POST("api/v1/rewards/redeem")
     suspend fun requestRedemption(
         @Body body: RewardRedemptionRequestDto
     ): Response<ApiResponse<RewardRedemptionDto>>
 
-    @GET("children/{childId}/rewards/redemptions")
+    @GET("api/v1/children/{childId}/rewards/redemptions")
     suspend fun getRedemptions(
         @Path("childId") childId: String
     ): Response<ApiResponse<List<RewardRedemptionDto>>>
 
-    @GET("children/{childId}/predictions")
+    @GET("api/v1/children/{childId}/predictions")
     suspend fun getPredictions(
         @Path("childId") childId: String
     ): Response<ApiResponse<List<BehaviorPredictionDto>>>
 
-    @GET("children/{childId}/self-harm-alerts")
+    @GET("api/v1/children/{childId}/self-harm-alerts")
     suspend fun getSelfHarmAlerts(
         @Path("childId") childId: String
     ): Response<ApiResponse<List<SelfHarmAlertDto>>>
 
-    @GET("children/{childId}/devices/{deviceId}/security-scans")
+    @GET("api/v1/children/{childId}/devices/{deviceId}/security-scans")
     suspend fun getSecurityScans(
         @Path("childId") childId: String,
         @Path("deviceId") deviceId: String

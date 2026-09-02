@@ -16,7 +16,7 @@ Open `deploy/index.html` in any browser (Chrome, Firefox, Edge, Safari).
 |------|-------------------|
 | 1. Environment & Mode | Dev/Prod/Local mode selection |
 | 2. Backend Configuration | JWT secrets (64-char), DB config, rate limiting, CORS |
-| 3. Frontend Configuration | API URL, Socket.io URL, Mapbox token |
+| 3. Frontend Configuration | API URL, Socket.io URL, VAPID public key |
 | 4. Android Configuration | API base URL, certificate pinning, Firebase |
 | 5. Admin Panel Configuration | Admin access key, panel URL |
 | 6. Summary & Deploy | Generated .env files, BuildConfig, deploy script |
@@ -26,11 +26,11 @@ Open `deploy/index.html` in any browser (Chrome, Firefox, Edge, Safari).
 ### Security Reminders
 
 - ✅ DO save JWT secrets (64-char strings) in a password manager
-- ✅ DO restrict Mapbox token by domain in Mapbox dashboard
-- ✅ DO set ALLOWED_ORIGINS to your actual domain(s)
+- ✅ DO restrict ALLOWED_ORIGINS to your actual domain(s)
+- ✅ DO use strong DATA_ENCRYPTION_KEY for AI API key encryption
 - ❌ DON'T commit .env files to version control
 - ❌ DON'T share JWT secrets
-- ❌ DON'T bake Mapbox token into frontend bundle permanently
+- ❌ DON'T expose Redis or database ports to the internet
 
 ### Common Issues
 
@@ -38,35 +38,41 @@ Open `deploy/index.html` in any browser (Chrome, Firefox, Edge, Safari).
 |---------|-----------|
 | "PostgreSQL connection failed" | Ensure Docker is running. Default: user=postgres, password=password, db=kavach |
 | "Module not found" errors | Run `npm install` in respective directory |
-| "Map not showing" | Get Mapbox token from mapbox.com, restrict by domain |
 | "Android build fails" | Open Android Studio, ensure `google-services.json` is in `android/app/` |
 | "Socket.io not connecting" | Ensure both backend and frontend are running |
+| "Redis connection failed" | Ensure Redis is running. Default: port 6379 |
 
 ## Production Architecture
 
 ```
-┌──────────────┐
-│   CloudFront │  (CDN + WAF + DDoS protection)
-│   + ACM SSL  │
-└──────┬───────┘
-       │
-┌──────▼───────┐
-│  ALB / Nginx │  (TLS termination, rate limiting)
-└──────┬───────┘
-       │
-┌──────┼────────────┐
-│      │            │
-┌─────▼─────┐ ┌────▼────┐ ┌─────▼─────┐
-│ Frontend  │ │ Backend │ │  Backend  │  (ECS Fargate / k8s)
-│ (nginx)   │ │  Node   │ │  (replica)│
-└───────────┘ └────┬────┘ └───────────┘
+┌─────────────────────────────────────────┐
+│  CDN (CloudFront / Cloudflare)          │  (CDN + WAF + DDoS protection)
+└─────────────────┬───────────────────────┘
                   │
-       ┌──────────┼──────────┐
-       │          │          │
- ┌─────▼────┐ ┌───▼────┐ ┌───▼────┐
- │ Postgres │ │ Redis  │ │  S3    │  (backups)
- │   RDS    │ │ElastiC.│ │ bucket │
- └──────────┘ └────────┘ └────────┘
+┌─────────────────▼───────────────────────┐
+│  ALB / Nginx                            │  (TLS termination, rate limiting)
+└─────────────────┬───────────────────────┘
+                  │
+┌─────────────────┼───────────────────────┐
+│                 │                       │
+┌─────────────▼──┐  ┌──────────────▼──┐  ┌──────────────▼──┐
+│ Frontend       │  │ Backend        │  │ Admin Panel     │
+│ (React/Vite)   │  │ (Node.js/TS)   │  │ (React)         │
+└────────────────┘  └───────┬────────┘  └─────────────────┘
+                            │
+           ┌────────────────┼────────────────┐
+           │                │                │
+     ┌─────▼──────┐  ┌─────▼──────┐  ┌─────▼──────┐
+     │ PostgreSQL │  │ Redis      │  │ S3/MinIO   │  (backups)
+     │ + PostGIS  │  │ (Pub/Sub)  │  │ bucket     │
+     └────────────┘  └────────────┘  └────────────┘
+                            │
+           ┌────────────────┼────────────────┐
+           │                │                │
+     ┌─────▼──────┐  ┌─────▼──────┐  ┌─────▼──────┐
+     │ Prometheus │  │ Grafana    │  │ Uptime Kuma│  (monitoring)
+     │ (metrics)  │  │ (dashboards│  │ (uptime)   │
+     └────────────┘  └────────────┘  └────────────┘
 ```
 
 ### Sizing
@@ -135,7 +141,8 @@ Open `deploy/index.html` in any browser (Chrome, Firefox, Edge, Safari).
 | Variable | Description | Example |
 |----------|-------------|---------|
 | `VITE_API_URL` | Backend API base URL | `https://api.kavach.com/api/v1` |
-| `VITE_MAPBOX_TOKEN` | Mapbox access token | `pk.xxx` |
+| `VITE_SOCKET_URL` | Socket.IO URL (defaults to API URL) | `wss://api.kavach.com` |
+| `VITE_VAPID_PUBLIC_KEY` | Web Push VAPID public key | `BN...` |
 
 ### Admin Panel (Build-time)
 
@@ -158,16 +165,40 @@ docker compose -f deploy/docker-compose.prod.yml exec backend npm run db:migrate
 curl https://api.kavach.com/health
 ```
 
-### Option B: AWS ECS Fargate (Production)
+### Option B: Oracle Cloud Always-Free (Zero Cost)
+
+Deploy on Oracle Cloud's Always Free tier — **$0.00/month** for 4 OCPUs, 24 GB RAM.
 
 ```bash
+# On Oracle Cloud ARM instance (Ubuntu 22.04)
+git clone https://github.com/kavach/kavach.git
+cd kavach/deploy/oracle-cloud
+chmod +x setup.sh
+./setup.sh
+
+# Edit .env with real secrets
+nano ../.env.prod
+
+# Start services
+docker compose -f ../docker-compose.prod.yml --env-file ../.env.prod up -d
+```
+
+See `deploy/oracle-cloud/README.md` for full resource allocation and monitoring setup.
+
+### Option C: AWS ECS Fargate (Production)
+
+```bash
+# Deploy via CloudFormation
+aws cloudformation deploy \
+  --template-file deploy/ecs/cloudformation.yml \
+  --stack-name kavach-production \
+  --parameter-overrides Environment=production \
+  --capabilities CAPABILITY_IAM
+
+# Or via CLI
 cd backend
 docker build -t $ECR_REGISTRY/kavach-backend:$VERSION .
 docker push $ECR_REGISTRY/kavach-backend:$VERSION
-
-cd ../frontend
-docker build -t $ECR_REGISTRY/kavach-frontend:$VERSION .
-docker push $ECR_REGISTRY/kavach-frontend:$VERSION
 
 aws ecs update-service \
   --cluster kavach-prod \
@@ -181,9 +212,30 @@ aws ecs run-task \
   --launch-type FARGATE
 ```
 
-### Option C: Kubernetes
+See `deploy/ecs/` for CloudFormation template, task definition, and service definition.
 
-Kubernetes manifests are not included in the repository. Adapt the Docker Compose configuration or ECS task definitions for your Kubernetes cluster. The backend Docker image is compatible with any container orchestrator.
+### Option D: Kubernetes
+
+Complete Kubernetes manifests are provided in `deploy/kubernetes/`:
+
+```bash
+# Create namespace and secrets
+kubectl apply -f deploy/kubernetes/namespace.yml
+kubectl apply -f deploy/kubernetes/secrets.yml
+
+# Deploy infrastructure
+kubectl apply -f deploy/kubernetes/postgres.yml
+kubectl apply -f deploy/kubernetes/redis.yml
+
+# Deploy application
+kubectl apply -f deploy/kubernetes/backend.yml
+kubectl apply -f deploy/kubernetes/frontend.yml
+
+# Configure ingress (requires cert-manager and nginx-ingress)
+kubectl apply -f deploy/kubernetes/ingress.yml
+```
+
+See `deploy/kubernetes/` for all manifests (namespace, secrets, postgres, redis, backend, frontend, ingress).
 
 ## Database
 
@@ -243,10 +295,6 @@ Save in a password manager. Never share. Never commit to version control.
 - **Production**: `https://app.yourcompany.com`
 - **Local with Android emulator**: `http://localhost:5173,http://10.0.2.2:5173`
 
-### Mapbox Token (Optional)
-
-Get from [mapbox.com](https://www.mapbox.com). **Restrict by domain** in Mapbox dashboard. The token is served at runtime from the backend API, not baked into the frontend bundle.
-
 ### Certificate Pinning (Android Release Only)
 
 Set SHA-256 certificate pins in `android/local.properties`. Get pins from your production server's certificate.
@@ -269,14 +317,17 @@ Set SHA-256 certificate pins in `android/local.properties`. Get pins from your p
 - [ ] Response time p95 >500ms
 - [ ] Failed login attempts >100/min
 - [ ] Unhandled exceptions in Sentry
+- [ ] Audit chain verification failures
+- [ ] SMS fallback failures (SOS critical)
 
 ### Recommended Tools
 
 - **APM**: Sentry (errors), Datadog/New Relic (performance)
-- **Metrics**: Prometheus + Grafana
+- **Metrics**: Prometheus + Grafana (included in `docker-compose.prod.yml`)
 - **Logs**: CloudWatch / ELK / Loki
-- **Uptime**: Pingdom / UptimeRobot / BetterStack
+- **Uptime**: Uptime Kuma (self-hosted, included in `docker-compose.prod.yml`)
 - **DB**: pgwatch2 / pgAdmin
+- **Load Testing**: k6 scripts in `loadtest/`
 
 ### Health Check Endpoints
 

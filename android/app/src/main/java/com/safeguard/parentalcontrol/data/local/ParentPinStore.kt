@@ -8,6 +8,8 @@ import androidx.security.crypto.MasterKey
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.security.MessageDigest
 import java.security.SecureRandom
+import javax.crypto.SecretKeyFactory
+import javax.crypto.spec.PBEKeySpec
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -41,11 +43,11 @@ class ParentPinStore @Inject constructor(@ApplicationContext context: Context) {
         if (trimmed.length !in MIN_PIN_LENGTH..MAX_PIN_LENGTH) {
             return false
         }
-        val salt = ByteArray(16).also { SecureRandom().nextBytes(it) }
+        val salt = ByteArray(32).also { SecureRandom().nextBytes(it) }
         val saltHex = salt.toHex()
         prefs.edit()
             .putString(KEY_SALT, saltHex)
-            .putString(KEY_HASH, sha256(saltHex + trimmed))
+            .putString(KEY_HASH, pbkdf2(trimmed, salt))
             .putInt(KEY_FAILED_ATTEMPTS, 0)
             .remove(KEY_LOCKOUT_UNTIL)
             .apply()
@@ -60,9 +62,13 @@ class ParentPinStore @Inject constructor(@ApplicationContext context: Context) {
             return false
         }
 
-        val salt = prefs.getString(KEY_SALT, null) ?: return false
+        val saltHex = prefs.getString(KEY_SALT, null) ?: return false
         val expected = prefs.getString(KEY_HASH, null) ?: return false
-        val valid = sha256(salt + pin.trim()).contentEquals(expected)
+        val salt = saltHex.hexToBytes()
+        val valid = MessageDigest.isEqual(
+            pbkdf2(pin.trim(), salt).toByteArray(Charsets.UTF_8),
+            expected.toByteArray(Charsets.UTF_8)
+        )
 
         if (valid) {
             prefs.edit()
@@ -95,13 +101,17 @@ class ParentPinStore @Inject constructor(@ApplicationContext context: Context) {
             .apply()
     }
 
-    private fun sha256(input: String): String {
-        val digest = MessageDigest.getInstance("SHA-256").digest(input.toByteArray(Charsets.UTF_8))
-        return digest.joinToString("") { "%02x".format(it) }
+    private fun pbkdf2(password: String, salt: ByteArray): String {
+        val spec = PBEKeySpec(password.toCharArray(), salt, PBKDF2_ITERATIONS, 256)
+        val key = SecretKeyFactory.getInstance(PBKDF2_ALGORITHM).generateSecret(spec)
+        return key.encoded.joinToString("") { "%02x".format(it) }
     }
 
     private fun ByteArray.toHex(): String =
         joinToString("") { "%02x".format(it) }
+
+    private fun String.hexToBytes(): ByteArray =
+        chunked(2).map { it.toInt(16).toByte() }.toByteArray()
 
     companion object {
         private const val TAG = "ParentPinStore"
@@ -113,5 +123,7 @@ class ParentPinStore @Inject constructor(@ApplicationContext context: Context) {
         private const val MAX_PIN_LENGTH = 16
         private const val MAX_ATTEMPTS = 5
         private const val MAX_LOCKOUT_MS = 30 * 60 * 1000L
+        private const val PBKDF2_ITERATIONS = 120_000
+        private const val PBKDF2_ALGORITHM = "PBKDF2WithHmacSHA256"
     }
 }

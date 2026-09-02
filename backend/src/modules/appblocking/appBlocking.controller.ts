@@ -5,7 +5,7 @@
 import { Request, Response, NextFunction } from 'express';
 import * as appBlockingService from './appBlocking.service';
 import { emitRuleChange } from '../../utils/socketHub';
-import { respond } from '../../utils/response';
+import { respond, respondError } from '../../utils/response';
 
 /**
  * GET /api/v1/children/:childId/apps/blocked?page=1&limit=20
@@ -216,6 +216,38 @@ export const getUnblockRequests = async (
     );
 
     respond(res, 200, items, req);
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * POST /api/v1/children/:childId/apps/unblock-requests/:requestId/respond
+ * Parent approves or denies an unblock request.
+ * Body: { approved: boolean }
+ */
+export const respondToUnblockRequest = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const parentId = req.user!.userId;
+    const { childId, requestId } = req.params;
+    const { approved } = req.body;
+
+    if (typeof approved !== 'boolean') {
+      return respondError(res, 400, 'approved field must be a boolean', req);
+    }
+
+    const result = await appBlockingService.respondToUnblockRequest(
+      parentId,
+      childId,
+      requestId,
+      approved
+    );
+
+    respond(res, 200, result, req);
   } catch (err) {
     next(err);
   }

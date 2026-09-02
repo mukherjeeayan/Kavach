@@ -9,6 +9,8 @@ import fs from 'fs';
 import path from 'path';
 import YAML from 'yaml';
 import swaggerUi from 'swagger-ui-express';
+import * as Sentry from '@sentry/node';
+import { register } from './config/metrics';
 import { errorHandler } from './middleware/errorHandler';
 import { standardLimiter } from './middleware/rateLimiter';
 import { requestLogger } from './middleware/requestLogger';
@@ -283,7 +285,21 @@ app.post('/api/v1/dev/seed', async (_req, res) => {
 
 
 // Global Error Handler (must be last)
+if (process.env.SENTRY_DSN) {
+  Sentry.setupExpressErrorHandler(app);
+}
 app.use(errorHandler);
+
+// Prometheus metrics endpoint (for /metrics scraping)
+app.get('/metrics', async (req, res) => {
+  try {
+    res.setHeader('Content-Type', register.contentType);
+    const metrics = await register.metrics();
+    res.end(metrics);
+  } catch (err) {
+    res.status(500).end('Error collecting metrics');
+  }
+});
 
 // 404 handler for undefined API routes
 app.use('/api/*', (req, res) => {

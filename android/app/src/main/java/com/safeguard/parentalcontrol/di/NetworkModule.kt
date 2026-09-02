@@ -3,7 +3,7 @@ package com.safeguard.parentalcontrol.di
 import android.content.Context
 import com.safeguard.parentalcontrol.BuildConfig
 import com.safeguard.parentalcontrol.data.remote.AuthInterceptor
-import androidx.security.crypto.MasterKey
+import com.safeguard.parentalcontrol.security.SecureMasterKey
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -24,9 +24,7 @@ object NetworkModule {
     @Provides
     @Singleton
     fun provideMasterKey(@ApplicationContext context: Context): MasterKey {
-        return MasterKey.Builder(context)
-            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-            .build()
+        return SecureMasterKey.build(context)
     }
 
     @Provides

@@ -300,3 +300,73 @@ export const getUnblockRequests = async (
   await verifyChildBelongsToParent(childId, parentId);
   return appBlockRuleRepo.getUnblockRequests(childId, page, limit);
 };
+
+/**
+ * Respond to an unblock request (approve or deny).
+ * Sends a push notification to the child's device with the result.
+ */
+export const respondToUnblockRequest = async (
+  parentId: string,
+  childId: string,
+  requestId: string,
+  approved: boolean
+): Promise<{ message: string }> => {
+  await verifyChildBelongsToParent(childId, parentId);
+
+  const request = await appBlockRuleRepo.getUnblockRequestById(requestId);
+  if (!request) {
+    throw new NotFoundError('Unblock request not found');
+  }
+
+  if (request.child_id !== childId) {
+    throw new NotFoundError('Unblock request not found for this child');
+  }
+
+  // Update request status
+  await appBlockRuleRepo.updateUnblockRequestStatus(
+    requestId,
+    approved ? 'approved' : 'denied'
+  );
+
+  // If approved, temporarily unblock the app
+  if (approved) {
+    await appBlockRuleRepo.unblockAppTemporarily(
+      request.child_id,
+      request.package_name,
+      15 * 60 * 1000 // 15 minutes
+    );
+  }
+
+  // Send push notification to child's device
+  try {
+    const pool = await import('../../config/database');
+    const result = await pool.default.query(
+      `SELECT fcm_token FROM devices WHERE child_id = $1 AND fcm_token IS NOT NULL LIMIT 1`,
+      [childId]
+    );
+    const device = result.rows[0];
+    if (device?.fcm_token) {
+      const { sendMulticastNotification } = await import('../shared/firebase.service');
+      await sendMulticastNotification(
+        [device.fcm_token],
+        approved ? 'Unblock Approved' : 'Unblock Denied',
+        approved
+          ? `${request.app_name || 'App'} has been unblocked for 15 minutes`
+          : `Your request for ${request.app_name || 'App'} was denied`,
+        {
+          type: approved ? 'UNBLOCK_APPROVED' : 'UNBLOCK_DENIED',
+          packageName: request.package_name,
+          requestId,
+        },
+        'high'
+      );
+    }
+  } catch (err) {
+    // Log but don't fail the response if push notification fails
+    console.error('Failed to send unblock response push:', err);
+  }
+
+  return {
+    message: approved ? 'Unblock approved' : 'Unblock denied',
+  };
+};

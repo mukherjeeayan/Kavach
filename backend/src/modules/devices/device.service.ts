@@ -248,3 +248,38 @@ export const unpairDevice = async (
     details: { device_id: deviceId, device_name: device.rows[0].device_name },
   });
 };
+
+/**
+ * Register a device's ECDH public key after QR-code pairing.
+ * The key is stored for key exchange verification.
+ */
+export const registerPublicKey = async (
+  parentId: string,
+  deviceId: string,
+  publicKey: string,
+  keyType: string = 'ecdh'
+): Promise<void> => {
+  const device = await query(
+    `SELECT d.id, d.child_id FROM devices d
+     JOIN children c ON c.id = d.child_id
+     WHERE d.id = $1 AND c.parent_id = $2`,
+    [deviceId, parentId]
+  );
+  if (device.rows.length === 0) {
+    throw new NotFoundError('Device not found for this parent');
+  }
+
+  await query(
+    `UPDATE devices SET public_key = $1, public_key_type = $2, updated_at = now()
+     WHERE id = $3`,
+    [publicKey, keyType, deviceId]
+  );
+
+  await writeAuditLog({
+    actorId: parentId,
+    targetChildId: device.rows[0].child_id,
+    action: 'REGISTER_PUBLIC_KEY',
+    resourceType: 'devices',
+    details: { device_id: deviceId, key_type: keyType },
+  });
+};

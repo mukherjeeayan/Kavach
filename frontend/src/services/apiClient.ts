@@ -1,4 +1,7 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
+import * as Sentry from '@sentry/react';
+import { store } from '../store/store';
+import { clearSession } from '../store/authSlice';
 import { clearStoredSession, getAccessToken, setAccessToken } from './session';
 
 /** Custom error class for premium-gated 403 responses. */
@@ -29,6 +32,16 @@ apiClient.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+  Sentry.addBreadcrumb({
+    category: 'api',
+    type: 'http',
+    level: 'info',
+    data: {
+      method: config.method?.toUpperCase(),
+      url: config.url,
+      baseURL: config.baseURL,
+    },
+  });
   return config;
 });
 
@@ -104,6 +117,7 @@ apiClient.interceptors.response.use(
         } catch {
           // Refresh failed — session is unrecoverable.
           clearStoredSession();
+          store.dispatch(clearSession());
           if (window.location.pathname !== '/login') {
             window.location.href = '/login';
           }
@@ -111,6 +125,7 @@ apiClient.interceptors.response.use(
       } else {
         // Already refreshed once and still rejected — session is dead.
         clearStoredSession();
+        store.dispatch(clearSession());
         if (window.location.pathname !== '/login') {
           window.location.href = '/login';
         }

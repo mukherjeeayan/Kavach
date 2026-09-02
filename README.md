@@ -13,11 +13,14 @@ As a parent, you can:
 - **Monitor communications** — SMS and call monitoring with cyberbullying detection
 - **Filter websites** — Block inappropriate content automatically
 - **Get AI-powered insights** — Behavior predictions and weekly AI reports
-- **Get emergency alerts** — If they tap the SOS button, you get notified instantly
+- **Get emergency alerts** — If they tap the SOS button, you get notified instantly (with SMS fallback)
 - **Track mood** — Kids can log how they're feeling each day
 - **Detect self-harm keywords** — Critical alerts for concerning behavior
 - **Voice commands** — Control features hands-free
 - **Keyword alerts** — Real-time notifications for flagged content
+- **Pair devices securely** — QR code pairing with ECDH key exchange
+- **Enforce kiosk mode** — Full-screen lock during scheduled times
+- **Offline enforcement** — Rules work even without internet connection
 
 ## For Kids (The Safe Part)
 Kavach keeps you safe without being mean! You can:
@@ -57,13 +60,18 @@ Yes! Kavach follows strict privacy rules and is built to be **COPPA and GDPR-K c
 | **Self-Harm Detection** | Keyword-based critical alert system |
 | **Mood Tracking** | Daily emoji check-in for emotional wellness |
 | **Rewards** | Points-based system for good behavior |
-| **SOS** | Dual-channel emergency alerts (FCM high-priority + APNs critical) |
+| **SOS** | Dual-channel emergency alerts (push + SMS fallback) |
 | **Voice Commands** | Hands-free feature control |
 | **Keyword Alerts** | Real-time notifications for flagged content |
 | **Weekly AI Reports** | Comprehensive weekly summaries with insights |
 | **Multi-Guardian** | Share monitoring with co-guardians |
 | **Admin Panel** | User management and feature flags |
 | **Google OAuth** | Sign in with Google (demo mode available without credentials) |
+| **QR Code Pairing** | Secure ECDH-based device pairing via QR code |
+| **Kiosk Mode** | Full-screen lockout for scheduled locks and screen time limits |
+| **Offline Rules** | Rule enforcement without internet connection (IndexedDB) |
+| **Push Notifications** | Interactive lock-screen approve/deny actions |
+| **SMS Fallback** | Emergency SMS delivery when push notifications fail |
 
 ## Subscription & Payments
 
@@ -74,17 +82,21 @@ Kavach uses **Razorpay** for web-based payment processing:
 - Premium features are gated behind subscription tiers
 - No Google Play Store billing — all payments handled via the web dashboard
 
+See `.env.example` for plan IDs: `RAZORPAY_PLAN_MONTHLY`, `RAZORPAY_PLAN_YEARLY`
+
 ## Tech Stack
 
 - **Backend:** Node.js + Express + TypeScript
-- **Frontend:** React + Vite + TypeScript + Tailwind CSS
+- **Frontend:** React 18 + Vite + TypeScript + Tailwind CSS
 - **Mobile:** Kotlin + Jetpack Compose (Android)
-- **Database:** PostgreSQL (with pg-mem for zero-config dev)
-- **Cache:** Redis ( Streams for telemetry pipeline)
-- **Real-time:** Socket.IO
-- **Auth:** JWT + Google OAuth
-- **Deployment:** Docker + Docker Compose
-- **CI/CD:** GitHub Actions
+- **Database:** PostgreSQL 16 + PostGIS (with pg-mem for zero-config dev)
+- **Cache:** Redis (Streams for telemetry + Pub/Sub for Socket.IO)
+- **Real-time:** Socket.IO with Redis adapter
+- **Maps:** React-Leaflet + OpenStreetMap (zero-cost)
+- **Auth:** JWT + Google OAuth + 2FA (TOTP)
+- **Monitoring:** Prometheus + Grafana + Sentry
+- **Payments:** Razorpay
+- **Deployment:** Docker + Docker Compose + ECS Fargate + Kubernetes
 
 ## Quick Start
 
@@ -118,31 +130,32 @@ kavach/
 │   ├── src/
 │   │   ├── modules/    # Feature modules (auth, children, location, etc.)
 │   │   ├── middleware/  # Auth, tenant guard, rate limiting, CSP
-│   │   ├── db/         # Migrations and seeds
+│   │   ├── config/    # Database, Redis, Sentry, metrics
 │   │   ├── jobs/       # Scheduled tasks
 │   │   └── workers/    # Background workers (telemetry)
-│   └── __tests__/      # Integration tests
+│   └── db/            # Migrations
 ├── frontend/           # React + Vite SPA
-│   ├── eslint.config.js
 │   ├── vite.config.ts
 │   ├── src/
-│   │   ├── pages/
-│   │   ├── components/
-│   │   ├── hooks/
-│   │   ├── services/
-│   │   └── store/
-│   └── e2e/            # Playwright E2E tests
+│   │   ├── pages/      # 18 page components
+│   │   ├── components/ # 30+ UI components
+│   │   ├── hooks/      # 23 custom hooks
+│   │   ├── services/   # API clients
+│   │   └── utils/      # Crypto, offline sync, push notifications
+│   └── public/         # Static assets + service worker
 ├── android/            # Android (Kotlin/Jetpack Compose)
-├── admin-panel/        # Admin React app (Vite)
-├── deploy/             # Deployment configs (Docker, nginx)
-├── docs/               # Documentation
-└── loadtest/           # Load testing scripts
+├── admin-panel/       # Admin React app (Vite)
+├── deploy/            # Deployment configs (Docker, ECS, K8s, Oracle Cloud)
+├── docs/              # Full documentation
+├── loadtest/          # k6 load testing scripts
+└── .github/          # GitHub Actions CI/CD
 ```
 
 ## Testing
 
 - **Backend:** 644 tests across 58 test suites (Jest)
-- **Frontend:** Unit tests (Vitest) + E2E tests (Playwright)
+- **Frontend:** 513 tests across 75 test files (Vitest)
+- **Load Testing:** 3 k6 scripts in `loadtest/` (auth, telemetry, geofence)
 
 ```bash
 # Backend tests
@@ -151,16 +164,63 @@ cd backend && npm test
 # Frontend tests
 cd frontend && npx vitest run
 
+# Load tests (requires k6)
+cd loadtest
+k6 run auth-load-test.js
+
 # Lint
-npm run lint
+cd backend && npm run lint
+cd frontend && npm run lint
 ```
 
 ## Deployment
 
 Kavach supports multiple deployment options:
-- **Docker Compose** — Development and production environments
-- **AWS ECS Fargate** — Scalable cloud deployment
-- **Kubernetes** — Container orchestration
+
+### Option 1: Oracle Cloud Always-Free (Zero Cost)
+
+Deploy on Oracle Cloud's Always Free tier — **$0.00/month** for 4 OCPUs, 24 GB RAM, 98 GB storage.
+
+```bash
+# On Oracle Cloud ARM instance (Ubuntu 22.04)
+git clone https://github.com/your-org/kavach.git
+cd kavach/deploy/oracle-cloud
+chmod +x setup.sh
+./setup.sh
+
+# Edit .env with real secrets
+nano ../.env.prod
+
+# Start all services
+docker compose -f ../docker-compose.prod.yml --env-file ../.env.prod up -d
+```
+
+Includes:
+- PostgreSQL + PostGIS database
+- Redis cache with Pub/Sub adapter for Socket.IO scaling
+- Backend API server
+- Frontend dashboard with OpenStreetMap
+- Grafana + Prometheus (monitoring)
+- Uptime Kuma (uptime monitoring)
+- Certbot (auto-renew SSL)
+
+### Option 2: Docker Compose (Single Server / Staging)
+
+```bash
+git clone https://github.com/your-org/kavach.git
+cd kavach
+cp .env.prod.example .env.prod
+# Edit .env.prod with real secrets
+docker compose -f deploy/docker-compose.prod.yml --env-file .env.prod up -d
+```
+
+### Option 3: AWS ECS Fargate (Production)
+
+See `deploy/ecs/` for CloudFormation template, task definition, and service configuration.
+
+### Option 4: Kubernetes
+
+See `deploy/kubernetes/` for complete manifests (namespace, secrets, postgres, redis, backend, frontend, ingress).
 
 ## Environment Variables
 
@@ -170,9 +230,14 @@ See `.env.example` for all required variables. Key ones:
 |----------|-------------|
 | `DATABASE_URL` | PostgreSQL connection string |
 | `JWT_SECRET` | Secret for signing JWT tokens |
-| `GOOGLE_CLIENT_ID` | Google OAuth client ID (optional, enables demo mode) |
-| `REDIS_URL` | Redis connection string (optional, enables caching) |
+| `JWT_REFRESH_SECRET` | Secret for refresh tokens |
+| `REDIS_URL` | Redis connection for telemetry and Socket.IO |
 | `FIREBASE_PROJECT_ID` | Firebase project for push notifications |
+| `VITE_VAPID_PUBLIC_KEY` | Web Push VAPID public key |
+| `DATA_ENCRYPTION_KEY` | AES-256 key for encrypting AI API keys |
+| `GOOGLE_CLIENT_ID` | Google OAuth client ID |
+| `RAZORPAY_KEY_ID` | Razorpay payment key |
+| `TWILIO_ACCOUNT_SID` | Twilio for SMS fallback |
 
 ## License
 

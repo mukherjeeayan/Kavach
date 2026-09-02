@@ -8,8 +8,13 @@ import { ruleEvents } from './utils/socketHub';
 import { startScheduler, stopScheduler } from './jobs/scheduler';
 import { contentScanner } from './utils/contentScanner';
 import { startTelemetryWorker } from './workers/telemetryWorker';
+import { initSentry } from './config/sentry';
+import { attachRedisAdapter, disconnectRedisAdapter } from './config/socketRedisAdapter';
 // Ensure DB is connected/initialized
 import pool from './config/database';
+
+// Initialize Sentry before anything else
+initSentry();
 
 // Fail fast: never boot with unset JWT secrets — every request would
 // 500 or, worse, tokens would be unverifiable.
@@ -50,6 +55,9 @@ const io = new Server(server, {
     methods: ['GET', 'POST'],
   }
 });
+
+// Attach Redis adapter for multi-instance broadcast (degrades gracefully)
+attachRedisAdapter(io);
 
 // Every socket must authenticate during the handshake with a valid,
 // unscoped parent access token. Unauthenticated clients are rejected
@@ -138,6 +146,7 @@ ruleEvents.on('rule:changed', (childId: string) => {
 const gracefulShutdown = async () => {
   logger.info('Shutting down server gracefully...');
   stopScheduler();
+  await disconnectRedisAdapter();
   // Force-exit fallback so keep-alive connections can't hang shutdown
   const forceExit = setTimeout(() => {
     logger.warn('Forcing exit after 10s shutdown timeout');

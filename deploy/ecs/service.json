@@ -1,0 +1,45 @@
+# ecs-service.json
+# ECS Fargate service definition for Kavach backend.
+# Place in deploy/ecs/ directory.
+#
+# Usage:
+#   aws ecs create-service --cli-input-json file://ecs-service.json
+
+{
+  "serviceName": "kavach-backend",
+  "cluster": "kavach-production",
+  "taskDefinition": "kavach-backend",
+  "launchType": "FARGATE",
+  "platformVersion": "LATEST",
+  "desiredCount": 2,
+  "deploymentConfiguration": {
+    "maximumPercent": 200,
+    "minimumHealthyPercent": 100,
+    "deploymentCircuitBreaker": {
+      "enable": true,
+      "rollback": true
+    }
+  },
+  "networkConfiguration": {
+    "awsvpcConfiguration": {
+      "subnets": ["subnet-PLACEHOLDER_PRIVATE_A", "subnet-PLACEHOLDER_PRIVATE_B"],
+      "securityGroups": ["sg-PLACEHOLDER_BACKEND"],
+      "assignPublicIp": "DISABLED"
+    }
+  },
+  "loadBalancers": [
+    {
+      "targetGroupArn": "arn:aws:elasticloadbalancing:REGION:ACCOUNT_ID:targetgroup/kavach-backend/PLACEHOLDER",
+      "containerName": "backend",
+      "containerPort": 3000
+    }
+  ],
+  "serviceRegistries": [
+    {
+      "registryArn": "arn:aws:servicediscovery:REGION:ACCOUNT_ID:service/srv-PLACEHOLDER"
+    }
+  ],
+  "healthCheckGracePeriodSeconds": 60,
+  "schedulingStrategy": "REPLICA",
+  "enableExecuteCommand": true
+}

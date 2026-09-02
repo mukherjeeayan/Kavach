@@ -65,7 +65,7 @@ class SafeGuardMessagingService : FirebaseMessagingService() {
             .setAutoCancel(true)
             .setContentIntent(tapIntent)
 
-        attachActionFor(builder, type, childId, alertId, packageName)
+        attachActionFor(builder, type, childId, alertId, packageName, data)
 
         NotificationManagerCompat.from(this).notify(
             (System.currentTimeMillis() and 0xFFFF).toInt(),
@@ -93,9 +93,33 @@ class SafeGuardMessagingService : FirebaseMessagingService() {
         type: String?,
         childId: String?,
         alertId: String?,
-        packageName: String?
+        packageName: String?,
+        data: Map<String, String> = emptyMap()
     ) {
         when (type) {
+            NotificationHandler.TYPE_UNBLOCK_REQUEST -> {
+                // For unblock requests from child, show Approve/Deny action buttons
+                // that launch the overlay activity directly
+                val approveIntent = UnblockRequestOverlayActivity.createIntent(
+                    context = this,
+                    requestId = alertId ?: "",
+                    childId = childId ?: "",
+                    childName = data["child_name"] ?: "Your child",
+                    appName = data["app_name"] ?: packageName ?: "an app",
+                    reason = data["reason"] ?: "No reason provided"
+                )
+                val approvePending = android.app.PendingIntent.getActivity(
+                    this,
+                    (System.currentTimeMillis() and 0xFFFF).toInt(),
+                    approveIntent,
+                    android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
+                )
+                builder.addAction(
+                    android.R.drawable.ic_menu_send,
+                    "Review",
+                    approvePending
+                )
+            }
             NotificationHandler.TYPE_UNBLOCK_APPROVED -> {
                 val openApp = NotificationHandler.buildOpenIntent(
                     context = this,
@@ -142,6 +166,8 @@ class SafeGuardMessagingService : FirebaseMessagingService() {
         NotificationHandler.TYPE_GEOFENCE ->
             CHANNEL_GEOFENCE to NotificationCompat.PRIORITY_HIGH
         NotificationHandler.TYPE_SELFHARM ->
+            CHANNEL_ALERT to NotificationCompat.PRIORITY_HIGH
+        NotificationHandler.TYPE_UNBLOCK_REQUEST ->
             CHANNEL_ALERT to NotificationCompat.PRIORITY_HIGH
         NotificationHandler.TYPE_UNBLOCK_APPROVED,
         NotificationHandler.TYPE_UNBLOCK_REJECTED ->

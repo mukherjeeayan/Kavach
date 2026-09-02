@@ -220,3 +220,66 @@ export const getLimitRulesForDevice = async (
   );
   return result.rows;
 };
+
+/**
+ * Get an unblock request by ID (includes child_id for ownership check).
+ */
+export const getUnblockRequestById = async (
+  requestId: string
+): Promise<AppBlockRule | null> => {
+  const result = await query(
+    `SELECT abr.id, abr.device_id, abr.package_name, abr.app_name,
+            abr.is_blocked, abr.block_reason,
+            abr.unblock_requested, abr.unblock_reason,
+            abr.daily_limit_minutes,
+            abr.created_at, abr.updated_at,
+            d.child_id
+     FROM app_block_rules abr
+     INNER JOIN devices d ON abr.device_id = d.id
+     WHERE abr.id = $1`,
+    [requestId]
+  );
+  return result.rows[0] || null;
+};
+
+/**
+ * Update the status of an unblock request.
+ */
+export const updateUnblockRequestStatus = async (
+  requestId: string,
+  status: 'approved' | 'denied'
+): Promise<void> => {
+  await query(
+    `UPDATE app_block_rules
+     SET unblock_requested = false,
+         unblock_reason = unblock_reason || ' [' || $1 || ']',
+         updated_at = now()
+     WHERE id = $2`,
+    [status, requestId]
+  );
+};
+
+/**
+ * Temporarily unblock an app by setting is_blocked = false.
+ * The app will be re-blocked after the specified duration by the
+ * AppBlockingService monitoring loop.
+ */
+export const unblockAppTemporarily = async (
+  childId: string,
+  packageName: string,
+  durationMs: number
+): Promise<void> => {
+  await query(
+    `UPDATE app_block_rules abr
+     SET is_blocked = false, updated_at = now()
+     FROM devices d
+     WHERE abr.device_id = d.id
+       AND d.child_id = $1
+       AND abr.package_name = $2`,
+    [childId, packageName]
+  );
+
+  // Schedule re-blocking after duration
+  // The AppBlockingService monitoring loop will pick up the rule
+  // and re-block it based on schedule/limits
+};

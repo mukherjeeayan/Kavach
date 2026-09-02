@@ -8,6 +8,11 @@ import com.safeguard.parentalcontrol.ui.screens.appblock.AppBlockingScreen
 import com.safeguard.parentalcontrol.ui.screens.deviceui.DeviceDashboardScreen
 import com.safeguard.parentalcontrol.ui.screens.onboarding.OnboardingScreen
 import com.safeguard.parentalcontrol.ui.screens.parentlock.ParentLockScreen
+import com.safeguard.parentalcontrol.ui.screens.phase2.GeofenceStatusScreen
+import com.safeguard.parentalcontrol.ui.screens.phase2.MoodScreen
+import com.safeguard.parentalcontrol.ui.screens.phase2.RewardsScreen
+import com.safeguard.parentalcontrol.ui.screens.phase2.SecurityScreen
+import com.safeguard.parentalcontrol.ui.screens.phase2.SosScreen
 import com.safeguard.parentalcontrol.ui.screens.settings.BedtimeConfigScreen
 import com.safeguard.parentalcontrol.ui.screens.settings.ChangePinScreen
 import com.safeguard.parentalcontrol.ui.screens.settings.ScreenTimeLimitScreen
@@ -162,6 +167,24 @@ fun SafeGuardNavigation(
         }
         composable("screen_time_limit") {
             ScreenTimeLimitScreen()
+        }
+        composable("app_blocking") {
+            AppBlockingScreen()
+        }
+        composable("sos") {
+            SosScreen()
+        }
+        composable("security") {
+            SecurityScreen()
+        }
+        composable("rewards") {
+            RewardsScreen()
+        }
+        composable("mood") {
+            MoodScreen()
+        }
+        composable("geofence_status") {
+            GeofenceStatusScreen()
         }
     }
 }

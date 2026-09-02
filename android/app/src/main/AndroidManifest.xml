@@ -17,12 +17,13 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <!-- Required by ActivityManager.appTasks in AppBlockingService -->
-    <uses-permission android:name="android.permission.GET_TASKS" />
     
     <!-- Communication Sync Permissions -->
     <uses-permission android:name="android.permission.READ_SMS" />
     <uses-permission android:name="android.permission.READ_CALL_LOG" />
+    
+    <!-- SMS Fallback for Emergency SOS -->
+    <uses-permission android:name="android.permission.SEND_SMS" />
     
     <!-- WiFi & Security Scan Permissions -->
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
@@ -67,6 +68,43 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- QR-code Device Owner provisioning (enterprise builds) -->
+        <activity
+            android:name=".provisioning.DeviceOwnerProvisioningActivity"
+            android:exported="true"
+            android:theme="@style/Theme.SafeGuard"
+            android:screenOrientation="portrait">
+            <intent-filter>
+                <action android:name="android.app.action.PROVISION_MANAGED_DEVICE" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <!-- Full-screen lock-screen overlay for parent approve/deny -->
+        <activity
+            android:name=".notifications.UnblockRequestOverlayActivity"
+            android:exported="false"
+            android:theme="@style/Theme.SafeGuard"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true"
+            android:screenOrientation="portrait" />
+
+        <!-- Kiosk Mode activity (shown when device is locked) -->
+        <activity
+            android:name=".service.appblock.KioskActivity"
+            android:exported="false"
+            android:theme="@style/Theme.SafeGuard"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true"
+            android:screenOrientation="portrait"
+            android:launchMode="singleInstance"
+            android:excludeFromRecents="true"
+            android:taskAffinity=""
+            android:stateNotNeeded="true"
+            android:resumeWhilePausing="true"
+            android:clearTaskOnLaunch="true"
+            android:noHistory="true" />
 
         <!-- Device Admin Receiver for tamper-proofing and uninstall prevention -->
         <receiver

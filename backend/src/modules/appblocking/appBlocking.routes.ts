@@ -98,4 +98,13 @@ router.get(
   appBlockingController.getUnblockRequests
 );
 
+// POST /api/v1/children/:childId/apps/unblock-requests/:requestId/respond
+// Parent approves or denies an unblock request
+router.post(
+  '/unblock-requests/:requestId/respond',
+  requireRole('parent'),
+  validateParams(childAndUuidParams('requestId')),
+  appBlockingController.respondToUnblockRequest
+);
+
 export default router;

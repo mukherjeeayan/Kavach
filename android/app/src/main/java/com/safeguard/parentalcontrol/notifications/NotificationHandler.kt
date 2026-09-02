@@ -36,6 +36,7 @@ object NotificationHandler {
     const val TYPE_SELFHARM = "selfharm"
     const val TYPE_UNBLOCK_APPROVED = "unblock_approved"
     const val TYPE_UNBLOCK_REJECTED = "unblock_rejected"
+    const val TYPE_UNBLOCK_REQUEST = "unblock_request"
     const val TYPE_ALERT = "alert"
 
     /**
@@ -80,7 +81,7 @@ object NotificationHandler {
         TYPE_GEOFENCE -> "Location"
         TYPE_KEYWORD -> "Communication"
         TYPE_SELFHARM -> "Security"
-        TYPE_UNBLOCK_APPROVED, TYPE_UNBLOCK_REJECTED -> "Apps"
+        TYPE_UNBLOCK_APPROVED, TYPE_UNBLOCK_REJECTED, TYPE_UNBLOCK_REQUEST -> "Apps"
         else -> null
     }
 

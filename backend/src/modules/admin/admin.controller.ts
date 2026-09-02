@@ -94,3 +94,16 @@ export const getSystemStats = async (req: Request, res: Response, next: NextFunc
     next(err);
   }
 };
+
+// ─── Audit Integrity ──────────────────────────────────────────────────────────
+
+export const verifyAuditIntegrity = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const familyId = req.query.familyId as string;
+    const { verifyAuditChain } = await import('../shared/audit.service');
+    const result = await verifyAuditChain(familyId);
+    res.json({ success: true, data: result, timestamp: new Date().toISOString() });
+  } catch (err) {
+    next(err);
+  }
+};

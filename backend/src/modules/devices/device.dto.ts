@@ -35,7 +35,14 @@ export const heartbeatSchema = z.object({
   heartbeat: z.string().datetime({ offset: true })
 });
 
+/** POST /devices/:deviceId/public-key body. */
+export const registerPublicKeySchema = z.object({
+  public_key: z.string().min(1, 'public_key is required'),
+  key_type: z.enum(['ecdh', 'rsa']).default('ecdh'),
+});
+
 export type RegisterDeviceInput = z.infer<typeof registerDeviceSchema>;
 export type AdminStatusInput = z.infer<typeof adminStatusSchema>;
 export type FcmTokenInput = z.infer<typeof fcmTokenSchema>;
 export type HeartbeatInput = z.infer<typeof heartbeatSchema>;
+export type RegisterPublicKeyInput = z.infer<typeof registerPublicKeySchema>;

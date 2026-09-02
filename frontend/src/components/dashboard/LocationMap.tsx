@@ -1,118 +1,106 @@
-import { useEffect, useRef, useState } from 'react';
-import mapboxgl from 'mapbox-gl';
-import 'mapbox-gl/dist/mapbox-gl.css';
+import { useEffect, useMemo } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import type { LocationPoint } from '../../types/api';
-import apiClient from '../../services/apiClient';
+
+// Fix Leaflet default marker icon issue with bundlers
+import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
+import markerIcon from 'leaflet/dist/images/marker-icon.png';
+import markerShadow from 'leaflet/dist/images/marker-shadow.png';
+
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: markerIcon2x,
+  iconUrl: markerIcon,
+  shadowUrl: markerShadow,
+});
+
+// Custom blue marker for child locations
+const childMarkerIcon = new L.Icon({
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png',
+  shadowUrl: markerShadow,
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41],
+});
+
+// Component to fit map bounds to all points
+function FitBounds({ points }: { points: LocationPoint[] }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (points.length === 0) return;
+
+    const bounds = L.latLngBounds(
+      points.map((p) => [p.latitude, p.longitude] as [number, number])
+    );
+
+    if (points.length === 1) {
+      map.setView([points[0].latitude, points[0].longitude], 15);
+    } else {
+      map.fitBounds(bounds, { padding: [48, 48], maxZoom: 13 });
+    }
+  }, [map, points]);
+
+  return null;
+}
 
 /**
- * Embedded Mapbox map of the child's recent locations. The token is
- * fetched at runtime from the backend (/geo/mapbox-token) so it is
- * never baked into the JS bundle. Renders nothing when the backend has
- * no map integration configured — callers fall back to link cards.
+ * Embedded OpenStreetMap map of the child's recent locations.
+ * Uses react-leaflet + OpenStreetMap tiles (100% free, no API key required).
+ * Renders nothing when there are no points to display.
  */
 export default function LocationMap({ points }: { points: LocationPoint[] }) {
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const mapRef = useRef<mapboxgl.Map | null>(null);
-  const markersRef = useRef<mapboxgl.Marker[]>([]);
-  const prevPointsRef = useRef<LocationPoint[]>([]);
-  const [token, setToken] = useState<string | null>(null);
+  // Calculate center point from all locations
+  const center = useMemo<[number, number]>(() => {
+    if (points.length === 0) return [20.5937, 78.9629]; // Default: India
+    if (points.length === 1) return [points[0].latitude, points[0].longitude];
 
-  useEffect(() => {
-    let active = true;
-    apiClient
-      .get('/geo/mapbox-token')
-      .then((res: { data?: { data?: { token?: string } } }) => {
-        if (active) setToken(res?.data?.data?.token ?? null);
-      })
-      .catch(() => {
-        // Map integration not configured — fall back to link cards.
-      });
-    return () => {
-      active = false;
-    };
-  }, []);
+    const sumLat = points.reduce((sum, p) => sum + p.latitude, 0);
+    const sumLng = points.reduce((sum, p) => sum + p.longitude, 0);
+    return [sumLat / points.length, sumLng / points.length];
+  }, [points]);
 
-  useEffect(() => {
-    if (!token || !containerRef.current || points.length === 0) return;
-
-    // Skip update if points haven't changed (reference or content)
-    if (
-      prevPointsRef.current.length === points.length &&
-      prevPointsRef.current.every(
-        (p, i) =>
-          p.latitude === points[i].latitude &&
-          p.longitude === points[i].longitude &&
-          p.recorded_at === points[i].recorded_at
-      )
-    ) {
-      return;
-    }
-    prevPointsRef.current = points;
-
-    mapboxgl.accessToken = token;
-    
-    // Only create map if it doesn't exist
-    if (!mapRef.current) {
-      const map = new mapboxgl.Map({
-        container: containerRef.current,
-        style: 'mapbox://styles/mapbox/streets-v12',
-        center: [points[0].longitude, points[0].latitude],
-        zoom: 10,
-      });
-      mapRef.current = map;
-    }
-
-    const map = mapRef.current;
-
-    // Clear existing markers
-    markersRef.current.forEach((marker) => marker.remove());
-    markersRef.current = [];
-
-    // Add new markers
-    points.forEach((point) => {
-      const time = document.createTextNode(new Date(point.recorded_at).toLocaleString());
-      const strong = document.createElement('strong');
-      strong.appendChild(time);
-      const popupEl = document.createElement('div');
-      popupEl.appendChild(strong);
-      popupEl.appendChild(document.createElement('br'));
-      popupEl.appendChild(
-        document.createTextNode(
-          `${point.latitude.toFixed(6)}, ${point.longitude.toFixed(6)}` +
-            (point.accuracy_m != null ? ` ±${Math.round(point.accuracy_m)} m` : '')
-        )
-      );
-      const marker = new mapboxgl.Marker({ color: '#2563eb' })
-        .setLngLat([point.longitude, point.latitude])
-        .setPopup(new mapboxgl.Popup({ offset: 18 }).setDOMContent(popupEl))
-        .addTo(map);
-      markersRef.current.push(marker);
-    });
-
-    if (points.length > 1) {
-      const bounds = new mapboxgl.LngLatBounds();
-      points.forEach((point) => bounds.extend([point.longitude, point.latitude]));
-      map.fitBounds(bounds, { padding: 48, maxZoom: 13 });
-    }
-  }, [token, points]);
-
-  useEffect(() => {
-    return () => {
-      markersRef.current.forEach((marker) => marker.remove());
-      markersRef.current = [];
-      mapRef.current?.remove();
-      mapRef.current = null;
-    };
-  }, []);
-
-  if (!token || points.length === 0) return null;
+  if (points.length === 0) return null;
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 mb-4 overflow-hidden">
       <div className="p-4 pb-2">
         <p className="text-sm text-gray-500 dark:text-gray-400">On the map</p>
       </div>
-      <div ref={containerRef} className="h-64 w-full" />
+      <div className="h-64 w-full">
+        <MapContainer
+          center={center}
+          zoom={12}
+          style={{ height: '100%', width: '100%' }}
+          scrollWheelZoom={false}
+        >
+          <TileLayer
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          />
+          <FitBounds points={points} />
+          {points.map((point, index) => (
+            <Marker
+              key={index}
+              position={[point.latitude, point.longitude]}
+              icon={childMarkerIcon}
+            >
+              <Popup>
+                <div>
+                  <strong>{new Date(point.recorded_at).toLocaleString()}</strong>
+                  <br />
+                  {point.latitude.toFixed(6)}, {point.longitude.toFixed(6)}
+                  {point.accuracy_m != null && (
+                    <span> ±{Math.round(point.accuracy_m)} m</span>
+                  )}
+                </div>
+              </Popup>
+            </Marker>
+          ))}
+        </MapContainer>
+      </div>
     </div>
   );
 }

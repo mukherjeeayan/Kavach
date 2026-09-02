@@ -2,9 +2,9 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
-import { useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import * as yup from 'yup';
-import { login as loginApi, logout as logoutApi, register as registerApi } from '../services/api';
+import { login as loginApi, logout as logoutApi, register as registerApi, logoutAll, setPin, changePassword, updateProfile } from '../services/api';
 import { clearSession, setSession } from '../store/authSlice';
 import { getErrorMessage } from '../utils/apiError';
 
@@ -153,17 +153,49 @@ export const useLogout = () => {
   const queryClient = useQueryClient();
 
   const handleLogout = () => {
-    // Revoke the refresh token server-side (best-effort, idempotent).
-    // The httpOnly cookie is sent automatically and cleared by the
-    // backend; the in-memory access token dies with the page.
     logoutApi().catch(() => {
-      // Offline or server error — local session is still cleared.
     });
     dispatch(clearSession());
-    // Clear React Query cache to prevent data leakage between users
     queryClient.clear();
     navigate('/login', { replace: true });
   };
 
   return { handleLogout };
+};
+
+export const useUpdateProfile = () => {
+  const dispatch = useDispatch();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { name: string }) => updateProfile(input),
+    onSuccess: (user) => {
+      dispatch(setSession({ user }));
+      queryClient.invalidateQueries({ queryKey: ['auth'] });
+    },
+  });
+};
+
+export const useChangePassword = () =>
+  useMutation({
+    mutationFn: (input: { current_password: string; new_password: string }) => changePassword(input),
+  });
+
+export const useSetPin = () =>
+  useMutation({
+    mutationFn: (input: { pin: string }) => setPin(input),
+  });
+
+export const useLogoutAll = () => {
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const handleLogout = () => {
+    dispatch(clearSession());
+    queryClient.clear();
+    navigate('/login', { replace: true });
+  };
+  return useMutation({
+    mutationFn: () => logoutAll(),
+    onSettled: () => handleLogout(),
+  });
 };

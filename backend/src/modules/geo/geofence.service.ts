@@ -183,6 +183,7 @@ export const getActiveGeofencesForChild = async (childId: string) => {
 
 /**
  * Check if a location is inside any geofence for a child.
+ * Uses PostGIS ST_DWithin for efficient spatial queries.
  * Returns an array of geofence violations (entry/exit events).
  */
 export const checkGeofences = async (
@@ -201,11 +202,23 @@ export const checkGeofences = async (
   // Re-verify access to log a co-guardian access path explicitly.
   await verifyChildBelongsToParent(childId, parentId);
 
+  // Use PostGIS ST_DWithin for efficient spatial queries
+  // ST_DWithin with geography type calculates distance in meters
   const geofences = await query(
-    `SELECT id, name, latitude, longitude, radius_meters, zone_type, alert_on_entry, alert_on_exit
+    `SELECT id, name, latitude, longitude, radius_meters, zone_type,
+            alert_on_entry, alert_on_exit,
+            ST_Distance(
+              ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography,
+              ST_SetSRID(ST_MakePoint(longitude, latitude), 4326)::geography
+            ) AS distance_meters
      FROM geofences
-     WHERE child_id = $1 AND is_active = TRUE`,
-    [childId]
+     WHERE child_id = $3 AND is_active = TRUE
+       AND ST_DWithin(
+         ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography,
+         ST_SetSRID(ST_MakePoint(longitude, latitude), 4326)::geography,
+         radius_meters
+       )`,
+    [latitude, longitude, childId]
   );
 
   const violations: Array<{
@@ -216,11 +229,7 @@ export const checkGeofences = async (
   }> = [];
 
   for (const gf of geofences.rows) {
-    const distance = haversineDistance(
-      latitude, longitude,
-      Number(gf.latitude), Number(gf.longitude)
-    );
-    const isInside = distance <= Number(gf.radius_meters);
+    const isInside = true; // ST_DWithin already filtered to within radius
 
     // Check last known state for this geofence+device
     const lastState = await query(
@@ -305,8 +314,8 @@ function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
 
 /**
  * Parent-side geofence check: determines which geofence zones a child
- * is currently in based on lat/lng. Finds the child's primary device
- * automatically.
+ * is currently in based on lat/lng. Uses PostGIS ST_DWithin for
+ * efficient spatial queries. Finds the child's primary device automatically.
  */
 export const checkGeofencesForChild = async (
   parentId: string,
@@ -323,11 +332,21 @@ export const checkGeofencesForChild = async (
   if (device.rows.length === 0) throw new NotFoundError('No device found for this child');
   const deviceId = device.rows[0].id;
 
+  // Use PostGIS for efficient spatial queries
   const geofences = await query(
-    `SELECT id, name, latitude, longitude, radius_meters, zone_type
+    `SELECT id, name, latitude, longitude, radius_meters, zone_type,
+            ST_Distance(
+              ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography,
+              ST_SetSRID(ST_MakePoint(longitude, latitude), 4326)::geography
+            ) AS distance_meters
      FROM geofences
-     WHERE child_id = $1 AND is_active = TRUE`,
-    [childId]
+     WHERE child_id = $3 AND is_active = TRUE
+       AND ST_DWithin(
+         ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography,
+         ST_SetSRID(ST_MakePoint(longitude, latitude), 4326)::geography,
+         radius_meters
+       )`,
+    [latitude, longitude, childId]
   );
 
   const insideZones: Array<{
@@ -338,18 +357,12 @@ export const checkGeofencesForChild = async (
   }> = [];
 
   for (const gf of geofences.rows) {
-    const distance = haversineDistance(
-      latitude, longitude,
-      Number(gf.latitude), Number(gf.longitude)
-    );
-    if (distance <= Number(gf.radius_meters)) {
-      insideZones.push({
-        geofence_id: gf.id,
-        name: gf.name,
-        zone_type: gf.zone_type,
-        distance_meters: Math.round(distance),
-      });
-    }
+    insideZones.push({
+      geofence_id: gf.id,
+      name: gf.name,
+      zone_type: gf.zone_type,
+      distance_meters: Math.round(Number(gf.distance_meters)),
+    });
   }
 
   return {
@@ -357,6 +370,5 @@ export const checkGeofencesForChild = async (
     latitude,
     longitude,
     inside_zones: insideZones,
-    total_active_geofences: geofences.rows.length,
   };
 };

@@ -5,12 +5,16 @@
 --
 -- This migration:
 -- 1. Creates pg_partman extension for automated partition management
--- 2. Converts location_logs to PARTITION BY RANGE (recorded_at)
--- 3. Creates initial partitions for current and next month
--- 4. Adds partition maintenance procedures
+-- 2. Enables PostGIS for spatial queries (ST_DWithin, ST_MakePoint)
+-- 3. Converts location_logs to PARTITION BY RANGE (recorded_at)
+-- 4. Creates initial partitions for current and next month
+-- 5. Adds partition maintenance procedures
 
 -- Enable pg_partman extension (if available)
 CREATE EXTENSION IF NOT EXISTS pg_partman;
+
+-- Enable PostGIS for spatial queries
+CREATE EXTENSION IF NOT EXISTS postgis;
 
 -- Note: In production, this migration requires careful handling because
 -- location_logs is an existing table with data. The recommended approach:

@@ -27,9 +27,7 @@ class TamperState @Inject constructor(
 
     private val prefs: SharedPreferences? by lazy {
         try {
-            val masterKey = MasterKey.Builder(context!!)
-                .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-                .build()
+            val masterKey = SecureMasterKey.build(context!!)
             EncryptedSharedPreferences.create(
                 context,
                 "safeguard_security_encrypted",

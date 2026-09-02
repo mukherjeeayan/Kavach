@@ -1,25 +1,16 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import apiClient from '../services/apiClient';
+import {
+  useAiSettings,
+  useSaveAiSettings,
+  useTestAiConnection,
+  useDeleteAiSettings,
+  useFetchModels,
+} from '../hooks/useAiSettings';
+import type { ModelInfo } from '../services/api';
 import Toast from '../components/ui/Toast';
 
 type AiProvider = 'openai' | 'gemini' | 'anthropic';
-
-interface AiSettings {
-  id: string;
-  provider: AiProvider;
-  model: string;
-  api_key_masked: string;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
-interface ModelInfo {
-  id: string;
-  name: string;
-  description?: string;
-}
 
 const PROVIDERS: { value: AiProvider; label: string; fallbackModels: string[] }[] = [
   { value: 'openai', label: 'OpenAI', fallbackModels: ['gpt-4o-mini', 'gpt-4o'] },
@@ -28,110 +19,75 @@ const PROVIDERS: { value: AiProvider; label: string; fallbackModels: string[] }[
 ];
 
 export default function AiSettingsPage() {
-  const [settings, setSettings] = useState<AiSettings[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: settings = [], isLoading } = useAiSettings();
+  const saveSettings = useSaveAiSettings();
+  const testConnection = useTestAiConnection();
+  const deleteSettings = useDeleteAiSettings();
+  const fetchModels = useFetchModels();
+
   const [selectedProvider, setSelectedProvider] = useState<AiProvider>('openai');
   const [apiKey, setApiKey] = useState('');
   const [selectedModel, setSelectedModel] = useState('');
-  const [saving, setSaving] = useState(false);
-  const [testing, setTesting] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [showUpdateKey, setShowUpdateKey] = useState<AiProvider | null>(null);
 
-  // Dynamic model list from API
   const [availableModels, setAvailableModels] = useState<ModelInfo[]>([]);
-  const [modelsLoading, setModelsLoading] = useState(false);
   const [modelsError, setModelsError] = useState(false);
-
-  const fetchModels = useCallback(async (provider: AiProvider, key: string) => {
-    if (!key.trim()) {
-      setAvailableModels([]);
-      return;
-    }
-    setModelsLoading(true);
-    setModelsError(false);
-    try {
-      const res = await apiClient.post<{ models: ModelInfo[] }>(
-        '/ai/models/fetch',
-        { provider, api_key: key }
-      );
-      setAvailableModels(res.data.models);
-    } catch {
-      setModelsError(true);
-      setAvailableModels([]);
-    } finally {
-      setModelsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadSettings();
-  }, []);
 
   useEffect(() => {
     const fallback = PROVIDERS.find((p) => p.value === selectedProvider);
     setSelectedModel(fallback?.fallbackModels[0] ?? '');
     setAvailableModels([]);
+    setModelsError(false);
   }, [selectedProvider]);
-
-  const loadSettings = async () => {
-    try {
-      const res = await apiClient.get<{ settings: AiSettings[] }>('/ai/settings');
-      setSettings(res.data.settings);
-    } catch {
-      setToast({ message: 'Failed to load AI settings', type: 'error' });
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!apiKey.trim()) return;
-    setSaving(true);
     try {
-      await apiClient.put('/ai/settings', {
+      await saveSettings.mutateAsync({
         provider: selectedProvider,
         api_key: apiKey.trim(),
         model: selectedModel,
       });
       setApiKey('');
-      await loadSettings();
       setToast({ message: 'AI settings saved', type: 'success' });
     } catch {
       setToast({ message: 'Failed to save AI settings', type: 'error' });
-    } finally {
-      setSaving(false);
     }
   };
 
   const handleTest = async (provider: AiProvider) => {
-    setTesting(true);
     try {
-      await apiClient.post('/ai/test', { provider });
+      await testConnection.mutateAsync(provider);
       setToast({ message: `${provider} connection successful`, type: 'success' });
     } catch {
       setToast({ message: `${provider} connection failed`, type: 'error' });
-    } finally {
-      setTesting(false);
     }
   };
 
   const handleDelete = async (provider: AiProvider) => {
     try {
-      await apiClient.delete(`/ai/settings/${provider}`);
-      await loadSettings();
+      await deleteSettings.mutateAsync(provider);
       setToast({ message: `${provider} removed`, type: 'success' });
     } catch {
       setToast({ message: 'Failed to remove provider', type: 'error' });
     }
   };
 
-  const handleFetchModels = () => {
-    fetchModels(selectedProvider, apiKey);
+  const handleFetchModels = async () => {
+    if (!apiKey.trim()) return;
+    setModelsError(false);
+    try {
+      const models = await fetchModels.mutateAsync({ provider: selectedProvider, apiKey });
+      setAvailableModels(models);
+    } catch {
+      setModelsError(true);
+      setAvailableModels([]);
+    }
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-background dark:bg-gray-900 flex items-center justify-center">
         <div className="text-gray-500">Loading AI settings...</div>
@@ -159,7 +115,6 @@ export default function AiSettingsPage() {
           </p>
         </div>
 
-        {/* Active providers */}
         {settings.length > 0 && (
           <section className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
             <h2 className="text-lg font-semibold mb-4 dark:text-white">Configured Providers</h2>
@@ -174,10 +129,10 @@ export default function AiSettingsPage() {
                     <div className="flex gap-2">
                       <button
                         onClick={() => handleTest(s.provider)}
-                        disabled={testing}
+                        disabled={testConnection.isPending}
                         className="text-xs px-3 py-1 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-900/50 disabled:opacity-50"
                       >
-                        {testing ? 'Testing...' : 'Test'}
+                        {testConnection.isPending ? 'Testing...' : 'Test'}
                       </button>
                       <button
                         onClick={() => {
@@ -192,6 +147,7 @@ export default function AiSettingsPage() {
                       </button>
                       <button
                         onClick={() => handleDelete(s.provider)}
+                        disabled={deleteSettings.isPending}
                         className="text-xs px-3 py-1 rounded bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/50"
                       >
                         Remove
@@ -210,7 +166,6 @@ export default function AiSettingsPage() {
           </section>
         )}
 
-        {/* Add / update provider */}
         <section className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
           <h2 className="text-lg font-semibold mb-4 dark:text-white">
             {showUpdateKey ? `Update ${showUpdateKey} API Key` : 'Add Provider'}
@@ -236,10 +191,10 @@ export default function AiSettingsPage() {
                   <button
                     type="button"
                     onClick={handleFetchModels}
-                    disabled={modelsLoading}
+                    disabled={fetchModels.isPending}
                     className="text-xs text-primary hover:underline disabled:opacity-50"
                   >
-                    {modelsLoading ? 'Fetching...' : 'Fetch available models'}
+                    {fetchModels.isPending ? 'Fetching...' : 'Fetch available models'}
                   </button>
                 )}
               </div>
@@ -250,17 +205,16 @@ export default function AiSettingsPage() {
                 placeholder="Type or select a model below"
                 className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white p-2 text-sm shadow-sm focus:border-primary focus:ring focus:ring-primary focus:ring-opacity-50"
               />
-              {/* Model chips */}
               <div className="mt-2 flex flex-wrap gap-1">
-                {modelsLoading && (
+                {fetchModels.isPending && (
                   <span className="text-xs text-gray-400 dark:text-gray-500 py-0.5">Loading models from provider...</span>
                 )}
-                {!modelsLoading && modelsError && (
+                {!fetchModels.isPending && modelsError && (
                   <span className="text-xs text-amber-500 dark:text-amber-400 py-0.5">
                     Could not fetch models. Enter your API key and try again, or type any model name.
                   </span>
                 )}
-                {!modelsLoading && !modelsError && availableModels.length > 0 && (
+                {!fetchModels.isPending && !modelsError && availableModels.length > 0 && (
                   <>
                     {availableModels.map((m) => (
                       <button
@@ -279,7 +233,7 @@ export default function AiSettingsPage() {
                     ))}
                   </>
                 )}
-                {!modelsLoading && !modelsError && availableModels.length === 0 && (
+                {!fetchModels.isPending && !modelsError && availableModels.length === 0 && (
                   <>
                     {PROVIDERS.find((p) => p.value === selectedProvider)?.fallbackModels.map((m) => (
                       <button
@@ -335,16 +289,15 @@ export default function AiSettingsPage() {
               )}
               <button
                 type="submit"
-                disabled={saving || !apiKey.trim()}
+                disabled={saveSettings.isPending || !apiKey.trim()}
                 className="flex-1 bg-primary text-white py-2 px-4 rounded-md text-sm font-medium hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {saving ? 'Saving...' : showUpdateKey ? 'Update Key' : 'Save Provider'}
+                {saveSettings.isPending ? 'Saving...' : showUpdateKey ? 'Update Key' : 'Save Provider'}
               </button>
             </div>
           </form>
         </section>
 
-        {/* Info box */}
         <section className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
           <h3 className="text-sm font-semibold text-blue-800 dark:text-blue-300 mb-1">How it works</h3>
           <ul className="text-xs text-blue-700 dark:text-blue-400 space-y-1">

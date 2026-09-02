@@ -6,7 +6,10 @@ import * as session from './session';
 vi.mock('./session', () => ({
   getAccessToken: vi.fn(() => null),
   setAccessToken: vi.fn(),
+  getStoredUser: vi.fn(() => null),
   clearStoredSession: vi.fn(),
+  persistSession: vi.fn(),
+  restoreSession: vi.fn(),
 }));
 
 describe('apiClient', () => {

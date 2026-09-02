@@ -6,6 +6,7 @@
 import apiClient from './apiClient';
 import type {
   ApiResponse,
+  AuthUser,
   AnalyticsReport,
   AppBlockRule,
   BehaviorPrediction,
@@ -91,6 +92,26 @@ export const googleAuth = async (payload: GoogleAuthPayload): Promise<LoginPaylo
 /** Revokes the refresh token server-side and clears session cookies. Idempotent; call on sign-out. */
 export const logout = async (): Promise<void> => {
   await apiClient.post('/auth/logout');
+};
+
+export const updateProfile = async (input: { name: string }): Promise<AuthUser> => {
+  const response = await apiClient.put<ApiResponse<AuthUser>>('/auth/profile', input);
+  return response.data.data!;
+};
+
+export const changePassword = async (input: {
+  current_password: string;
+  new_password: string;
+}): Promise<void> => {
+  await apiClient.put('/auth/password', input);
+};
+
+export const setPin = async (input: { pin: string }): Promise<void> => {
+  await apiClient.put('/auth/pin', input);
+};
+
+export const logoutAll = async (): Promise<void> => {
+  await apiClient.post('/auth/logout-all');
 };
 
 export const fetchChildren = async (): Promise<ChildProfile[]> => {
@@ -698,6 +719,57 @@ export const fetchSettings = async (): Promise<UserSettings> => {
 export const updateSettings = async (input: UserSettingsInput): Promise<UserSettings> => {
   const response = await apiClient.put<ApiResponse<UserSettings>>('/settings', input);
   return response.data.data!;
+};
+
+// ── AI Settings ──────────────────────────────────────────────
+
+export interface AiSettings {
+  id: string;
+  provider: 'openai' | 'gemini' | 'anthropic';
+  model: string;
+  api_key_masked: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ModelInfo {
+  id: string;
+  name: string;
+  description?: string;
+}
+
+export const fetchAiSettings = async (): Promise<AiSettings[]> => {
+  const response = await apiClient.get<ApiResponse<{ settings: AiSettings[] }>>('/ai/settings');
+  return response.data.data?.settings ?? [];
+};
+
+export const saveAiSettings = async (input: {
+  provider: 'openai' | 'gemini' | 'anthropic';
+  api_key: string;
+  model: string;
+}): Promise<AiSettings> => {
+  const response = await apiClient.put<ApiResponse<AiSettings>>('/ai/settings', input);
+  return response.data.data!;
+};
+
+export const testAiConnection = async (provider: 'openai' | 'gemini' | 'anthropic'): Promise<void> => {
+  await apiClient.post('/ai/test', { provider });
+};
+
+export const deleteAiSettings = async (provider: string): Promise<void> => {
+  await apiClient.delete(`/ai/settings/${provider}`);
+};
+
+export const fetchAiModels = async (
+  provider: 'openai' | 'gemini' | 'anthropic',
+  apiKey: string
+): Promise<ModelInfo[]> => {
+  const response = await apiClient.post<ApiResponse<{ models: ModelInfo[] }>>('/ai/models/fetch', {
+    provider,
+    api_key: apiKey,
+  });
+  return response.data.data?.models ?? [];
 };
 
 // ── Notifications ─────────────────────────────────────────────

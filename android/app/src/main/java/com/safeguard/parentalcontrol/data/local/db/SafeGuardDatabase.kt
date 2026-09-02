@@ -7,13 +7,16 @@ import com.safeguard.parentalcontrol.data.local.dao.AppBlockRuleDao
 import com.safeguard.parentalcontrol.data.local.dao.BehaviorPredictionDao
 import com.safeguard.parentalcontrol.data.local.dao.ContactRuleDao
 import com.safeguard.parentalcontrol.data.local.dao.GeofenceDao
+import com.safeguard.parentalcontrol.data.local.dao.IntegrationConfigDao
 import com.safeguard.parentalcontrol.data.local.dao.LocationDao
+import com.safeguard.parentalcontrol.data.local.dao.RewardPointsDao
 import com.safeguard.parentalcontrol.data.local.dao.ScheduledLockDao
 import com.safeguard.parentalcontrol.data.local.dao.ScreenTimeDao
 import com.safeguard.parentalcontrol.data.local.dao.SecurityScanDao
 import com.safeguard.parentalcontrol.data.local.dao.SelfHarmAlertDao
 import com.safeguard.parentalcontrol.data.local.dao.SyncQueueDao
 import com.safeguard.parentalcontrol.data.local.dao.UrlFilterDao
+import com.safeguard.parentalcontrol.data.local.dao.VoiceCommandDao
 import com.safeguard.parentalcontrol.data.local.entity.AppBlockRuleEntity
 import com.safeguard.parentalcontrol.data.local.entity.BehaviorPredictionEntity
 import com.safeguard.parentalcontrol.data.local.entity.ContactRuleEntity
@@ -65,4 +68,7 @@ abstract class SafeGuardDatabase : RoomDatabase() {
     abstract fun securityScanDao(): SecurityScanDao
     abstract fun selfHarmAlertDao(): SelfHarmAlertDao
     abstract fun behaviorPredictionDao(): BehaviorPredictionDao
+    abstract fun voiceCommandDao(): VoiceCommandDao
+    abstract fun rewardPointsDao(): RewardPointsDao
+    abstract fun integrationConfigDao(): IntegrationConfigDao
 }

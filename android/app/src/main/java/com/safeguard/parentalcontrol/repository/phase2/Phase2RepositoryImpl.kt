@@ -18,6 +18,7 @@ import com.safeguard.parentalcontrol.data.remote.dto.SosEventDto
 import com.safeguard.parentalcontrol.data.remote.dto.SosTriggerDto
 import com.safeguard.parentalcontrol.data.remote.dto.VoiceCommandReportDto
 import com.safeguard.parentalcontrol.data.remote.dto.WifiLogReportDto
+import com.safeguard.parentalcontrol.service.sos.SmsFallbackService
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 
@@ -25,7 +26,8 @@ class Phase2RepositoryImpl @Inject constructor(
     private val api: Phase2Api,
     private val onboardingStore: OnboardingStore,
     private val urlFilterDao: UrlFilterDao,
-    private val geofenceDao: GeofenceDao
+    private val geofenceDao: GeofenceDao,
+    private val smsFallbackService: SmsFallbackService
 ) : Phase2Repository {
 
     private val childId: String get() = onboardingStore.childId ?: ""
@@ -130,10 +132,14 @@ class Phase2RepositoryImpl @Inject constructor(
             if (response.isSuccessful && response.body()?.data != null) {
                 Result.success(response.body()!!.data!!)
             } else {
+                // API failed — attempt SMS fallback as last resort
+                smsFallbackService.sendSosFallback(latitude, longitude)
                 Result.failure(Exception("API error: ${response.code()}"))
             }
         } catch (e: Exception) {
-            Log.e(TAG, "triggerSos failed", e)
+            // Network error — attempt SMS fallback (works without internet)
+            smsFallbackService.sendSosFallback(latitude, longitude)
+            Log.e(TAG, "triggerSos failed, SMS fallback attempted", e)
             Result.failure(e)
         }
     }

@@ -16,9 +16,9 @@ Every response uses the uniform envelope:
 
 All endpoints except `/auth/login`, `/auth/register`, `/auth/refresh-token`,
 `/auth/pin/verify`, `/auth/biometric-token`, `/devices/register`,
-`/devices/:deviceId/screen-time`, `/devices/:deviceId/location`,
-`/devices/:deviceId/tamper-alert`, `/subscriptions/webhooks/razorpay`
-and `/health` require
+`/auth/provisioning-qr`, `/devices/:deviceId/screen-time`,
+`/devices/:deviceId/location`, `/devices/:deviceId/tamper-alert`,
+`/subscriptions/webhooks/razorpay` and `/health` require
 `Authorization: Bearer <JWT>`.
 
 **Browser sessions (web dashboard):** the auth endpoints also set
@@ -101,6 +101,12 @@ Body: `{ email, pin }` → 200
 Body: `{ email, password }` → 15-minute scoped token. Rate-limited
 (5 per minute per IP).
 
+### POST /auth/provisioning-qr — generate a QR pairing code
+Body: `{ child_id }` → 200 `{ pairingNonce, backendUrl, expiresAt }`.
+Returns an ephemeral nonce for ECDH key exchange. Rate-limited (5
+per minute per IP). Used by the web dashboard to generate a QR code
+for pairing a child's Android device.
+
 ---
 
 ## Children & Devices
@@ -116,11 +122,13 @@ Body: `{ email, password }` → 15-minute scoped token. Rate-limited
 | PUT | `/children/:childId/screen-time-limit` | Set or clear the daily screen-time limit (`{ limit_minutes: number \| null }`, 0-1440) |
 | GET | `/children/:childId/alerts` | Tamper / screen-time / per-app-limit / device-admin alerts with `acknowledged_at` state (paginated) |
 | POST | `/children/:childId/alerts/ack` | Mark alerts seen — `{ alert_ids?: string[] }`; omit to acknowledge all |
+| GET | `/children/:childId/offline-policy` | Full policy snapshot for offline sync — returns schedules, app limits, geofences, URL filters with `policy_version` timestamp |
 | DELETE | `/devices/:deviceId` | Unpair a device (cascades its rules/logs) |
 | POST | `/devices/register` | Register/refresh this device (`{ child_id, device_id?, device_name, device_type, os_version?, fcm_token? }`) |
 | GET | `/devices/:deviceId/heartbeat` | Device heartbeat — returns `{ rules_changed, force_logout }` and bumps `last_active` |
 | PUT | `/devices/:deviceId/admin-status` | Report device-admin state `{ admin_active }` (audited) |
 | PUT | `/devices/:deviceId/fcm-token` | Refresh push token `{ fcm_token }` |
+| POST | `/devices/:deviceId/public-key` | Register device's ECDH public key after QR pairing (`{ public_key, key_type? }`) — stores key server-side for key exchange verification |
 | POST | `/devices/:deviceId/tamper-alert` | Device reports tampering (`{ details }`) — `X-Device-ID` header accepted as fallback |
 
 ### Co-guardian sharing
@@ -216,6 +224,39 @@ consent has been granted for the child.
 
 ---
 
+## Two-Factor Authentication (2FA)
+
+All 2FA endpoints require authentication.
+
+| Method | Path | Description |
+|---|---|---|
+| POST | `/auth/2fa/setup` | Initialize 2FA — generates TOTP secret + QR code URL |
+| POST | `/auth/2fa/verify` | Verify TOTP code during setup (`{ code }`) |
+| POST | `/auth/2fa/enable` | Enable 2FA after verification (`{ code }`) |
+| POST | `/auth/2fa/disable` | Disable 2FA (`{ password }`) |
+| GET | `/auth/2fa/recovery` | Generate recovery codes (returns 8 one-time codes) |
+| POST | `/auth/2fa/challenge` | Challenge endpoint for TOTP verification during login (`{ email, code }`) |
+
+---
+
+## Google OAuth
+
+| Method | Path | Description |
+|---|---|---|
+| GET | `/auth/google/url` | Get Google OAuth authorization URL — redirects to Google consent screen |
+| POST | `/auth/google` | Exchange authorization code for tokens (`{ code }`) — returns session |
+
+---
+
+## Password Reset
+
+| Method | Path | Description |
+|---|---|---|
+| POST | `/auth/forgot-password` | Request password reset link (`{ email }`) — sends email with reset token |
+| POST | `/auth/reset-password` | Reset password with token (`{ token, new_password }`) (≥8 chars) |
+
+---
+
 ## Subscriptions
 
 | Method | Path | Description |
@@ -240,6 +281,7 @@ All admin routes require `role: admin` in the JWT.
 | PATCH | `/admin/users/:userId/role` | Update user role `{ role: "parent"\|"child"\|"admin" }` |
 | GET | `/admin/feature-flags` | List all feature flags |
 | PATCH | `/admin/feature-flags/:key` | Update a feature flag `{ enabled: boolean }` |
+| GET | `/admin/audit/verify` | Verify audit log integrity — accepts optional `familyId` query param, returns verification result |
 
 ---
 
@@ -261,13 +303,27 @@ When AI is configured, weekly reports include an AI-generated narrative summary 
 
 ---
 
+## Statistics
+
+| Method | Path | Description |
+|---|---|---|
+| GET | `/children/:childId/statistics` | Aggregated usage statistics for a child — includes summary data for dashboards and reports |
+
+---
+
+## Reward Catalog
+
+| Method | Path | Description |
+|---|---|---|
+| GET | `/rewards/catalog` | List all available rewards in the catalog |
+
+---
+
 ## Misc
 
 `GET /health` — liveness with real DB check (200 / 503).
 
-`GET /api/v1/geo/mapbox-token` — runtime Mapbox public token for the
-dashboard (503 when `MAPBOX_PUBLIC_TOKEN` is unset). Keeps the token
-out of the frontend bundle.
+`GET /metrics` — Prometheus metrics endpoint for monitoring.
 
 OpenAPI documentation: interactive docs are served at **`/api/docs`**
 (swagger-ui) backed by `/api/docs.json`.
@@ -280,3 +336,8 @@ child whenever block rules change (path `/socket.io`, same port).
 access token (`auth: { token: "Bearer <jwt>" }`); unauthenticated
 sockets are rejected and room joins are authorized against child
 ownership.
+
+**Horizontal Scaling:** Socket.IO uses a Redis Pub/Sub adapter for
+multi-instance deployments. The adapter automatically connects when
+`REDIS_URL` is configured. Connection attempts use exponential backoff
+with jitter to prevent thundering herd on restart.

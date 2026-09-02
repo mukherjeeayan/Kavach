@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { getAccessToken } from '../services/session';
 
@@ -32,9 +32,28 @@ export const useRealtimeRules = (
   const [isConnected, setIsConnected] = useState(false);
   const onRuleChangedRef = useRef(onRuleChanged);
   const reconnectAttemptRef = useRef(0);
+  const socketRef = useRef<Socket | null>(null);
+  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   // Keep the ref up to date without re-creating the socket
   onRuleChangedRef.current = onRuleChanged;
+
+  const cleanupReconnectTimer = useCallback(() => {
+    if (reconnectTimerRef.current) {
+      clearTimeout(reconnectTimerRef.current);
+      reconnectTimerRef.current = null;
+    }
+  }, []);
+
+  const scheduleReconnect = useCallback(() => {
+    cleanupReconnectTimer();
+    const delay = jitterDelay(reconnectAttemptRef.current);
+    reconnectTimerRef.current = setTimeout(() => {
+      if (socketRef.current && !socketRef.current.connected) {
+        socketRef.current.connect();
+      }
+    }, delay);
+  }, [cleanupReconnectTimer]);
 
   useEffect(() => {
     if (!childId) return;
@@ -46,20 +65,16 @@ export const useRealtimeRules = (
     const socket: Socket = url
       ? io(url, {
           auth: { token },
-          reconnection: true,
-          reconnectionAttempts: Infinity,
-          reconnectionDelay: 1000,
-          reconnectionDelayMax: 30000,
+          reconnection: false, // We handle reconnection manually with jitter
           timeout: 10000,
         })
       : io({
           auth: { token },
-          reconnection: true,
-          reconnectionAttempts: Infinity,
-          reconnectionDelay: 1000,
-          reconnectionDelayMax: 30000,
+          reconnection: false,
           timeout: 10000,
         });
+    
+    socketRef.current = socket;
     let disposed = false;
 
     const subscribe = () => {
@@ -70,17 +85,24 @@ export const useRealtimeRules = (
       if (disposed) return;
       setIsConnected(true);
       reconnectAttemptRef.current = 0; // Reset on successful connection
+      cleanupReconnectTimer();
       // socket.io reconnects automatically, but the room subscription
       // must be re-sent after every (re)connect.
       subscribe();
     });
     socket.on('disconnect', () => {
-      if (!disposed) setIsConnected(false);
+      if (!disposed) {
+        setIsConnected(false);
+        // Schedule reconnect with jitter
+        scheduleReconnect();
+      }
     });
     socket.on('connect_error', () => {
       if (!disposed) {
         setIsConnected(false);
         reconnectAttemptRef.current++;
+        // Schedule reconnect with jitter
+        scheduleReconnect();
       }
     });
     // Use ref to always call the latest callback without recreating socket
@@ -88,8 +110,10 @@ export const useRealtimeRules = (
 
     return () => {
       disposed = true;
+      cleanupReconnectTimer();
       socket.off('rule:changed');
       socket.disconnect();
+      socketRef.current = null;
     };
   }, [childId]);
 

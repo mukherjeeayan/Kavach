@@ -4,6 +4,7 @@ import com.safeguard.parentalcontrol.data.remote.api.ParentPhase2Api
 import com.safeguard.parentalcontrol.data.remote.api.Phase2Api
 import com.safeguard.parentalcontrol.repository.phase2.Phase2Repository
 import com.safeguard.parentalcontrol.repository.phase2.Phase2RepositoryImpl
+import com.safeguard.parentalcontrol.service.sos.SmsFallbackService
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -33,8 +34,9 @@ object Phase2Module {
         api: Phase2Api,
         onboardingStore: com.safeguard.parentalcontrol.data.local.OnboardingStore,
         urlFilterDao: com.safeguard.parentalcontrol.data.local.dao.UrlFilterDao,
-        geofenceDao: com.safeguard.parentalcontrol.data.local.dao.GeofenceDao
+        geofenceDao: com.safeguard.parentalcontrol.data.local.dao.GeofenceDao,
+        smsFallbackService: SmsFallbackService
     ): Phase2Repository {
-        return Phase2RepositoryImpl(api, onboardingStore, urlFilterDao, geofenceDao)
+        return Phase2RepositoryImpl(api, onboardingStore, urlFilterDao, geofenceDao, smsFallbackService)
     }
 }

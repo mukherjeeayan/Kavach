@@ -540,3 +540,42 @@ export const resendVerification = async (req: Request, res: Response, next: Next
     next(err);
   }
 };
+
+/**
+ * POST /api/v1/auth/provisioning-qr
+ * Generates ephemeral QR code data for Device Owner provisioning.
+ * The QR code contains a signed pairing nonce, family ID, backend URL,
+ * and child name. Valid for 10 minutes.
+ */
+export const generateProvisioningQr = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { childId, childName } = req.body;
+
+    if (!childId || typeof childId !== 'string') {
+      return respondError(res, 400, 'childId is required', req);
+    }
+
+    const crypto = await import('crypto');
+    const pairingNonce = crypto.randomBytes(16).toString('hex');
+    const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
+
+    const backendUrl = process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
+
+    const qrData = {
+      familyId: req.user!.userId,
+      pairingNonce,
+      backendUrl,
+      childId,
+      childName: childName || 'Child',
+      expiresAt,
+      signature: crypto
+        .createHmac('sha256', process.env.JWT_SECRET || 'dev-secret')
+        .update(`${req.user!.userId}:${pairingNonce}:${expiresAt}`)
+        .digest('hex'),
+    };
+
+    respond(res, 200, qrData, req);
+  } catch (err) {
+    next(err);
+  }
+};

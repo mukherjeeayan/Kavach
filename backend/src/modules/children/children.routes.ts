@@ -116,4 +116,12 @@ router.put(
   childrenController.setChildPhone
 );
 
+// GET /api/v1/children/:childId/offline-policy — full policy snapshot for offline sync
+router.get(
+  '/:childId/offline-policy',
+  validateParams(uuidParams('childId')),
+  requireChildOwnership,
+  childrenController.getOfflinePolicy
+);
+
 export default router;

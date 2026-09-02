@@ -32,6 +32,19 @@ This PIN is used to unlock the device and approve sensitive actions.
 
 ### Step 3: Install on Your Child's Device
 
+There are two ways to pair your child's device:
+
+#### Option A: QR Code Pairing (Recommended)
+
+1. On the web dashboard, click **Pair Device** in the child's section
+2. A QR code will be generated with a 5-minute expiry
+3. On your child's Android phone, install the Kavach app
+4. Open the app and tap **Scan QR Code**
+5. Scan the QR code from the web dashboard
+6. The device will be paired automatically
+
+#### Option B: Manual Pairing
+
 1. On your child's Android phone, install the Kavach app
 2. Open the app and tap **Get Started**
 3. Follow the onboarding steps:
@@ -204,11 +217,24 @@ Comprehensive weekly summaries with AI-generated insights.
 
 ### Emergency SOS
 
-One-touch emergency alert with location sharing.
+One-touch emergency alert with location sharing and SMS fallback.
 
 - Child taps the SOS button in their app
-- Parent receives instant notification with the child's location
+- Parent receives instant push notification with the child's location
+- If push notification fails (no internet, Doze mode), an emergency SMS is sent automatically
+- SMS includes the child's name, last known location (Google Maps link), and emergency hotline (112)
 - SOS events are logged and can be acknowledged/resolved
+
+### Kiosk Mode
+
+Full-screen lockout for scheduled locks and screen time limits.
+
+- Device is locked during scheduled windows (bedtime, homework)
+- Child cannot exit the locked screen (no back, home, or recent apps)
+- Shows current time and reason for lock
+- "Request More Time" button sends a notification to the parent
+- Emergency SOS button always available
+- Child receives a warning 10 minutes before lock starts
 
 ### Device Health Monitoring
 
@@ -285,7 +311,7 @@ The dashboard is fully responsive. You can manage your child's settings from you
 - Device Admin may have been deactivated. Re-enable it in Android Settings > Security > Device Admin Apps.
 
 **Rules aren't being enforced:**
-- Check that the child's device has an internet connection. Rules sync automatically, but first-time setup requires connectivity.
+- Rules are cached offline on the child's device. If first-time setup requires connectivity, ensure the device has internet.
 - Ensure Usage Access permission is granted (Settings > Apps > Special Access > Usage Access).
 
 **Location shows "No locations recorded":**
@@ -294,8 +320,17 @@ The dashboard is fully responsive. You can manage your child's settings from you
 **Screen time data seems inaccurate:**
 - The app records foreground usage only. Time in background or with screen off is not counted.
 
+**Device is locked in Kiosk Mode:**
+- This is normal during scheduled lock windows (bedtime, homework).
+- Your child can tap "Request More Time" to send you a notification.
+- You can unlock the device from the web dashboard by deleting or disabling the lock schedule.
+
 **I can't log in:**
 - Try the **Forgot password?** link. If that doesn't work, contact your system administrator.
+
+**QR code pairing failed:**
+- QR codes expire after 5 minutes. Generate a new one from the web dashboard.
+- Ensure the child's device has a camera and the Kavach app has camera permission.
 
 ## FAQ
 
@@ -306,7 +341,10 @@ A: Location (for GPS tracking), Usage Access (for screen time), Device Admin (fo
 A: With Device Admin enabled, the app cannot be uninstalled without your PIN.
 
 **Q: Does the app work offline?**
-A: Rules are cached on the device. Location pings and screen time data sync when connectivity is restored.
+A: Yes. Rules are cached on the child's device via IndexedDB. App blocking, scheduled locks, and screen time limits are enforced even without internet. Location pings and screen time data sync when connectivity is restored.
+
+**Q: How does the QR code pairing work?**
+A: The web dashboard generates a QR code containing an ephemeral ECDH public key. The child's device scans the QR code and derives a shared secret. This ensures secure pairing without exposing credentials.
 
 **Q: How do I add another child?**
 A: Click **+ Add Child** in the Children section, or install the app on another device and pair it with your account.

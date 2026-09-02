@@ -123,10 +123,17 @@ class OnboardingRepositoryImpl @Inject constructor(
     }
 
     override fun logout() {
+        // Delete cryptographic keys from Android Keystore (StrongBox/TEE)
+        // to ensure key material is destroyed on account termination
+        try {
+            com.safeguard.parentalcontrol.provisioning.KeyExchange.deleteKeyPair()
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to delete Keystore keys on logout", e)
+        }
         tokenStore.clear()
         onboardingStore.clear()
         parentPinStore.clear()
-        Log.i(TAG, "Session cleared")
+        Log.i(TAG, "Session cleared and cryptographic keys destroyed")
     }
 
     override suspend fun updateChildPhone(childId: String, phoneNumber: String): Result<Unit> {

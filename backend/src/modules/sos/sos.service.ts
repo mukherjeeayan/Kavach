@@ -6,6 +6,8 @@ import { NotFoundError } from '../../utils/errors';
 import { verifyChildBelongsToParent } from '../children/children.service';
 import { writeAuditLog } from '../shared/audit.service';
 import { sendPushToAllParents } from '../shared/pushNotificationService';
+import { sendSosSmsFallback } from '../shared/smsService';
+import logger from '../../utils/logger';
 
 export interface SosEventInput {
   latitude?: number;
@@ -74,6 +76,37 @@ export const createSosEvent = async (
     },
     'high'
   );
+
+  // SMS fallback: if FCM fails or parent devices are offline,
+  // deliver the emergency alert via SMS (dual-channel delivery).
+  try {
+    const parentPhoneResult = await query(
+      `SELECT p.phone_number
+       FROM parents p
+       JOIN children c ON c.parent_id = p.id
+       WHERE c.id = $1 AND p.phone_number IS NOT NULL AND p.phone_number != ''`,
+      [childId]
+    );
+
+    if (parentPhoneResult.rows.length > 0) {
+      const phoneNumbers = parentPhoneResult.rows.map((r: any) => r.phone_number);
+      const childNameResult = await query(
+        `SELECT name FROM children WHERE id = $1`,
+        [childId]
+      );
+      const childName = childNameResult.rows[0]?.name ?? 'Your child';
+
+      await sendSosSmsFallback(
+        phoneNumbers,
+        childName,
+        input.latitude,
+        input.longitude
+      );
+    }
+  } catch (smsErr) {
+    // SMS failure must never crash the SOS flow — FCM already succeeded
+    logger.error('SMS fallback for SOS failed (FCM was delivered):', smsErr);
+  }
 
   return result.rows[0];
 };

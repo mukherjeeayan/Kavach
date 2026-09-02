@@ -467,3 +467,79 @@ export const setChildPhone = async (
 
   return child;
 };
+
+/**
+ * Get the full offline policy snapshot for a child.
+ * Aggregates schedules, app limits, geofences, and URL filters
+ * into a single JSON object for offline sync.
+ */
+export const getOfflinePolicy = async (
+  parentId: string,
+  childId: string
+) => {
+  await verifyChildBelongsToParent(childId, parentId);
+
+  const [schedulesResult, appLimitsResult, geofencesResult, urlFiltersResult] =
+    await Promise.all([
+      query(
+        `SELECT id, name, start_time, end_time, days, action, allowed_packages
+         FROM scheduled_locks
+         WHERE child_id = $1 AND is_active = true
+         ORDER BY created_at`,
+        [childId]
+      ),
+      query(
+        `SELECT id, package_name, daily_limit_minutes
+         FROM app_block_rules
+         WHERE child_id = $1 AND is_active = true
+         ORDER BY created_at`,
+        [childId]
+      ),
+      query(
+        `SELECT id, name, latitude, longitude, radius_meters, alert_on_exit, alert_on_enter
+         FROM geofences
+         WHERE child_id = $1 AND is_active = true
+         ORDER BY created_at`,
+        [childId]
+      ),
+      query(
+        `SELECT id, pattern, action
+         FROM url_filters
+         WHERE child_id = $1 AND is_active = true
+         ORDER BY created_at`,
+        [childId]
+      ),
+    ]);
+
+  return {
+    policy_version: Date.now(),
+    schedules: schedulesResult.rows.map((r: any) => ({
+      id: r.id,
+      name: r.name,
+      startTime: r.start_time,
+      endTime: r.end_time,
+      days: r.days,
+      action: r.action,
+      allowedPackages: r.allowed_packages,
+    })),
+    app_limits: appLimitsResult.rows.map((r: any) => ({
+      id: r.id,
+      packageName: r.package_name,
+      dailyLimitMinutes: r.daily_limit_minutes,
+    })),
+    geofences: geofencesResult.rows.map((r: any) => ({
+      id: r.id,
+      name: r.name,
+      latitude: r.latitude,
+      longitude: r.longitude,
+      radiusMeters: r.radius_meters,
+      alertOnExit: r.alert_on_exit,
+      alertOnEnter: r.alert_on_enter,
+    })),
+    url_filters: urlFiltersResult.rows.map((r: any) => ({
+      id: r.id,
+      pattern: r.pattern,
+      action: r.action,
+    })),
+  };
+};

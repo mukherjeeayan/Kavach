@@ -6,6 +6,7 @@
 import { runAllRetentionPurges } from './dataRetention';
 import { purgeExpiredRefreshTokens } from './purgeRefreshTokens';
 import { expireTrials } from './expireTrials';
+import { runPartitionMaintenance } from './partitionMaintenance';
 import logger from '../utils/logger';
 
 const RUN_INTERVAL_MS = 24 * 60 * 60 * 1000; // daily
@@ -22,6 +23,9 @@ export const startScheduler = (): void => {
       logger.error('Scheduled trial expiry failed', err)
     );
     await runAllRetentionPurges();
+    await runPartitionMaintenance().catch((err) =>
+      logger.error('Scheduled partition maintenance failed', err)
+    );
   }, RUN_INTERVAL_MS);
   // Never keep the process alive just for the scheduler.
   timer.unref();

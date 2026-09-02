@@ -51,13 +51,45 @@ export const useUnblockRequests = (
     refetchInterval,
   });
 
-/** Returns a callback that refreshes the two child-scoped queries. */
+/** Returns a callback that refreshes all child-scoped queries. */
 export const useInvalidateChildData = (childId: string | null) => {
   const queryClient = useQueryClient();
   return () => {
-    if (childId) {
-      queryClient.invalidateQueries({ queryKey: ['blocked', childId] });
-      queryClient.invalidateQueries({ queryKey: ['unblockRequests', childId] });
+    if (!childId) return;
+    const childKeys: string[][] = [
+      ['blocked', childId],
+      ['unblockRequests', childId],
+      ['locks', childId],
+      ['contacts', childId],
+      ['locationsCurrent', childId],
+      ['locationsHistory', childId],
+      ['geofences', childId],
+      ['urlFilters', childId],
+      ['deviceHealth', childId],
+      ['deviceHealthHistory', childId],
+      ['communications', childId],
+      ['keywordAlerts', childId],
+      ['sos', childId],
+      ['reports', childId],
+      ['latestReport', childId],
+      ['analytics', childId],
+      ['screenTimeSummary', childId],
+      ['screenTimeDaily', childId],
+      ['childAlerts', childId],
+      ['moodLogs', childId],
+      ['moodSummary', childId],
+      ['rewardPoints', childId],
+      ['redemptions', childId],
+      ['rewardRedemptions', childId],
+      ['predictions', childId],
+      ['securityScans', childId],
+      ['wifiLogs', childId],
+      ['selfHarmAlerts', childId],
+      ['selfHarmAlertCount', childId],
+      ['voiceCommands', childId],
+    ];
+    for (const key of childKeys) {
+      queryClient.invalidateQueries({ queryKey: key });
     }
   };
 };

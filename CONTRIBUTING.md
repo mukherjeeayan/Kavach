@@ -181,7 +181,7 @@ kavach/
 ### Backend
 ```bash
 cd backend
-npm test                    # Run all tests (644 tests, 58 suites)
+npm test                    # Run all tests (644 tests, 58 suites, 22 skipped)
 npm run test:watch          # Watch mode
 npx jest --testPathPattern=auth  # Run specific test suite
 ```
@@ -189,8 +189,16 @@ npx jest --testPathPattern=auth  # Run specific test suite
 ### Frontend
 ```bash
 cd frontend
-npx vitest run              # Run all tests
+npx vitest run              # Run all tests (515 tests, 75 files)
 npx vitest run --watch      # Watch mode
+```
+
+### Load Testing (k6)
+```bash
+cd loadtest
+k6 run auth-load-test.js              # Auth endpoint load test
+k6 run telemetry-load-test.js         # Telemetry ingestion load test
+k6 run geofence-load-test.js          # Geofence checking load test
 ```
 
 ### Android
@@ -209,7 +217,7 @@ See `.env.example` at the project root for all variables. Key ones:
 | `JWT_SECRET` | No** | Secret for JWT signing (**auto-generated in dev) |
 | `GOOGLE_CLIENT_ID` | No | Google OAuth client ID (enables Google sign-in) |
 | `GOOGLE_CLIENT_SECRET` | No | Google OAuth client secret |
-| `REDIS_URL` | No | Redis connection for telemetry pipeline |
+| `REDIS_URL` | No | Redis connection for telemetry pipeline and Socket.IO |
 | `FIREBASE_PROJECT_ID` | No | Firebase for push notifications |
 | `RAZORPAY_KEY_ID` | No | Razorpay for payments |
 
@@ -219,8 +227,14 @@ See `.env.example` at the project root for all variables. Key ones:
 - **Audit Log Hash Chain** — Cryptographic integrity for audit trails (SHA-256)
 - **Aho-Corasick Scanner** — Real-time content filtering for cyberbullying detection
 - **Telemetry Pipeline** — Redis Streams for location data ingestion
-- **Offline-First Rules** — Android enforces app blocking even without connectivity
+- **Offline-First Rules** — Android enforces app blocking even without connectivity (IndexedDB)
 - **Kalman Filter** — GPS noise reduction with accuracy thresholds
+- **ECDH Key Exchange** — Secure QR code device pairing with StrongBox-backed keys
+- **SMS Fallback** — Emergency SMS delivery when push notifications fail
+- **Kiosk Mode** — Full-screen lockout for scheduled locks and screen time limits
+- **Redis Pub/Sub Adapter** — Socket.IO horizontal scaling for multi-instance deployments
+- **Zero-Cost Maps** — React-Leaflet + OpenStreetMap (no external API keys required)
+- **Prometheus Metrics** — `GET /metrics` endpoint for monitoring integration
 
 ## Pull Request Guidelines
 

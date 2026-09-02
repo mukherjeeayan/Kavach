@@ -7,7 +7,7 @@ import { authenticateJWT, requireRole } from '../../middleware/auth';
 import { validate, validateParams } from '../../middleware/validate';
 import { uuidParams } from '../../middleware/params';
 import { requireDeviceOwnership } from '../../middleware/tenantGuard';
-import { registerDeviceSchema, adminStatusSchema, fcmTokenSchema, heartbeatSchema } from './device.dto';
+import { registerDeviceSchema, adminStatusSchema, fcmTokenSchema, heartbeatSchema, registerPublicKeySchema } from './device.dto';
 import * as deviceController from './device.controller';
 
 const router = Router();
@@ -37,6 +37,15 @@ router.put(
   validate(fcmTokenSchema),
   requireDeviceOwnership,
   deviceController.updateFcmToken
+);
+
+// POST /api/v1/devices/:deviceId/public-key — register device's ECDH public key after QR pairing
+router.post(
+  '/:deviceId/public-key',
+  validateParams(uuidParams('deviceId')),
+  validate(registerPublicKeySchema),
+  requireDeviceOwnership,
+  deviceController.registerPublicKey
 );
 
 // DELETE /api/v1/devices/:deviceId — unpair (delete) a device

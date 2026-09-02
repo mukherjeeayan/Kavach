@@ -111,3 +111,24 @@ export const unpairDevice = async (req: Request, res: Response, next: NextFuncti
     next(err);
   }
 };
+
+/**
+ * POST /api/v1/devices/:deviceId/public-key
+ * Body: { public_key: string, key_type?: 'ecdh' | 'rsa' }
+ * Registers the device's ECDH public key after QR-code pairing.
+ * The key is stored server-side for key exchange verification.
+ */
+export const registerPublicKey = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { public_key, key_type } = req.body;
+    await deviceService.registerPublicKey(
+      req.user!.userId,
+      req.params.deviceId,
+      public_key,
+      key_type
+    );
+    respond(res, 200, { registered: true }, req);
+  } catch (err) {
+    next(err);
+  }
+};

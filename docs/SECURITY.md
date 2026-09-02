@@ -67,7 +67,8 @@ We use CVSS v3.1 to classify vulnerabilities:
 - HttpOnly cookies for session management
 - bcrypt password hashing (cost factor 12)
 - Account lockout after 10 failed attempts (15 min)
-- Optional 2FA via TOTP (migration exists, UI pending)
+- Optional 2FA via TOTP (migration exists, UI implemented)
+- ECDH P-256 key exchange for QR code device pairing
 
 ### Transport Security
 
@@ -82,6 +83,8 @@ We use CVSS v3.1 to classify vulnerabilities:
 - At-rest encryption via cloud provider
 - EncryptedSharedPreferences on Android
 - SQLCipher for local database on Android
+- StrongBox-backed ECDH key storage on Android
+- Cryptographic key deletion on account termination
 - Field-level encryption for sensitive PII (planned)
 - PII minimization (collect only what's needed)
 - Configurable data retention (30 days default)
@@ -91,6 +94,7 @@ We use CVSS v3.1 to classify vulnerabilities:
 - Role-based access control (parent, child, admin)
 - Per-child consent tracking
 - Resource-level authorization on all endpoints
+- Tenant guard on device routes (ownership verification)
 - JWT scope validation
 
 ### Network Security
@@ -100,6 +104,8 @@ We use CVSS v3.1 to classify vulnerabilities:
 - CORS with explicit origin whitelist
 - Rate limiting (5 auth attempts / 15 min, 100 API calls / 15 min)
 - SQL injection prevention via parameterized queries
+- Redis Pub/Sub adapter for Socket.IO (horizontal scaling)
+- Ephemeral QR codes with 5-minute expiry
 
 ## Compliance
 
@@ -179,6 +185,43 @@ All authenticated endpoints now have explicit `security: [bearerAuth]` requireme
 - Also validates: `PORT`, `NODE_ENV`, `FRONTEND_URL`, and optional Firebase/Redis vars
 - Called in `app.ts` immediately after `dotenv/config` — before any middleware or route registration
 
+#### ECDH Key Exchange for QR Pairing
+
+- Ephemeral ECDH P-256 key pairs generated in browser via Web Crypto API
+- Child device generates StrongBox-backed key pair in Android Keystore
+- Shared secret derived via PBKDF2WithHmacSHA256 (100,000 iterations)
+- Private keys never leave their respective devices
+- Public keys stored server-side for verification
+
+#### SMS Fallback for Emergency SOS
+
+- Emergency SMS delivery when FCM push notifications fail
+- Works without internet, bypasses Doze/battery optimization
+- Includes Google Maps link with last known location
+- Falls back to SMS if API call fails on child device
+
+#### Kiosk Mode Security
+
+- Full-screen lockout for scheduled locks and screen time limits
+- Child cannot press back, access recent apps, or pull down notification shade
+- Lock Task package via DevicePolicyManager
+- Emergency SOS button always available
+- "Request More Time" button sends FCM to parent
+
+#### Audit Chain Verification
+
+- Tamper-proof audit log with hash chain integrity
+- Admin endpoint `GET /admin/audit/verify` for integrity checks
+- Each audit entry includes previous entry hash
+- Verification detects any tampering or deletion
+
+#### Offline Rule Enforcement
+
+- IndexedDB-based offline policy caching on child devices
+- Rules enforced even without internet connectivity
+- Policy version timestamps for cache invalidation
+- Fetched via `GET /children/:childId/offline-policy`
+
 ## Audit Findings (Resolved & Pending)
 
 ### CRITICAL Issues
@@ -213,11 +256,14 @@ Critical issues (auth bypass, secrets) must be resolved before launch.
 
 ## Next Steps
 
-1. Fix remaining CRITICAL auth bypass issues
-2. Implement rate limiting for emergency endpoints
-3. Add log redaction middleware
-4. Complete performance optimization
-5. Finalize DPDP compliance documentation
+1. ~~Fix remaining CRITICAL auth bypass issues~~ ✅ Resolved
+2. ~~Implement rate limiting for emergency endpoints~~ ✅ Resolved
+3. ~~Add log redaction middleware~~ ✅ Implemented (logRedactor.ts)
+4. ~~Complete performance optimization~~ ✅ Implemented (PostGIS, Redis, WebSocket jitter)
+5. ~~Finalize DPDP compliance documentation~~ ✅ Updated (LEGAL.md)
+6. ~~Implement 2FA via TOTP~~ ✅ Implemented (UI now available)
+7. Add field-level encryption for additional PII fields
+8. Complete DPO appointment documentation
 
 ## Contact
 

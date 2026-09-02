@@ -5,24 +5,30 @@
 ```bash
 # Backend
 cd backend
-npm test           # Run all 643 tests (58 suites)
+npm test           # Run all 644 tests (58 suites, 22 skipped)
 npm run test:unit  # Unit tests only
 npm run test:integration  # Integration tests (requires DB)
 
 # Frontend
 cd frontend
-npx vitest run          # Run all 515 tests (75 files)
+npx vitest run          # Run all 507 tests (73 files, 2 failed)
 npx vitest run --watch  # Watch mode
 npx vitest run --coverage  # With coverage report
+
+# Load Testing (k6)
+cd loadtest
+k6 run auth-load-test.js              # Auth endpoint load test
+k6 run telemetry-load-test.js         # Telemetry ingestion load test
+k6 run geofence-load-test.js          # Geofence checking load test
 
 # Android
 cd android
 ./gradlew :app:testDebugUnitTest  # Run Android unit tests
 ```
 
-## Backend Tests (643 tests)
+## Backend Tests (644 tests)
 
-The backend has **643 tests** across **58 test suites** (1 skipped). All tests use **Jest** as the test framework, **pg-mem** for in-memory database emulation, and **supertest** for HTTP integration tests.
+The backend has **644 tests** across **58 test suites** (22 skipped). All tests use **Jest** as the test framework, **pg-mem** for in-memory database emulation, and **supertest** for HTTP integration tests.
 
 ### Module Coverage
 
@@ -81,9 +87,9 @@ All service tests follow a consistent pattern:
 - Predictions: ~10 tests
 - ~~All other modules each have 1–9 tests~~
 
-## Frontend Tests (515 tests)
+## Frontend Tests (507 tests)
 
-The frontend has **515 tests** across **75 test files**. All tests use **Vitest** with jsdom environment and **@testing-library/react**.
+The frontend has **507 tests** across **73 test files** (2 files failing). All tests use **Vitest** with jsdom environment and **@testing-library/react**.
 
 ### Test Commands
 
@@ -251,3 +257,47 @@ The `testOptions` block in `android/app/build.gradle.kts` ensures Android resour
 ### Re-using Existing Test Patterns
 
 Copy `ParentLockScreenTest.kt` imports, `@get:Rule` declaration, and `newPinStore()` / context-provider pattern, then replace screen-specific components.
+
+## Load Tests (k6)
+
+The project includes **3 k6 load test scripts** in the `loadtest/` directory for performance testing under realistic load conditions.
+
+### Test Scripts
+
+| Script | VUs | Duration | Focus |
+|--------|-----|----------|-------|
+| `auth-load-test.js` | 100 | ~4.5 min | Registration, login, token refresh |
+| `telemetry-load-test.js` | 100 | ~6.5 min | GPS pings, screen time upload |
+| `geofence-load-test.js` | 50 | ~6.5 min | Geofence boundary checks |
+
+### Configuration
+
+All tests use environment variables for configuration:
+
+```bash
+# Auth test (no auth required)
+k6 run auth-load-test.js
+
+# Telemetry test (auth required)
+k6 run --env AUTH_TOKEN=<jwt> telemetry-load-test.js
+
+# Geofence test (auth required)
+k6 run --env AUTH_TOKEN=<jwt> geofence-load-test.js
+
+# Custom base URL
+k6 run --env BASE_URL=https://api.kavach.com auth-load-test.js
+```
+
+### Thresholds
+
+All tests enforce:
+- **Error rate**: < 10% of requests
+- **Response time p95**: < 2000ms (auth), < 1000ms (telemetry), < 1500ms (geofence)
+
+### Metrics Tracked
+
+- `http_req_duration` — Response time trends
+- `errors` — Error rate
+- `login_duration`, `register_duration`, `refresh_duration` — Auth-specific
+- `ingest_duration` — Telemetry ingestion
+- `total_pings` — Total location pings sent

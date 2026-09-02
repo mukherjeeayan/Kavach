@@ -216,3 +216,20 @@ export const setChildPhone = async (req: Request, res: Response, next: NextFunct
     next(err);
   }
 };
+
+/**
+ * GET /api/v1/children/:childId/offline-policy
+ * Returns the full policy snapshot for offline synchronization.
+ * Includes schedules, app limits, geofences, and URL filters.
+ */
+export const getOfflinePolicy = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const policy = await childrenService.getOfflinePolicy(
+      req.user!.userId,
+      req.params.childId
+    );
+    respond(res, 200, policy, req);
+  } catch (err) {
+    next(err);
+  }
+};

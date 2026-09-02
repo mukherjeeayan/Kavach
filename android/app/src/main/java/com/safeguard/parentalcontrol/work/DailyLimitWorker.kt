@@ -3,6 +3,7 @@ package com.safeguard.parentalcontrol.work
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
+import android.content.Intent
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.hilt.work.HiltWorker
@@ -12,6 +13,7 @@ import com.safeguard.parentalcontrol.data.local.OnboardingStore
 import com.safeguard.parentalcontrol.data.local.dao.AppBlockRuleDao
 import com.safeguard.parentalcontrol.data.local.dao.ScreenTimeDao
 import com.safeguard.parentalcontrol.notifications.SafeGuardMessagingService
+import com.safeguard.parentalcontrol.service.appblock.KioskActivity
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import java.time.LocalDate
@@ -53,6 +55,7 @@ class DailyLimitWorker @AssistedInject constructor(
 
                 if (usedMinutes >= limitMinutes) {
                     sendLimitNotification(packageName, usedMinutes, limitMinutes)
+                    launchKioskActivity(packageName, usedMinutes, limitMinutes)
                     Log.i(TAG, "App limit exceeded: $packageName ($usedMinutes >= $limitMinutes min)")
                 }
             }
@@ -78,6 +81,20 @@ class DailyLimitWorker @AssistedInject constructor(
             .build()
 
         manager.notify(packageName.hashCode(), notification)
+    }
+
+    private fun launchKioskActivity(packageName: String, usedMinutes: Int, limitMinutes: Int) {
+        try {
+            val lockReason = "Daily limit reached: $packageName ($usedMinutes/$limitMinutes min)"
+            val intent = KioskActivity.createIntent(
+                context = applicationContext,
+                lockReason = lockReason,
+                lockType = "quota"
+            )
+            applicationContext.startActivity(intent)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to launch KioskActivity", e)
+        }
     }
 
     private fun dayKey(): String =

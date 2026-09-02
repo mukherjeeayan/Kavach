@@ -1,6 +1,7 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { useSelector } from 'react-redux';
 import { RootState } from '../store/store';
+import type { AuthUser } from '../types/api';
 import {
   clearStoredSession,
   getAccessToken,
@@ -8,15 +9,6 @@ import {
   persistSession,
   AuthSession,
 } from '../services/session';
-
-export interface AuthUser {
-  id: string;
-  name: string;
-  email: string;
-  role: 'parent' | 'child' | 'admin' | null;
-  subscription_tier?: 'FREE' | 'TRIAL' | 'PREMIUM';
-  trial_expires_at?: string | null;
-}
 
 interface AuthState {
   hasToken: boolean;

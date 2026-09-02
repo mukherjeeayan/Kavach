@@ -160,4 +160,9 @@ router.get('/export-data', authenticateJWT, authController.exportData);
 // DELETE /api/v1/auth/account — permanently delete the parent + dependents
 router.delete('/account', authenticateJWT, validate(deleteAccountSchema), authController.deleteAccount);
 
+// POST /api/v1/auth/provisioning-qr — generate ephemeral QR code data for
+// Device Owner provisioning. The QR code contains a signed pairing nonce,
+// family ID, backend URL, and child name. Valid for 10 minutes.
+router.post('/provisioning-qr', authenticateJWT, authController.generateProvisioningQr);
+
 export default router;

@@ -7,6 +7,8 @@ import com.safeguard.parentalcontrol.data.remote.dto.RefreshTokenRequest
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import okhttp3.CertificatePinner
+import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.Interceptor
 import okhttp3.Response
 import retrofit2.Retrofit
@@ -34,6 +36,10 @@ class AuthInterceptor @Inject constructor(
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
             .writeTimeout(30, TimeUnit.SECONDS)
+
+        if (BuildConfig.CERT_PINNING_ENABLED) {
+            clientBuilder.certificatePinner(buildCertificatePinner())
+        }
 
         Retrofit.Builder()
             .baseUrl(BuildConfig.API_BASE_URL)
@@ -104,6 +110,20 @@ class AuthInterceptor @Inject constructor(
 
     private fun isAuthEndpoint(path: String): Boolean =
         path.startsWith("api/v1/auth/")
+
+    private fun buildCertificatePinner(): CertificatePinner {
+        val pins = BuildConfig.CERT_PINS
+            .split(",")
+            .map { it.trim() }
+            .filter { it.isNotEmpty() }
+        check(pins.isNotEmpty()) {
+            "Release build has certificate pinning enabled but no pins."
+        }
+        val host = BuildConfig.API_BASE_URL.toHttpUrl().host
+        return CertificatePinner.Builder()
+            .add(host, *pins.toTypedArray())
+            .build()
+    }
 
     companion object {
         private const val RETRY_HEADER = "X-Kavach-Retry"

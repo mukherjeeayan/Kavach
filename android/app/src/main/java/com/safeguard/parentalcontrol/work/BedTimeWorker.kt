@@ -12,6 +12,7 @@ import com.safeguard.parentalcontrol.data.local.BedtimePreferences
 import com.safeguard.parentalcontrol.data.local.OnboardingStore
 import com.safeguard.parentalcontrol.data.local.dao.ScheduledLockDao
 import com.safeguard.parentalcontrol.notifications.SafeGuardMessagingService
+import com.safeguard.parentalcontrol.service.appblock.KioskActivity
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import java.util.Calendar
@@ -49,6 +50,7 @@ class BedTimeWorker @AssistedInject constructor(
 
                 if (isBedtime) {
                     sendBedtimeNotification()
+                    launchKioskActivity("Bedtime: ${bedtimePreferences.bedtimeStart} - ${bedtimePreferences.bedtimeEnd}")
                     if (bedtimePreferences.dndEnabled && isScreenOn()) {
                         // DND only matters while the user is actually
                         // looking at the device — pointless to flip
@@ -82,6 +84,7 @@ class BedTimeWorker @AssistedInject constructor(
 
                 if (isActive) {
                     sendBedtimeNotification()
+                    launchKioskActivity("Scheduled lock: ${lock.startTime} - ${lock.endTime}")
                     Log.i(TAG, "Bedtime lock window active (${lock.startTime} - ${lock.endTime})")
                 }
             }
@@ -118,6 +121,19 @@ class BedTimeWorker @AssistedInject constructor(
             .build()
 
         manager.notify(NOTIFICATION_ID, notification)
+    }
+
+    private fun launchKioskActivity(lockReason: String) {
+        try {
+            val intent = KioskActivity.createIntent(
+                context = applicationContext,
+                lockReason = lockReason,
+                lockType = "schedule"
+            )
+            applicationContext.startActivity(intent)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to launch KioskActivity", e)
+        }
     }
 
     private fun enforceDnd() {

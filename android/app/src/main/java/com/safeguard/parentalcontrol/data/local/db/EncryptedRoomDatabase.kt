@@ -5,9 +5,9 @@ import android.content.SharedPreferences
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKey
+import com.safeguard.parentalcontrol.security.SecureMasterKey
 import androidx.sqlite.db.SupportSQLiteDatabase
-import net.sqlcipher.database.SupportFactory
+import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
 import javax.crypto.KeyGenerator
 
 object EncryptedDatabase {
@@ -19,10 +19,8 @@ object EncryptedDatabase {
      * Creates a SupportFactory for SQLCipher encryption using a passphrase
      * stored in EncryptedSharedPreferences (backed by Android Keystore).
      */
-    fun createFactory(context: Context): SupportFactory {
-        val masterKey = MasterKey.Builder(context)
-            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-            .build()
+    fun createFactory(context: Context): SupportOpenHelperFactory {
+        val masterKey = SecureMasterKey.build(context)
 
         val prefs: SharedPreferences = EncryptedSharedPreferences.create(
             context,
@@ -35,7 +33,7 @@ object EncryptedDatabase {
         val passphrase = prefs.getString(KEY_DB_PASSPHRASE, null)
             ?: generateAndStorePassphrase(prefs)
 
-        return SupportFactory(passphrase.toByteArray(Charsets.UTF_8))
+        return SupportOpenHelperFactory(passphrase.toByteArray(Charsets.UTF_8))
     }
 
     private fun generateAndStorePassphrase(prefs: SharedPreferences): String {

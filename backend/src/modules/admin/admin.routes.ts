@@ -23,4 +23,7 @@ router.patch('/users/:userId/role',            adminController.updateUserRole);
 router.get('/feature-flags',         adminController.listFeatureFlags);
 router.patch('/feature-flags/:key',  adminController.updateFeatureFlag);
 
+// ─── Audit integrity verification ─────────────────────────────────────────────
+router.get('/audit/verify', adminController.verifyAuditIntegrity);
+
 export default router;

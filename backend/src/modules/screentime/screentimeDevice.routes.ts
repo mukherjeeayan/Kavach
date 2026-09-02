@@ -5,6 +5,7 @@ import { uuidParams } from '../../middleware/params';
 import { deviceIngestionLimiter } from '../../middleware/rateLimiter';
 import { screenTimeUploadSchema } from './screentime.dto';
 import { requireConsent } from '../../middleware/consent';
+import { requireDeviceOwnership } from '../../middleware/tenantGuard';
 import * as screentimeController from './screentime.controller';
 
 const router = Router({ mergeParams: true });
@@ -14,6 +15,7 @@ router.post(
   authenticateJWT,
   requireRole('parent'),
   validateParams(uuidParams('deviceId')),
+  requireDeviceOwnership,
   deviceIngestionLimiter,
   validate(screenTimeUploadSchema),
   requireConsent('app_usage'),

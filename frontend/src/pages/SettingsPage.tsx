@@ -2,16 +2,18 @@ import { useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
 import type { RootState } from '../store/store';
-import { useLogout } from '../hooks/useAuth';
+import { useUpdateProfile, useChangePassword, useSetPin, useLogoutAll } from '../hooks/useAuth';
 import { useSettings, useUpdateSettings } from '../hooks/useSettings';
-import apiClient from '../services/apiClient';
+import type { UserSettingsInput } from '../types/api';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 import Toast from '../components/ui/Toast';
-import type { UserSettingsInput } from '../types/api';
 
 export default function SettingsPage() {
   const user = useSelector((state: RootState) => state.auth.user);
-  const { handleLogout } = useLogout();
+  const updateProfile = useUpdateProfile();
+  const changePassword = useChangePassword();
+  const setPinMutation = useSetPin();
+  const logoutAll = useLogoutAll();
   const { data: settings, isLoading: settingsLoading } = useSettings();
   const updateSettings = useUpdateSettings();
 
@@ -22,26 +24,24 @@ export default function SettingsPage() {
   const [pin, setPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
 
-  const [nameStatus, setNameStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
-  const [passwordStatus, setPasswordStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
-  const [pinStatus, setPinStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [nameError, setNameError] = useState<string | null>(null);
   const [pinError, setPinError] = useState<string | null>(null);
-  const [logoutAllStatus, setLogoutAllStatus] = useState<'idle' | 'loading'>('idle');
   const [confirmLogoutAll, setConfirmLogoutAll] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+  useEffect(() => {
+    if (user?.name) setName(user.name);
+  }, [user?.name]);
 
   const handleUpdateName = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
-    setNameStatus('loading');
     setNameError(null);
     try {
-      await apiClient.put('/auth/profile', { name: name.trim() });
-      setNameStatus('success');
+      await updateProfile.mutateAsync({ name: name.trim() });
+      setToast({ message: 'Name updated successfully', type: 'success' });
     } catch {
-      setNameStatus('error');
       setNameError('Failed to update name. Please try again.');
     }
   };
@@ -49,20 +49,18 @@ export default function SettingsPage() {
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentPassword || !newPassword || newPassword !== confirmPassword) return;
-    setPasswordStatus('loading');
     setErrorMessage(null);
     try {
-      await apiClient.put('/auth/password', {
+      await changePassword.mutateAsync({
         current_password: currentPassword,
         new_password: newPassword,
       });
-      setPasswordStatus('success');
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
+      setToast({ message: 'Password changed successfully', type: 'success' });
     } catch (err: unknown) {
-      setPasswordStatus('error');
-      const message = err instanceof Error ? err.message : (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
+      const message = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
       setErrorMessage(message || 'Failed to change password.');
     }
   };
@@ -70,14 +68,13 @@ export default function SettingsPage() {
   const handleSetPin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!pin || pin !== confirmPin || !/^\d{4,6}$/.test(pin)) return;
-    setPinStatus('loading');
+    setPinError(null);
     try {
-      await apiClient.put('/auth/pin', { pin });
-      setPinStatus('success');
+      await setPinMutation.mutateAsync({ pin });
       setPin('');
       setConfirmPin('');
+      setToast({ message: 'PIN updated successfully', type: 'success' });
     } catch {
-      setPinStatus('error');
       setPinError('Failed to set PIN. Please try again.');
     }
   };
@@ -96,23 +93,17 @@ export default function SettingsPage() {
   };
 
   const handleLogoutAll = async () => {
-    setLogoutAllStatus('loading');
-    try {
-      await apiClient.post('/auth/logout-all');
-    } catch {
-      // Even if the server call fails, fall through to local logout.
-    }
-    await handleLogout();
+    await logoutAll.mutateAsync();
   };
 
   const settingsSaving = updateSettings.isPending;
-  const settingsError = updateSettings.isError;
 
   useEffect(() => {
-    if (!settingsError) return;
-    setToast({ message: 'Failed to save settings', type: 'error' });
-    updateSettings.reset();
-  }, [settingsError, updateSettings]);
+    if (updateSettings.isError) {
+      setToast({ message: 'Failed to save settings', type: 'error' });
+      updateSettings.reset();
+    }
+  }, [updateSettings.isError, updateSettings]);
 
   return (
     <div className="min-h-screen bg-background dark:bg-gray-900">
@@ -130,7 +121,6 @@ export default function SettingsPage() {
       <main className="max-w-3xl mx-auto px-6 py-8 space-y-8">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Account Settings</h1>
 
-        {/* Profile Section */}
         <section className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
           <h2 className="text-lg font-semibold mb-4 dark:text-white">Profile</h2>
           <form onSubmit={handleUpdateName} className="space-y-4">
@@ -147,7 +137,7 @@ export default function SettingsPage() {
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Email</label>
               <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{user?.email}</p>
             </div>
-            {nameStatus === 'success' && (
+            {updateProfile.isSuccess && (
               <p className="text-sm text-green-600">Name updated successfully.</p>
             )}
             {nameError && (
@@ -155,15 +145,14 @@ export default function SettingsPage() {
             )}
             <button
               type="submit"
-              disabled={nameStatus === 'loading' || !name.trim()}
+              disabled={updateProfile.isPending || !name.trim()}
               className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 disabled:opacity-50 transition-colors"
             >
-              {nameStatus === 'loading' ? 'Saving...' : 'Save Changes'}
+              {updateProfile.isPending ? 'Saving...' : 'Save Changes'}
             </button>
           </form>
         </section>
 
-        {/* Password Section */}
         <section className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
           <h2 className="text-lg font-semibold mb-4 dark:text-white">Change Password</h2>
           <form onSubmit={handleChangePassword} className="space-y-4">
@@ -197,7 +186,7 @@ export default function SettingsPage() {
             {newPassword && confirmPassword && newPassword !== confirmPassword && (
               <p className="text-sm text-red-500">Passwords do not match.</p>
             )}
-            {passwordStatus === 'success' && (
+            {changePassword.isSuccess && (
               <p className="text-sm text-green-600">Password changed successfully.</p>
             )}
             {errorMessage && (
@@ -205,15 +194,14 @@ export default function SettingsPage() {
             )}
             <button
               type="submit"
-              disabled={passwordStatus === 'loading' || !currentPassword || !newPassword || newPassword !== confirmPassword}
+              disabled={changePassword.isPending || !currentPassword || !newPassword || newPassword !== confirmPassword}
               className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 disabled:opacity-50 transition-colors"
             >
-              {passwordStatus === 'loading' ? 'Changing...' : 'Change Password'}
+              {changePassword.isPending ? 'Changing...' : 'Change Password'}
             </button>
           </form>
         </section>
 
-        {/* PIN Section */}
         <section className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
           <h2 className="text-lg font-semibold mb-4 dark:text-white">Parental PIN</h2>
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
@@ -254,7 +242,7 @@ export default function SettingsPage() {
             {pin && !/^\d{4,6}$/.test(pin) && (
               <p className="text-sm text-red-500">PIN must be 4-6 digits.</p>
             )}
-            {pinStatus === 'success' && (
+            {setPinMutation.isSuccess && (
               <p className="text-sm text-green-600">PIN updated successfully.</p>
             )}
             {pinError && (
@@ -262,15 +250,14 @@ export default function SettingsPage() {
             )}
             <button
               type="submit"
-              disabled={pinStatus === 'loading' || !pin || !confirmPin || pin !== confirmPin || !/^\d{4,6}$/.test(pin)}
+              disabled={setPinMutation.isPending || !pin || !confirmPin || pin !== confirmPin || !/^\d{4,6}$/.test(pin)}
               className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 disabled:opacity-50 transition-colors"
             >
-              {pinStatus === 'loading' ? 'Saving...' : 'Save PIN'}
+              {setPinMutation.isPending ? 'Saving...' : 'Save PIN'}
             </button>
           </form>
         </section>
 
-        {/* Notification Settings Section */}
         <section className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
           <h2 className="text-lg font-semibold mb-4 dark:text-white">Notification Preferences</h2>
           {settingsLoading ? (
@@ -486,7 +473,6 @@ export default function SettingsPage() {
           )}
         </section>
 
-        {/* Danger Zone */}
         <section className="bg-white dark:bg-gray-800 rounded-lg border border-red-200 dark:border-red-800 p-6">
           <h2 className="text-lg font-semibold text-red-700 dark:text-red-400 mb-4">Danger Zone</h2>
           <div className="flex items-center justify-between">
@@ -496,10 +482,10 @@ export default function SettingsPage() {
             </div>
             <button
               onClick={() => setConfirmLogoutAll(true)}
-              disabled={logoutAllStatus === 'loading'}
+              disabled={logoutAll.isPending}
               className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-md hover:bg-red-700 disabled:opacity-50 transition-colors"
             >
-              {logoutAllStatus === 'loading' ? 'Signing Out...' : 'Sign Out All Devices'}
+              {logoutAll.isPending ? 'Signing Out...' : 'Sign Out All Devices'}
             </button>
           </div>
         </section>

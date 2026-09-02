@@ -15,7 +15,7 @@ export default defineConfig({
           'vendor-react': ['react', 'react-dom', 'react-router-dom'],
           'vendor-query': ['@tanstack/react-query'],
           'vendor-redux': ['redux', 'react-redux'],
-          'vendor-maps': ['mapbox-gl'],
+          'vendor-maps': ['leaflet', 'react-leaflet'],
           'vendor-charts': ['recharts'],
         },
       },

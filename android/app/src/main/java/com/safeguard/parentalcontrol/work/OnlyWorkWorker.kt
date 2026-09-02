@@ -6,6 +6,8 @@ import android.content.SharedPreferences
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.hilt.work.HiltWorker
+import androidx.security.crypto.EncryptedSharedPreferences
+import androidx.security.crypto.MasterKey
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.safeguard.parentalcontrol.data.local.OnboardingStore
@@ -82,8 +84,18 @@ class OnlyWorkWorker @AssistedInject constructor(
     private fun isExceededFlagSet(): Boolean =
         exceededPrefs().getBoolean(KEY_EXCEEDED, false)
 
-    private fun exceededPrefs(): SharedPreferences =
-        applicationContext.getSharedPreferences(PREFS_EXCEEDED, Context.MODE_PRIVATE)
+    private fun exceededPrefs(): SharedPreferences {
+        val masterKey = MasterKey.Builder(applicationContext)
+            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+            .build()
+        return EncryptedSharedPreferences.create(
+            applicationContext,
+            PREFS_EXCEEDED,
+            masterKey,
+            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+        )
+    }
 
     private fun sendLimitNotification(usedMinutes: Int, limitMinutes: Int) {
         val manager = applicationContext.getSystemService(Context.NOTIFICATION_SERVICE)
