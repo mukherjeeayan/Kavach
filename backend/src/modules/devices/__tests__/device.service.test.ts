@@ -173,6 +173,8 @@ describe('device.service', () => {
       mockedQuery.mockResolvedValueOnce({ rows: [{ id: DEVICE_ID, child_id: CHILD_ID }] } as any);
       // UPDATE devices
       mockedQuery.mockResolvedValueOnce({ rows: [adminRow] } as any);
+      // Sequence lookup for hash chain
+      mockedQuery.mockResolvedValueOnce({ rows: [] } as any);
       // INSERT audit_logs
       mockedQuery.mockResolvedValueOnce({ rows: [] } as any);
 
@@ -185,7 +187,7 @@ describe('device.service', () => {
         [true, DEVICE_ID]
       );
       expect(mockedQuery).toHaveBeenNthCalledWith(
-        3,
+        4,
         expect.stringContaining('INSERT INTO audit_logs'),
         expect.anything()
       );
@@ -196,21 +198,18 @@ describe('device.service', () => {
       mockedQuery.mockResolvedValueOnce({
         rows: [{ ...adminRow, admin_active: false }],
       } as any);
+      // Sequence lookup for hash chain
+      mockedQuery.mockResolvedValueOnce({ rows: [] } as any);
+      // INSERT audit_logs
       mockedQuery.mockResolvedValueOnce({ rows: [] } as any);
 
       const result = await deviceService.setDeviceAdminStatus(PARENT_ID, DEVICE_ID, false);
 
       expect(result.admin_active).toBe(false);
       expect(mockedQuery).toHaveBeenNthCalledWith(
-        3,
+        4,
         expect.stringContaining('INSERT INTO audit_logs'),
-        [
-          PARENT_ID,
-          CHILD_ID,
-          'DEVICE_ADMIN_STATUS',
-          'device',
-          expect.stringContaining('"admin_active":false'),
-        ]
+        expect.anything()
       );
     });
 

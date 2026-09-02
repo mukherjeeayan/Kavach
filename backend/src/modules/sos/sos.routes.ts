@@ -5,6 +5,7 @@ import { Router } from 'express';
 import { authenticateJWT, requireRole } from '../../middleware/auth';
 import { validate, validateParams } from '../../middleware/validate';
 import { uuidParams, childAndUuidParams } from '../../middleware/params';
+import { requireDeviceOwnership, requireChildOwnership } from '../../middleware/tenantGuard';
 import { requireConsent } from '../../middleware/consent';
 import { authLimiter } from '../../middleware/rateLimiter';
 import { createSosSchema, resolveSosSchema } from './sos.dto';
@@ -20,6 +21,7 @@ export const sosDeviceRouter = (() => {
   router.post(
     '/:deviceId/sos',
     validateParams(uuidParams('deviceId')),
+    requireDeviceOwnership,
     requireConsent('location'),
     validate(createSosSchema),
     authLimiter,
@@ -39,6 +41,7 @@ export const sosParentRouter = (() => {
   router.get(
     '/:childId/sos',
     validateParams(uuidParams('childId')),
+    requireChildOwnership,
     sosController.listSosEvents
   );
 
@@ -46,6 +49,7 @@ export const sosParentRouter = (() => {
   router.put(
     '/:childId/sos/:eventId/acknowledge',
     validateParams(childAndUuidParams('eventId')),
+    requireChildOwnership,
     sosController.acknowledgeSos
   );
 
@@ -53,6 +57,7 @@ export const sosParentRouter = (() => {
   router.put(
     '/:childId/sos/:eventId/resolve',
     validateParams(childAndUuidParams('eventId')),
+    requireChildOwnership,
     validate(resolveSosSchema),
     sosController.resolveSos
   );

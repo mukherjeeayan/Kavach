@@ -45,6 +45,27 @@ android {
         }
     }
 
+    // Product flavors for dual distribution:
+    // - play: Google Play Store build (compliant with DDA Section 3)
+    // - enterprise: Device Owner DPC build (full anti-tamper, kiosk mode)
+    flavorDimensions += "distribution"
+    productFlavors {
+        create("play") {
+            dimension = "distribution"
+            applicationIdSuffix = ""
+            // Play Store build: standard features, no Device Owner
+            buildConfigField("boolean", "IS_ENTERPRISE_BUILD", "false")
+            buildConfigField("boolean", "DEVICE_OWNER_ENABLED", "false")
+        }
+        create("enterprise") {
+            dimension = "distribution"
+            applicationIdSuffix = ".enterprise"
+            // Enterprise build: full DPC lockdown, kiosk mode
+            buildConfigField("boolean", "IS_ENTERPRISE_BUILD", "true")
+            buildConfigField("boolean", "DEVICE_OWNER_ENABLED", "true")
+        }
+    }
+
     buildTypes {
         debug {
 // Local backend as seen from the Android emulator

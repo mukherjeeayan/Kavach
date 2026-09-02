@@ -33,7 +33,9 @@ describe('deviceAlert.service', () => {
     it('should verify device ownership and persist the alert in audit_logs', async () => {
       // Ownership check: device belongs to the parent's child
       mockedQuery.mockResolvedValueOnce({ rows: [{ id: DEVICE_ID, child_id: CHILD_ID }] } as any);
-      // INSERT audit_logs
+      // Sequence lookup for hash chain
+      mockedQuery.mockResolvedValueOnce({ rows: [] } as any);
+      // INSERT audit_logs with hash chain
       mockedQuery.mockResolvedValueOnce({ rows: [] } as any);
 
       await expect(
@@ -46,7 +48,7 @@ describe('deviceAlert.service', () => {
         [DEVICE_ID, PARENT_ID]
       );
       expect(mockedQuery).toHaveBeenNthCalledWith(
-        2,
+        3,
         expect.stringContaining('INSERT INTO audit_logs'),
         [
           PARENT_ID,
@@ -54,6 +56,9 @@ describe('deviceAlert.service', () => {
           'TAMPER_ALERT',
           'device',
           JSON.stringify({ device_id: DEVICE_ID, details: 'root detected' }),
+          1,
+          '0000000000000000000000000000000000000000000000000000000000000000',
+          expect.any(String),
         ]
       );
     });

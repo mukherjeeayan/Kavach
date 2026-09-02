@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { authenticateJWT, requireRole } from '../../middleware/auth';
 import { validate, validateParams } from '../../middleware/validate';
 import { uuidParams } from '../../middleware/params';
+import { requireDeviceOwnership } from '../../middleware/tenantGuard';
 import { tamperAlertSchema } from './deviceAlert.dto';
 import * as deviceAlertController from './deviceAlert.controller';
 
@@ -14,6 +15,7 @@ router.use(requireRole('parent'));
 router.post(
   '/:deviceId/tamper-alert',
   validateParams(uuidParams('deviceId')),
+  requireDeviceOwnership,
   validate(tamperAlertSchema),
   deviceAlertController.reportTamper
 );

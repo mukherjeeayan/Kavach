@@ -6,6 +6,7 @@ import { Router } from 'express';
 import { authenticateJWT, requireRole } from '../../middleware/auth';
 import { validate, validateParams } from '../../middleware/validate';
 import { uuidParams } from '../../middleware/params';
+import { requireDeviceOwnership } from '../../middleware/tenantGuard';
 import { registerDeviceSchema, adminStatusSchema, fcmTokenSchema, heartbeatSchema } from './device.dto';
 import * as deviceController from './device.controller';
 
@@ -18,13 +19,14 @@ router.use(requireRole('parent'));
 router.post('/register', validate(registerDeviceSchema), deviceController.registerDevice);
 
 // POST /api/v1/devices/:deviceId/heartbeat — update last_active
-router.post('/:deviceId/heartbeat', validateParams(uuidParams('deviceId')), validate(heartbeatSchema), deviceController.heartbeat);
+router.post('/:deviceId/heartbeat', validateParams(uuidParams('deviceId')), validate(heartbeatSchema), requireDeviceOwnership, deviceController.heartbeat);
 
 // PUT /api/v1/devices/:deviceId/admin-status — report device-admin state
 router.put(
   '/:deviceId/admin-status',
   validateParams(uuidParams('deviceId')),
   validate(adminStatusSchema),
+  requireDeviceOwnership,
   deviceController.setAdminStatus
 );
 
@@ -33,10 +35,11 @@ router.put(
   '/:deviceId/fcm-token',
   validateParams(uuidParams('deviceId')),
   validate(fcmTokenSchema),
+  requireDeviceOwnership,
   deviceController.updateFcmToken
 );
 
 // DELETE /api/v1/devices/:deviceId — unpair (delete) a device
-router.delete('/:deviceId', validateParams(uuidParams('deviceId')), deviceController.unpairDevice);
+router.delete('/:deviceId', validateParams(uuidParams('deviceId')), requireDeviceOwnership, deviceController.unpairDevice);
 
 export default router;

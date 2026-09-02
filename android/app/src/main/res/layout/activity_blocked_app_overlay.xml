@@ -36,12 +36,74 @@
         android:textColor="#888888"
         android:gravity="center" />
 
-    <Button
-        android:id="@+id/btnRequestUnblock"
+    <!-- Request form (shown initially) -->
+    <LinearLayout
+        android:id="@+id/layoutRequestForm"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="32dp"
-        android:text="Request Unblock" />
+        android:layout_marginTop="24dp"
+        android:orientation="vertical">
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Why do you need this app?"
+            android:layout_marginBottom="8dp">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/editReason"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="text"
+                android:maxLength="200"
+                android:maxLines="2" />
+
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <Button
+            android:id="@+id/btnRequestUnblock"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Request Unblock" />
+
+    </LinearLayout>
+
+    <!-- Pending state (shown after request is sent) -->
+    <LinearLayout
+        android:id="@+id/layoutPending"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:visibility="gone">
+
+        <ProgressBar
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:indeterminate="true" />
+
+        <TextView
+            android:id="@+id/textPendingStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="Request sent to parent..."
+            android:textSize="16sp"
+            android:textColor="#1976D2"
+            android:gravity="center" />
+
+        <TextView
+            android:id="@+id/textCountdown"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Expires in 5:00"
+            android:textSize="14sp"
+            android:textColor="#888888"
+            android:gravity="center" />
+
+    </LinearLayout>
 
     <Button
         android:id="@+id/btnGoHome"

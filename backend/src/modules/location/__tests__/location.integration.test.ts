@@ -24,6 +24,11 @@ jest.mock('../../../middleware/rateLimiter', () => ({
   deviceIngestionLimiter: (_req: any, _res: any, next: any) => next(),
 }));
 
+jest.mock('../../../middleware/tenantGuard', () => ({
+  requireChildOwnership: (_req: any, _res: any, next: any) => next(),
+  requireDeviceOwnership: (_req: any, _res: any, next: any) => next(),
+}));
+
 // Consent is covered by its own tests; these suites exercise the
 // location endpoints with an assumed granted consent.
 jest.mock('../../../middleware/consent', () => ({

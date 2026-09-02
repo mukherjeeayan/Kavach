@@ -5,6 +5,7 @@ import { Router } from 'express';
 import { authenticateJWT, requireRole } from '../../middleware/auth';
 import { validateParams } from '../../middleware/validate';
 import { uuidParams } from '../../middleware/params';
+import { requireDeviceOwnership } from '../../middleware/tenantGuard';
 import * as geofenceController from './geofence.controller';
 
 export const geofenceDeviceRouter = (() => {
@@ -17,6 +18,7 @@ export const geofenceDeviceRouter = (() => {
   router.post(
     '/:deviceId/geofences/check',
     validateParams(uuidParams('deviceId')),
+    requireDeviceOwnership,
     geofenceController.checkGeofences
   );
 

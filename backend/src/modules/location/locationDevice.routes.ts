@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { authenticateJWT, requireRole } from '../../middleware/auth';
 import { validate, validateParams } from '../../middleware/validate';
 import { uuidParams } from '../../middleware/params';
+import { requireDeviceOwnership } from '../../middleware/tenantGuard';
 import { deviceIngestionLimiter } from '../../middleware/rateLimiter';
 import { locationUploadSchema } from './location.dto';
 import { requireConsent } from '../../middleware/consent';
@@ -16,6 +17,7 @@ router.post(
   validateParams(uuidParams('deviceId')),
   deviceIngestionLimiter,
   validate(locationUploadSchema),
+  requireDeviceOwnership,
   requireConsent('location'),
   locationController.upload
 );

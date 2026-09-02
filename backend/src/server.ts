@@ -6,6 +6,8 @@ import { Server } from 'socket.io';
 import jwt from 'jsonwebtoken';
 import { ruleEvents } from './utils/socketHub';
 import { startScheduler, stopScheduler } from './jobs/scheduler';
+import { contentScanner } from './utils/contentScanner';
+import { startTelemetryWorker } from './workers/telemetryWorker';
 // Ensure DB is connected/initialized
 import pool from './config/database';
 
@@ -25,8 +27,21 @@ const allowedOrigins = (process.env.ALLOWED_ORIGINS || '')
 
 const server = http.createServer(app);
 
+// WebSocket connection rate limiting (prevents thundering herd)
+const connectionRateMap = new Map<string, number[]>();
+
 // Daily retention purges (location/screen-time/audit logs, refresh tokens)
 startScheduler();
+
+// Pre-load keyword scanner for O(n+m) content moderation.
+// Runs in background so server startup is not blocked.
+contentScanner.refresh().catch((err) => {
+  logger.warn('Content scanner initial load failed (will retry):', err);
+});
+
+// Start Redis Streams telemetry worker for async GPS persistence.
+// Consumes from stream:telemetry:location and batch-inserts into PostgreSQL.
+startTelemetryWorker();
 
 // Initialize Socket.IO
 const io = new Server(server, {
@@ -40,6 +55,29 @@ const io = new Server(server, {
 // unscoped parent access token. Unauthenticated clients are rejected
 // before any event handler is registered.
 io.use((socket, next) => {
+  // Rate limit WebSocket connections per IP (10 connections per minute)
+  // to prevent thundering herd after server restarts.
+  const clientIp = socket.handshake.address;
+  const now = Date.now();
+  const windowMs = 60_000; // 1 minute
+  const maxConnections = 10;
+
+  if (!connectionRateMap.has(clientIp)) {
+    connectionRateMap.set(clientIp, []);
+  }
+  const timestamps = connectionRateMap.get(clientIp)!;
+
+  // Remove timestamps outside the window
+  while (timestamps.length > 0 && timestamps[0] < now - windowMs) {
+    timestamps.shift();
+  }
+
+  if (timestamps.length >= maxConnections) {
+    logger.warn(`WebSocket rate limit exceeded for ${clientIp}`);
+    return next(new Error('Rate limit exceeded'));
+  }
+  timestamps.push(now);
+
   const authHeader = socket.handshake.auth?.token as string | undefined;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return next(new Error('Unauthorized: no token provided'));

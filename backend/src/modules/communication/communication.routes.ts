@@ -5,6 +5,7 @@ import { Router } from 'express';
 import { authenticateJWT, requireRole, requirePremium } from '../../middleware/auth';
 import { validate, validateParams } from '../../middleware/validate';
 import { uuidParams, childAndUuidParams } from '../../middleware/params';
+import { requireDeviceOwnership, requireChildOwnership } from '../../middleware/tenantGuard';
 import { requireConsent } from '../../middleware/consent';
 import { standardLimiter } from '../../middleware/rateLimiter';
 import { uploadCommunicationsSchema } from './communication.dto';
@@ -20,6 +21,7 @@ export const communicationDeviceRouter = (() => {
   router.post(
     '/:deviceId/communications',
     validateParams(uuidParams('deviceId')),
+    requireDeviceOwnership,
     requireConsent('communications'),
     validate(uploadCommunicationsSchema),
     standardLimiter,
@@ -40,6 +42,7 @@ export const communicationParentRouter = (() => {
     '/:childId/communications',
     requirePremium,
     validateParams(uuidParams('childId')),
+    requireChildOwnership,
     commController.listCommunications
   );
 
@@ -48,6 +51,7 @@ export const communicationParentRouter = (() => {
     '/:childId/keyword-alerts',
     requirePremium,
     validateParams(uuidParams('childId')),
+    requireChildOwnership,
     commController.listKeywordAlerts
   );
 
@@ -56,6 +60,7 @@ export const communicationParentRouter = (() => {
     '/:childId/keyword-alerts/:alertId/review',
     requirePremium,
     validateParams(childAndUuidParams('alertId')),
+    requireChildOwnership,
     commController.reviewKeywordAlert
   );
 

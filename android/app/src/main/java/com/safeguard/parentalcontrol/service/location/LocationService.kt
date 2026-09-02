@@ -58,6 +58,7 @@ class LocationService : Service() {
     lateinit var onboardingStore: OnboardingStore
 
     private lateinit var fusedClient: FusedLocationProviderClient
+    private val locationFilter = LocationFilter()
     @Volatile
     private var isTracking = false
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -67,15 +68,29 @@ class LocationService : Service() {
             val location = result.lastLocation ?: return
             serviceScope.launch {
                 try {
-                    val entity = LocationEntryEntity(
+                    // Apply location filter: accuracy threshold + Kalman smoothing
+                    val filterResult = locationFilter.filter(
                         latitude = location.latitude,
                         longitude = location.longitude,
-                        accuracyM = location.accuracy.toDouble().takeIf { it > 0 },
+                        accuracyM = location.accuracy.toDouble(),
+                        isInsideGeofence = true // Will be updated by GeofenceService
+                    )
+
+                    val entity = LocationEntryEntity(
+                        latitude = filterResult.latitude,
+                        longitude = filterResult.longitude,
+                        accuracyM = filterResult.accuracyM.takeIf { it > 0 },
                         speedKmh = if (location.hasSpeed()) location.speed * 3.6 else null,
                         recordedAt = location.time.takeIf { it > 0 } ?: System.currentTimeMillis()
                     )
                     locationDao.insert(entity)
-                    Log.d(TAG, "Location buffered (${location.latitude}, ${location.longitude})")
+
+                    // Log inaccurate readings for debugging
+                    if (!filterResult.isAccurate) {
+                        Log.w(TAG, "Inaccurate location discarded from geofence: ${filterResult.accuracyM}m")
+                    }
+
+                    Log.d(TAG, "Location buffered (${filterResult.latitude}, ${filterResult.longitude})")
 
                     // Attempt immediate upload if network available
                     if (hasNetworkConnectivity()) {

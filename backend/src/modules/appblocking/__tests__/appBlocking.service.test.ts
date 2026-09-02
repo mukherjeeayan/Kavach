@@ -82,6 +82,8 @@ describe('appBlocking.service', () => {
       mockedRepo.verifyDeviceBelongsToChild.mockResolvedValueOnce(true);
       // createBlockRule returns the rule
       mockedRepo.createBlockRule.mockResolvedValueOnce(mockRule);
+      // Sequence lookup for hash chain
+      mockedQuery.mockResolvedValueOnce({ rows: [] } as any);
       // Audit log insert succeeds
       mockedQuery.mockResolvedValueOnce({ rows: [] } as any);
 
@@ -92,8 +94,8 @@ describe('appBlocking.service', () => {
       expect(result).toEqual(mockRule);
       expect(mockedRepo.createBlockRule).toHaveBeenCalledTimes(1);
       expect(mockedRepo.verifyDeviceBelongsToChild).toHaveBeenCalledWith(DEVICE_ID, CHILD_ID);
-      // Verify audit log was written (the second query call)
-      expect(mockedQuery).toHaveBeenCalledTimes(2);
+      // Ownership check + sequence lookup + audit log write
+      expect(mockedQuery).toHaveBeenCalledTimes(3);
     });
 
     it('should throw ForbiddenError if child does not belong to parent', async () => {
@@ -156,6 +158,8 @@ describe('appBlocking.service', () => {
         unblock_requested: true,
         unblock_reason: 'Need it for homework',
       });
+      // Sequence lookup for hash chain
+      mockedQuery.mockResolvedValueOnce({ rows: [] } as any);
       // Audit log insert succeeds
       mockedQuery.mockResolvedValueOnce({ rows: [] } as any);
 
@@ -165,8 +169,8 @@ describe('appBlocking.service', () => {
 
       expect(result.unblock_requested).toBe(true);
       expect(result.unblock_reason).toBe('Need it for homework');
-      // Ownership check + audit log write
-      expect(mockedQuery).toHaveBeenCalledTimes(2);
+      // Ownership check + sequence lookup + audit log write
+      expect(mockedQuery).toHaveBeenCalledTimes(3);
     });
 
     it('should throw NotFoundError if rule not found for this child', async () => {
@@ -214,6 +218,8 @@ describe('appBlocking.service', () => {
       mockedQuery.mockResolvedValueOnce({ rows: [{ id: CHILD_ID }] } as any);
       mockedRepo.getRuleByIdAndChildId.mockResolvedValueOnce(pendingRule);
       mockedRepo.updateBlockStatus.mockResolvedValueOnce(unblockedRule);
+      // Sequence lookup for hash chain
+      mockedQuery.mockResolvedValueOnce({ rows: [] } as any);
       // Audit log insert succeeds
       mockedQuery.mockResolvedValueOnce({ rows: [] } as any);
 
@@ -222,8 +228,8 @@ describe('appBlocking.service', () => {
       expect(result.is_blocked).toBe(false);
       expect(result.unblock_requested).toBe(false);
       expect(mockedRepo.updateBlockStatus).toHaveBeenCalledWith(RULE_ID, false);
-      // Ownership check + audit log write
-      expect(mockedQuery).toHaveBeenCalledTimes(2);
+      // Ownership check + sequence lookup + audit log write
+      expect(mockedQuery).toHaveBeenCalledTimes(3);
     });
 
     it('should throw NotFoundError if rule does not exist', async () => {
@@ -261,6 +267,8 @@ describe('appBlocking.service', () => {
         ...pendingRule,
         unblock_requested: false,
       });
+      // Sequence lookup for hash chain
+      mockedQuery.mockResolvedValueOnce({ rows: [] } as any);
       // Audit log insert succeeds
       mockedQuery.mockResolvedValueOnce({ rows: [] } as any);
 
@@ -269,8 +277,8 @@ describe('appBlocking.service', () => {
       expect(result.is_blocked).toBe(true);
       expect(result.unblock_requested).toBe(false);
       expect(mockedRepo.updateBlockStatus).toHaveBeenCalledWith(RULE_ID, true);
-      // Ownership check + audit log write
-      expect(mockedQuery).toHaveBeenCalledTimes(2);
+      // Ownership check + sequence lookup + audit log write
+      expect(mockedQuery).toHaveBeenCalledTimes(3);
     });
 
     it('should throw NotFoundError if rule does not exist', async () => {

@@ -19,11 +19,14 @@ const mockedQuery = query as jest.MockedFunction<typeof query>;
 
 beforeEach(() => {
   jest.clearAllMocks();
-  mockedQuery.mockResolvedValue({ rows: [] } as any);
+  // First call: SELECT for last sequence (returns empty), second call: INSERT
+  mockedQuery
+    .mockResolvedValueOnce({ rows: [] } as any) // sequence lookup
+    .mockResolvedValueOnce({ rows: [] } as any); // insert
 });
 
 describe('audit.service - writeAuditLog', () => {
-  it('inserts the required 5 columns into audit_logs', async () => {
+  it('inserts audit log with hash chain columns', async () => {
     await writeAuditLog({
       actorId: 'parent-1',
       targetChildId: 'child-2',
@@ -31,14 +34,17 @@ describe('audit.service - writeAuditLog', () => {
       resourceType: 'test',
       details: { foo: 'bar' },
     });
-    expect(mockedQuery).toHaveBeenCalledTimes(1);
-    const [sql, params] = mockedQuery.mock.calls[0] as [string, unknown[]];
+    expect(mockedQuery).toHaveBeenCalledTimes(2);
+    const [sql, params] = mockedQuery.mock.calls[1] as [string, unknown[]];
     expect(sql).toContain('INSERT INTO audit_logs');
     expect(sql).toContain('actor_id');
     expect(sql).toContain('target_child_id');
     expect(sql).toContain('action');
     expect(sql).toContain('resource_type');
     expect(sql).toContain('details');
+    expect(sql).toContain('sequence_number');
+    expect(sql).toContain('previous_hash');
+    expect(sql).toContain('current_hash');
     expect(params[0]).toBe('parent-1');
     expect(params[1]).toBe('child-2');
     expect(params[2]).toBe('TEST_EVENT');
@@ -53,7 +59,7 @@ describe('audit.service - writeAuditLog', () => {
       resourceType: 'device',
       details: { admin_active: false },
     });
-    const params = mockedQuery.mock.calls[0][1] as unknown[];
+    const params = mockedQuery.mock.calls[1][1] as unknown[];
     expect(JSON.parse(params[4] as string)).toEqual({ admin_active: false });
   });
 
@@ -64,7 +70,28 @@ describe('audit.service - writeAuditLog', () => {
       action: 'REFRESH_DEVICE',
       resourceType: 'devices',
     });
-    const params = mockedQuery.mock.calls[0][1] as unknown[];
+    const params = mockedQuery.mock.calls[1][1] as unknown[];
     expect(JSON.parse(params[4] as string)).toEqual({});
+  });
+
+  it('falls back to plain INSERT when hash chain fails', async () => {
+    // Simulate hash chain query failure, then successful plain INSERT
+    mockedQuery
+      .mockReset()
+      .mockRejectedValueOnce(new Error('column does not exist'))
+      .mockResolvedValueOnce({ rows: [] } as any);
+
+    await writeAuditLog({
+      actorId: 'parent-1',
+      targetChildId: null,
+      action: 'TEST_EVENT',
+      resourceType: 'test',
+    });
+    // Should have tried hash chain, then fallen back to plain INSERT
+    expect(mockedQuery).toHaveBeenCalledTimes(2);
+    const [sql] = mockedQuery.mock.calls[1] as [string, unknown[]];
+    expect(sql).toContain('INSERT INTO audit_logs');
+    // Plain INSERT should not have hash chain columns
+    expect(sql).not.toContain('sequence_number');
   });
 });

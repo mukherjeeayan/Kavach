@@ -94,12 +94,17 @@ export const sendToChild = async (
  * Returns { success, failure } counts. When Firebase is not
  * configured this is a no-op that returns { 0, 0 } so callers can
  * continue without erroring. Never throws.
+ *
+ * @param priority - 'normal' (default) or 'high' for emergency alerts.
+ *   High-priority payloads bypass Doze mode, battery optimization,
+ *   and app standby to ensure immediate delivery.
  */
 export const sendMulticastNotification = async (
   tokens: string[],
   title: string,
   body: string,
-  data: Record<string, string> = {}
+  data: Record<string, string> = {},
+  priority: 'normal' | 'high' = 'normal'
 ): Promise<{ success: number; failure: number }> => {
   if (!tokens || tokens.length === 0) {
     return { success: 0, failure: 0 };
@@ -109,11 +114,46 @@ export const sendMulticastNotification = async (
     return { success: 0, failure: 0 };
   }
   try {
-    const response = await m.sendEachForMulticast({
+    const message: Record<string, unknown> = {
       tokens,
       notification: { title, body },
       data,
-    });
+    };
+
+    // High-priority FCM for emergency alerts: bypasses Doze,
+    // battery optimization, and app standby. ttl:0 means display
+    // immediately even if the app was just opened.
+    if (priority === 'high') {
+      message.priority = 'high';
+      message.ttl = 0;
+      // Android-specific: use a dedicated high-importance channel
+      // with sound and vibration for emergency alerts.
+      message.android = {
+        priority: 'high',
+        ttl: '0s',
+        notification: {
+          channelId: 'kavach_emergency',
+          priority: 'max',
+          defaultSound: true,
+          defaultVibrateTimings: true,
+        },
+      };
+      // APNs (iOS) headless delivery for critical alerts
+      message.apns = {
+        headers: {
+          'apns-priority': '10',
+          'apns-push-type': 'alert',
+        },
+        payload: {
+          aps: {
+            'content-available': 1,
+            sound: { critical: 1, name: 'default', volume: 1.0 },
+          },
+        },
+      };
+    }
+
+    const response = await m.sendEachForMulticast(message);
     // Prune tokens FCM explicitly told us are dead so future sends
     // don't waste a slot on them. Codes vary by SDK version; the
     // two below cover the common "unregistered / invalid" cases.

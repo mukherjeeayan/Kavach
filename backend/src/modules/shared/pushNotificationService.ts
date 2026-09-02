@@ -11,7 +11,8 @@ export async function sendPushToParent(
   parentId: string,
   title: string,
   body: string,
-  data?: Record<string, string>
+  data?: Record<string, string>,
+  priority: 'normal' | 'high' = 'normal'
 ): Promise<{ success: number; failure: number }> {
   try {
     const result = await pool.query(
@@ -23,7 +24,7 @@ export async function sendPushToParent(
       logger.debug(`No push tokens for parent ${parentId}`);
       return { success: 0, failure: 0 };
     }
-    return await sendMulticastNotification(tokens, title, body, data);
+    return await sendMulticastNotification(tokens, title, body, data, priority);
   } catch (err) {
     logger.error(`Failed to send push to parent ${parentId}:`, err);
     return { success: 0, failure: 0 };
@@ -34,7 +35,8 @@ export async function sendPushToAllParents(
   childId: string,
   title: string,
   body: string,
-  data?: Record<string, string>
+  data?: Record<string, string>,
+  priority: 'normal' | 'high' = 'normal'
 ): Promise<void> {
   try {
     const result = await pool.query(
@@ -45,7 +47,7 @@ export async function sendPushToAllParents(
     );
     const parentIds = result.rows.map((r: { id: string }) => r.id);
     await Promise.all(
-      parentIds.map((parentId) => sendPushToParent(parentId, title, body, data))
+      parentIds.map((parentId) => sendPushToParent(parentId, title, body, data, priority))
     );
   } catch (err) {
     logger.error(`Failed to send push to parents of child ${childId}:`, err);

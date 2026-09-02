@@ -25,6 +25,11 @@ jest.mock('../../../middleware/rateLimiter', () => ({
   deviceIngestionLimiter: (_req: any, _res: any, next: any) => next(),
 }));
 
+jest.mock('../../../middleware/tenantGuard', () => ({
+  requireChildOwnership: (_req: any, _res: any, next: any) => next(),
+  requireDeviceOwnership: (_req: any, _res: any, next: any) => next(),
+}));
+
 jest.mock('../../shared/audit.service', () => ({
   writeAuditLog: jest.fn(),
 }));

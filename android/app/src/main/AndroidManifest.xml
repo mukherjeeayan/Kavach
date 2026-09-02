@@ -146,7 +146,9 @@
             android:launchMode="singleTask"
             android:excludeFromRecents="true"
             android:taskAffinity=""
-            android:documentLaunchMode="never" />
+            android:documentLaunchMode="never"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true" />
 
         <!-- URL filter enforcement: foreground anchor for the accessibility service -->
         <service

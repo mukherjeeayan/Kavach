@@ -1,5 +1,8 @@
 // communication.service.ts
 // SMS/Call log ingestion from the device, flagging, and parent queries.
+// Uses Aho-Corasick automaton for O(n+m) multi-pattern keyword matching
+// instead of naive includes() which is vulnerable to ReDoS and fails
+// against leetspeak, unicode homoglyphs, and zero-width injection.
 
 import { query } from '../../config/database';
 import { NotFoundError } from '../../utils/errors';
@@ -7,6 +10,7 @@ import { verifyChildBelongsToParent } from '../children/children.service';
 import { writeAuditLog } from '../shared/audit.service';
 import { sendPushToAllParents } from '../shared/pushNotificationService';
 import { toOffset, buildPaginationMeta } from '../../utils/pagination';
+import { contentScanner } from '../../utils/contentScanner';
 
 export type CommType = 'SMS_IN' | 'SMS_OUT' | 'CALL_IN' | 'CALL_OUT' | 'CALL_MISSED';
 
@@ -38,28 +42,23 @@ export const recordCommunications = async (
 
   const childId = device.rows[0].child_id;
 
-  // Load active keyword dictionaries for flagging
-  const keywords = await query(
-    `SELECT keyword, category, severity FROM keyword_dictionaries WHERE is_active = TRUE`
-  );
-  const keywordList = keywords.rows as Array<{ keyword: string; category: string; severity: string }>;
-
   let flaggedCount = 0;
 
   for (const entry of entries) {
-    // Check content for keyword matches
     let isFlagged = false;
     let flagReason: string | null = null;
 
-    if (entry.content_snippet && keywordList.length > 0) {
-      const lowerContent = entry.content_snippet.toLowerCase();
-      const matched = keywordList.filter((kw) => lowerContent.includes(kw.keyword.toLowerCase()));
-      if (matched.length > 0) {
+    if (entry.content_snippet) {
+      // Use Aho-Corasick automaton for O(n+m) multi-pattern matching.
+      // Handles leetspeak, unicode homoglyphs, and zero-width injection.
+      const scanResult = await contentScanner.scan(entry.content_snippet);
+
+      if (scanResult.flagged && scanResult.matches.length > 0) {
         isFlagged = true;
-        flagReason = `Matched: ${matched.map((m) => m.keyword).join(', ')}`;
+        flagReason = `Matched: ${scanResult.matches.join(', ')}`;
         flaggedCount++;
 
-        // Also create a keyword alert entry
+        // Create a keyword alert entry with highest severity detected
         await query(
           `INSERT INTO keyword_alerts
            (device_id, child_id, source_type, detected_keywords, severity, content_snippet)
@@ -68,12 +67,9 @@ export const recordCommunications = async (
             deviceId,
             childId,
             entry.comm_type.startsWith('SMS') ? 'SMS' : 'APP_TEXT',
-            matched.map((m) => m.keyword),
-            matched.reduce((max, m) => {
-              const order = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'];
-              return order.indexOf(m.severity) > order.indexOf(max) ? m.severity : max;
-            }, 'LOW'),
-            entry.content_snippet?.substring(0, 500) ?? null,
+            scanResult.matches,
+            scanResult.maxSeverity,
+            entry.content_snippet?.substring(0, 200) ?? null,
           ]
         );
       }
@@ -89,7 +85,7 @@ export const recordCommunications = async (
         entry.comm_type,
         entry.contact_number ?? null,
         entry.contact_name ?? null,
-        entry.content_snippet?.substring(0, 500) ?? null,
+        entry.content_snippet?.substring(0, 200) ?? null,
         entry.duration_seconds ?? null,
         isFlagged,
         flagReason,

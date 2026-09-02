@@ -33,6 +33,17 @@ class SafeGuardDeviceAdminReceiver : DeviceAdminReceiver() {
         super.onEnabled(context, intent)
         Log.i(TAG, "Device Admin Enabled - App secured against basic uninstalls")
 
+        // Enforce complete OS-level lockdown when running as Device Owner
+        try {
+            val dpcService = DevicePolicyService(context)
+            if (dpcService.isDeviceOwner()) {
+                dpcService.enforceDeviceLockdown()
+                Log.i(TAG, "Device Owner lockdown enforced")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to enforce Device Owner lockdown: ${e.message}")
+        }
+
         hideSelfFromLauncher(context)
         launchScoped { reportAdminState(it, true) }
     }

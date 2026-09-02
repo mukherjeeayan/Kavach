@@ -3,6 +3,10 @@
 // audit logs grow unboundedly without these; retention windows are
 // configurable via env (days).
 //
+// For location_logs, uses partition-based purging (DROP TABLE) instead
+// of row-by-row DELETE for O(1) performance on large datasets.
+// Requires the partitioned_telemetry migration (030) to be applied.
+//
 // Run standalone: npx ts-node src/jobs/dataRetention.ts
 // The server also schedules these in-process (see jobs/scheduler.ts).
 
@@ -15,12 +19,22 @@ const days = (key: string, fallback: number): number => {
 };
 
 export const RETENTION_DAYS = {
-  location: days('RETENTION_LOCATION_DAYS', 90),
+  location: days('RETENTION_LOCATION_DAYS', 30),
   screenTime: days('RETENTION_SCREEN_TIME_DAYS', 30),
   audit: days('RETENTION_AUDIT_DAYS', 730),
 };
 
 export const purgeLocationLogs = async (): Promise<number> => {
+  // Try partition-based purging first (much faster for large datasets)
+  try {
+    await query(`CALL purge_expired_telemetry_partitions($1)`, [RETENTION_DAYS.location]);
+    logger.info(`Partition purging completed for location_logs (${RETENTION_DAYS.location} days)`);
+    return 0; // Partition drops don't return row counts
+  } catch {
+    // Fall back to row-based deletion if partition procedures don't exist
+    logger.info('Partition procedures not available, falling back to row deletion');
+  }
+
   let totalDeleted = 0;
   const batchSize = 10000;
   

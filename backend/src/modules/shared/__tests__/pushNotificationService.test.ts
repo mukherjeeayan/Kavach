@@ -44,7 +44,8 @@ describe('sendPushToParent', () => {
       ['tok-a', 'tok-b'],
       'Hello',
       'World',
-      undefined
+      undefined,
+      'normal'
     );
     expect(result).toEqual({ success: 2, failure: 0 });
   });
@@ -55,7 +56,7 @@ describe('sendPushToParent', () => {
 
     await sendPushToParent(PARENT_ID, 't', 'b', { type: 'sos' });
 
-    expect(mockedSend).toHaveBeenCalledWith(['tok-x'], 't', 'b', { type: 'sos' });
+    expect(mockedSend).toHaveBeenCalledWith(['tok-x'], 't', 'b', { type: 'sos' }, 'normal');
   });
 
   test('returns 0,0 when the parent has no registered tokens', async () => {
@@ -119,7 +120,8 @@ describe('sendPushToAllParents', () => {
       expect.any(Array),
       'Title',
       'Body',
-      { type: 'sos' }
+      { type: 'sos' },
+      'normal'
     );
   });
 

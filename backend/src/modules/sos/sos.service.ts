@@ -61,6 +61,8 @@ export const createSosEvent = async (
     },
   });
 
+  // Send high-priority FCM: bypasses Doze, battery optimization,
+  // and app standby to ensure immediate delivery of emergency alerts.
   await sendPushToAllParents(
     childId,
     'SOS Alert',
@@ -69,7 +71,8 @@ export const createSosEvent = async (
       type: 'sos',
       event_id: result.rows[0].id,
       child_id: childId,
-    }
+    },
+    'high'
   );
 
   return result.rows[0];

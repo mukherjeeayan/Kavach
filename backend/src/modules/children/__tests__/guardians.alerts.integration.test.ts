@@ -30,6 +30,11 @@ jest.mock('../../../middleware/rateLimiter', () => ({
   deviceIngestionLimiter: (_req: any, _res: any, next: any) => next(),
 }));
 
+jest.mock('../../../middleware/tenantGuard', () => ({
+  requireChildOwnership: (_req: any, _res: any, next: any) => next(),
+  requireDeviceOwnership: (_req: any, _res: any, next: any) => next(),
+}));
+
 import app from '../../../app';
 import { query } from '../../../config/database';
 import { signTestToken, PARENT_ID, CHILD_ID, DEVICE_ID } from '../../../__tests__/test-helpers';

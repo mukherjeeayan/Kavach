@@ -12,6 +12,7 @@ import swaggerUi from 'swagger-ui-express';
 import { errorHandler } from './middleware/errorHandler';
 import { standardLimiter } from './middleware/rateLimiter';
 import { requestLogger } from './middleware/requestLogger';
+import { logRedactorMiddleware } from './middleware/logRedactor';
 import { validateEnv } from './config/validateEnv';
 
 // ── Central config validation (fail-fast at startup) ──────────────────
@@ -97,6 +98,11 @@ app.use((req, res, next) => {
 
 // Request logging (method, path, status, duration)
 app.use(requestLogger);
+
+// PII redaction in production logs (DPDP/COPPA compliance)
+if (process.env.NODE_ENV === 'production') {
+  app.use(logRedactorMiddleware);
+}
 
 // Health check endpoint — verifies real DB connectivity so
 // load balancers / k8s probes don't report healthy while broken.

@@ -31,6 +31,11 @@ jest.mock('../../../middleware/rateLimiter', () => ({
   resendVerificationLimiter: (_req: any, _res: any, next: any) => next(),
 }));
 
+jest.mock('../../../middleware/tenantGuard', () => ({
+  requireChildOwnership: (_req: any, _res: any, next: any) => next(),
+  requireDeviceOwnership: (_req: any, _res: any, next: any) => next(),
+}));
+
 jest.mock('../../../modules/children/children.service', () => ({
   __esModule: true,
   verifyChildBelongsToParent: jest.fn(),

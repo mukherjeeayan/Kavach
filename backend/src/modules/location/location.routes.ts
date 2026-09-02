@@ -6,6 +6,7 @@ import { Router } from 'express';
 import { authenticateJWT, requireRole, requirePremium } from '../../middleware/auth';
 import { validateParams, validateQuery } from '../../middleware/validate';
 import { uuidParams } from '../../middleware/params';
+import { requireChildOwnership } from '../../middleware/tenantGuard';
 import { locationUploadSchema, locationHistoryQuery as locHistoryQuery, currentLocationQuery as currQuery } from './location.dto';
 import * as locationController from './location.controller';
 
@@ -19,6 +20,7 @@ router.get(
   '/:childId/locations/current',
   requirePremium,
   validateParams(uuidParams('childId')),
+  requireChildOwnership,
   validateQuery(currQuery),
   locationController.getCurrent
 );
@@ -28,6 +30,7 @@ router.get(
   '/:childId/locations/history',
   requirePremium,
   validateParams(uuidParams('childId')),
+  requireChildOwnership,
   validateQuery(locHistoryQuery),
   locationController.getHistory
 );

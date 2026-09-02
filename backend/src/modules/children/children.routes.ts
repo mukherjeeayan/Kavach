@@ -6,6 +6,7 @@ import { Router } from 'express';
 import { authenticateJWT, requireRole } from '../../middleware/auth';
 import { validate, validateParams, validateQuery } from '../../middleware/validate';
 import { uuidParams, paginationQuery, childAndUuidParams } from '../../middleware/params';
+import { requireChildOwnership } from '../../middleware/tenantGuard';
 import { createChildSchema, updateChildSchema, screenTimeLimitSchema, setChildPhoneSchema } from './child.dto';
 import * as childrenController from './children.controller';
 import * as deviceController from '../devices/device.controller';
@@ -22,12 +23,13 @@ router.get('/', validateQuery(paginationQuery), childrenController.listChildren)
 router.post('/', validate(createChildSchema), childrenController.createChild);
 
 // GET /api/v1/children/:childId — fetch a single child profile
-router.get('/:childId', validateParams(uuidParams('childId')), childrenController.getChild);
+router.get('/:childId', validateParams(uuidParams('childId')), requireChildOwnership, childrenController.getChild);
 
 // PATCH /api/v1/children/:childId — update name/birth_date
 router.patch(
   '/:childId',
   validateParams(uuidParams('childId')),
+  requireChildOwnership,
   validate(updateChildSchema),
   childrenController.updateChild
 );
@@ -36,6 +38,7 @@ router.patch(
 router.delete(
   '/:childId',
   validateParams(uuidParams('childId')),
+  requireChildOwnership,
   childrenController.deleteChild
 );
 
@@ -43,6 +46,7 @@ router.delete(
 router.get(
   '/:childId/devices',
   validateParams(uuidParams('childId')),
+  requireChildOwnership,
   deviceController.listDevicesForChild
 );
 
@@ -50,6 +54,7 @@ router.get(
 router.put(
   '/:childId/screen-time-limit',
   validateParams(uuidParams('childId')),
+  requireChildOwnership,
   validate(screenTimeLimitSchema),
   childrenController.setScreenTimeLimit
 );
@@ -58,6 +63,7 @@ router.put(
 router.get(
   '/:childId/alerts',
   validateParams(uuidParams('childId')),
+  requireChildOwnership,
   validateQuery(paginationQuery),
   childrenController.listAlerts
 );
@@ -66,6 +72,7 @@ router.get(
 router.post(
   '/:childId/alerts/ack',
   validateParams(uuidParams('childId')),
+  requireChildOwnership,
   childrenController.acknowledgeAlerts
 );
 
@@ -81,12 +88,14 @@ const addGuardianSchema = z.object({
 router.get(
   '/:childId/guardians',
   validateParams(uuidParams('childId')),
+  requireChildOwnership,
   childrenController.listGuardians
 );
 
 router.post(
   '/:childId/guardians',
   validateParams(uuidParams('childId')),
+  requireChildOwnership,
   validate(addGuardianSchema),
   childrenController.addGuardian
 );
@@ -94,6 +103,7 @@ router.post(
 router.delete(
   '/:childId/guardians/:guardianId',
   validateParams(childAndUuidParams('guardianId')),
+  requireChildOwnership,
   childrenController.removeGuardian
 );
 
@@ -101,6 +111,7 @@ router.delete(
 router.put(
   '/:childId/phone',
   validateParams(uuidParams('childId')),
+  requireChildOwnership,
   validate(setChildPhoneSchema),
   childrenController.setChildPhone
 );
