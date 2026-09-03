@@ -148,41 +148,14 @@ export class FastContentScanner {
   }
 
   /**
-   * Scan text against all loaded keywords.
-   * Returns flagged status, matched keywords, highest severity, and categories.
+   * Core matching logic shared by scan() and scanSync().
+   * Resolves matched patterns back to keyword metadata.
    */
-  async scan(rawText: string): Promise<ScanResult> {
-    await this.ensureReady();
-
-    if (!this.trie || this.keywords.length === 0) {
-      return { flagged: false, matches: [], maxSeverity: 'LOW', categories: [] };
-    }
-
-    const normalized = normalizeText(rawText);
-    const leetNormalized = normalizeLeet(normalized);
-
-    // Run Aho-Corasick on both normalized and leet-normalized text
-    const rawMatches = this.trie.search(normalized);
-    const leetMatches = this.trie.search(leetNormalized);
-
-    // Collect matched pattern strings
-    const matchedPatterns = new Set<string>();
-    for (const match of rawMatches) {
-      for (const pattern of match[1]) {
-        matchedPatterns.add(pattern);
-      }
-    }
-    for (const match of leetMatches) {
-      for (const pattern of match[1]) {
-        matchedPatterns.add(pattern);
-      }
-    }
-
+  private resolveMatches(matchedPatterns: Set<string>): ScanResult {
     if (matchedPatterns.size === 0) {
       return { flagged: false, matches: [], maxSeverity: 'LOW', categories: [] };
     }
 
-    // Resolve matched patterns back to keyword entries
     const matchedKeywords = new Set<string>();
     const matchedCategories = new Set<string>();
     let maxSeverityScore = 0;
@@ -209,6 +182,38 @@ export class FastContentScanner {
       maxSeverity,
       categories: Array.from(matchedCategories),
     };
+  }
+
+  /**
+   * Scan text against all loaded keywords.
+   * Returns flagged status, matched keywords, highest severity, and categories.
+   */
+  async scan(rawText: string): Promise<ScanResult> {
+    await this.ensureReady();
+
+    if (!this.trie || this.keywords.length === 0) {
+      return { flagged: false, matches: [], maxSeverity: 'LOW', categories: [] };
+    }
+
+    const normalized = normalizeText(rawText);
+    const leetNormalized = normalizeLeet(normalized);
+
+    const rawMatches = this.trie.search(normalized);
+    const leetMatches = this.trie.search(leetNormalized);
+
+    const matchedPatterns = new Set<string>();
+    for (const match of rawMatches) {
+      for (const pattern of match[1]) {
+        matchedPatterns.add(pattern);
+      }
+    }
+    for (const match of leetMatches) {
+      for (const pattern of match[1]) {
+        matchedPatterns.add(pattern);
+      }
+    }
+
+    return this.resolveMatches(matchedPatterns);
   }
 
   /**
@@ -239,36 +244,7 @@ export class FastContentScanner {
       }
     }
 
-    if (matchedPatterns.size === 0) {
-      return { flagged: false, matches: [], maxSeverity: 'LOW', categories: [] };
-    }
-
-    const matchedKeywords = new Set<string>();
-    const matchedCategories = new Set<string>();
-    let maxSeverityScore = 0;
-    let maxSeverity = 'LOW';
-
-    for (const entry of this.keywords) {
-      const normalizedKw = normalizeText(entry.keyword);
-      const leetKw = normalizeLeet(normalizedKw);
-
-      if (matchedPatterns.has(normalizedKw) || matchedPatterns.has(leetKw)) {
-        matchedKeywords.add(entry.keyword);
-        matchedCategories.add(entry.category);
-        const score = SEVERITY_ORDER[entry.severity] ?? 0;
-        if (score > maxSeverityScore) {
-          maxSeverityScore = score;
-          maxSeverity = entry.severity;
-        }
-      }
-    }
-
-    return {
-      flagged: true,
-      matches: Array.from(matchedKeywords),
-      maxSeverity,
-      categories: Array.from(matchedCategories),
-    };
+    return this.resolveMatches(matchedPatterns);
   }
 
   /**

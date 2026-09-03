@@ -58,8 +58,8 @@ export const getOverviewStats = async (
     ),
   ]);
 
-  const totalScreenTime = screenTime.rows.reduce(
-    (acc: number, r: { total_seconds: number }) => acc + r.total_seconds, 0
+  const totalScreenTime = screenTime.rows.reduce<number>(
+    (acc, r) => acc + Number(r.total_seconds), 0
   );
 
   return {
@@ -215,8 +215,8 @@ export const getUsageSummary = async (
     ),
   ]);
 
-  const grandTotal = dailyTotal.rows.reduce(
-    (acc: number, r: { total_seconds: number }) => acc + r.total_seconds, 0
+  const grandTotal = dailyTotal.rows.reduce<number>(
+    (acc, r) => acc + Number(r.total_seconds), 0
   );
 
   return {

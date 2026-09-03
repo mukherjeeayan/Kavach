@@ -119,6 +119,16 @@ export const getGoogleAuthUrl = async (req: Request, res: Response) => {
   }
 
   const state = crypto.randomBytes(16).toString('hex');
+  
+  // Store state in a signed, httpOnly cookie for CSRF validation on callback
+  res.cookie('oauth_state', state, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: 10 * 60 * 1000, // 10 minutes
+    signed: process.env.COOKIE_SECRET ? true : false,
+  });
+
   const params = new URLSearchParams({
     client_id: clientId,
     redirect_uri: redirectUri,
@@ -144,9 +154,24 @@ export const getGoogleAuthUrl = async (req: Request, res: Response) => {
 export const handleGoogleCallback = async (req: Request, res: Response) => {
   try {
     const code = req.query.code as string;
+    const state = req.query.state as string;
     const clientId = process.env.GOOGLE_CLIENT_ID || process.env.CLIENT_ID;
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET || process.env.CLIENT_SECRET;
     const redirectUri = (process.env.APP_URL ? `${process.env.APP_URL}/auth/google/callback` : `${req.protocol}://${req.get('host')}/auth/google/callback`);
+
+    // Validate OAuth state parameter to prevent CSRF attacks
+    const savedState = req.cookies?.oauth_state || req.signedCookies?.oauth_state;
+    if (!state || !savedState || state !== savedState) {
+      return res.status(403).send(`
+        <html><body style="font-family:sans-serif;text-align:center;padding:40px;">
+          <h3>Authentication Failed</h3>
+          <p>Invalid or expired OAuth state. Please try again.</p>
+          <button onclick="window.close()" style="padding:8px 16px;cursor:pointer;">Close Window</button>
+        </body></html>
+      `);
+    }
+    // Clear the used state cookie
+    res.clearCookie('oauth_state');
 
     let email: string | undefined;
     let name: string | undefined;
@@ -181,14 +206,19 @@ export const handleGoogleCallback = async (req: Request, res: Response) => {
           }
         }
       } catch {
-        // Fall back to query param values if token exchange fails in sandbox
+        // Token exchange failed — fall through to error below
       }
     }
 
-    if (!email) {
-      email = (req.query.email as string) || 'google.parent@kavach.local';
-      name = (req.query.name as string) || 'Kavach Google User';
-      googleId = (req.query.googleId as string) || 'g_' + Math.random().toString(36).substring(2, 10);
+    // SECURITY: Never fall back to query params — require valid Google token exchange
+    if (!email || !googleId) {
+      return res.status(401).send(`
+        <html><body style="font-family:sans-serif;text-align:center;padding:40px;">
+          <h3>Google Authentication Failed</h3>
+          <p>Unable to verify your Google account. Please try again.</p>
+          <button onclick="window.close()" style="padding:8px 16px;cursor:pointer;">Close Window</button>
+        </body></html>
+      `);
     }
 
     const session = await authService.authenticateWithGoogle({
@@ -201,6 +231,8 @@ export const handleGoogleCallback = async (req: Request, res: Response) => {
     setSessionCookies(res, session);
 
     const safeSessionJson = JSON.stringify(session).replace(/</g, '\\u003c');
+    // SECURITY: Use specific frontend origin instead of wildcard '*'
+    const frontendOrigin = process.env.FRONTEND_URL || 'http://localhost:5173';
 
     res.send(`
       <!DOCTYPE html>
@@ -225,7 +257,7 @@ export const handleGoogleCallback = async (req: Request, res: Response) => {
             try {
               const session = ${safeSessionJson};
               if (window.opener) {
-                window.opener.postMessage({ type: 'OAUTH_AUTH_SUCCESS', session: session }, '*');
+                window.opener.postMessage({ type: 'OAUTH_AUTH_SUCCESS', session: session }, '${frontendOrigin}');
                 setTimeout(() => window.close(), 300);
               } else {
                 window.location.href = '/dashboard';
@@ -238,14 +270,13 @@ export const handleGoogleCallback = async (req: Request, res: Response) => {
       </html>
     `);
   } catch (err: any) {
+    // SECURITY: Never interpolate error messages into HTML — use generic message
     res.status(500).send(`
-      <html>
-        <body style="font-family:sans-serif; text-align:center; padding:40px;">
-          <h3>Google Authentication Failed</h3>
-          <p>${err.message || 'An error occurred during authentication.'}</p>
-          <button onclick="window.close()" style="padding:8px 16px; cursor:pointer;">Close Window</button>
-        </body>
-      </html>
+      <html><body style="font-family:sans-serif;text-align:center;padding:40px;">
+        <h3>Google Authentication Failed</h3>
+        <p>An error occurred during authentication. Please try again.</p>
+        <button onclick="window.close()" style="padding:8px 16px;cursor:pointer;">Close Window</button>
+      </body></html>
     `);
   }
 };
@@ -561,6 +592,10 @@ export const generateProvisioningQr = async (req: Request, res: Response, next: 
 
     const backendUrl = process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
 
+    if (!process.env.JWT_SECRET) {
+      return respondError(res, 500, 'Server configuration error', req);
+    }
+
     const qrData = {
       familyId: req.user!.userId,
       pairingNonce,
@@ -569,7 +604,7 @@ export const generateProvisioningQr = async (req: Request, res: Response, next: 
       childName: childName || 'Child',
       expiresAt,
       signature: crypto
-        .createHmac('sha256', process.env.JWT_SECRET || 'dev-secret')
+        .createHmac('sha256', process.env.JWT_SECRET)
         .update(`${req.user!.userId}:${pairingNonce}:${expiresAt}`)
         .digest('hex'),
     };

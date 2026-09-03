@@ -97,7 +97,7 @@ export const listGuardians = async (
   ]);
 
   return {
-    items: itemsResult.rows,
+    items: itemsResult.rows as Guardian[],
     total: countResult.rows[0].total,
   };
 };
@@ -240,7 +240,7 @@ export const listChildren = async (
       LIMIT $2 OFFSET $3`,
     [parentId, limit, toOffset(page, limit)]
   );
-  return { items: result.rows, total: count.rows[0].total };
+  return { items: result.rows as ChildProfile[], total: count.rows[0].total };
 };
 
 /**
@@ -257,7 +257,7 @@ export const createChild = async (
       RETURNING id, parent_id, name, birth_date, phone, daily_screen_time_limit_minutes, created_at, updated_at`,
     [parentId, name.trim(), birthDate || null]
   );
-  const child = result.rows[0];
+  const child = result.rows[0] as ChildProfile;
 
   await writeAuditLog({
     actorId: parentId,
@@ -289,7 +289,7 @@ export const setScreenTimeLimit = async (
       RETURNING id, parent_id, name, birth_date, phone, daily_screen_time_limit_minutes, created_at, updated_at`,
     [limitMinutes, childId]
   );
-  const child = result.rows[0];
+  const child = result.rows[0] as ChildProfile;
 
   await writeAuditLog({
     actorId: parentId,
@@ -339,7 +339,7 @@ export const listChildAlerts = async (
      LIMIT $2 OFFSET $3`,
     [childId, cappedLimit, toOffset(page, cappedLimit)]
   );
-  return { items: result.rows, total: count.rows[0].total };
+  return { items: result.rows as ChildAlert[], total: count.rows[0].total };
 };
 
 /**
@@ -383,7 +383,7 @@ export const getChild = async (
       FROM children WHERE id = $1`,
     [childId]
   );
-  return result.rows[0];
+  return result.rows[0] as ChildProfile;
 };
 
 /**
@@ -405,7 +405,7 @@ export const updateChild = async (
       RETURNING id, parent_id, name, birth_date, phone, daily_screen_time_limit_minutes, created_at, updated_at`,
     [childId, parentId, input.name?.trim() ?? null, input.birth_date ?? null]
   );
-  const child = result.rows[0];
+  const child = result.rows[0] as ChildProfile;
 
   await writeAuditLog({
     actorId: parentId,
@@ -455,7 +455,7 @@ export const setChildPhone = async (
      RETURNING id, parent_id, name, birth_date, phone, daily_screen_time_limit_minutes, created_at, updated_at`,
     [phone, childId]
   );
-  const child = result.rows[0];
+  const child = result.rows[0] as ChildProfile;
 
   await writeAuditLog({
     actorId: parentId,

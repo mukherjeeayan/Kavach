@@ -138,8 +138,8 @@ const evaluatePerAppLimits = async (
     [deviceId, today]
   );
   const totals = new Map(
-    todayTotal.rows.map((r: { app_package: string; total_seconds: number }) => [
-      r.app_package,
+    todayTotal.rows.map((r: Record<string, any>) => [
+      r.app_package as string,
       Number(r.total_seconds),
     ])
   );
@@ -164,7 +164,7 @@ const evaluatePerAppLimits = async (
        AND details->>'rule_id' = ANY($3::text[])`,
     [childId, today, ruleIds]
   );
-  const alertedRuleIds = new Set(existingAlerts.rows.map((r: { rule_id: string }) => r.rule_id));
+  const alertedRuleIds = new Set(existingAlerts.rows.map((r: Record<string, any>) => r.rule_id as string));
 
   // Only insert alerts for rules that haven't been alerted yet
   for (const { rule, used } of rulesToAlert) {
@@ -288,9 +288,8 @@ export const getScreenTimeSummary = async (
     [rangeDays, childId]
   );
 
-  const totalSeconds = daily.rows.reduce(
-    (acc: number, row: { total_seconds: string | null }) =>
-      acc + Number(row.total_seconds ?? 0),
+  const totalSeconds = daily.rows.reduce<number>(
+    (acc, row) => acc + Number(row.total_seconds ?? 0),
     0
   );
 

@@ -19,3 +19,5 @@ process.env.BCRYPT_SALT_ROUNDS = '4';
 // Encryption key for sensitive columns (FCM tokens, integration config).
 // Must be at least 32 characters per encryption.service.ts.
 process.env.DATA_ENCRYPTION_KEY = 'test-data-encryption-key-for-unit-tests-only';
+// Admin access key for admin routes (must be at least 16 characters per Zod schema)
+process.env.ADMIN_ACCESS_KEY = 'test-admin-access-key-for-unit-tests';

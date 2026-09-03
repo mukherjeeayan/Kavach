@@ -3,22 +3,25 @@ version: "3.9"
 # Local development stack for Kavach. Brings up the database the
 # backend depends on; run backend + frontend with their npm scripts so
 # edits hot-reload (ts-node-dev / vite).
+#
+# Usage: docker compose up -d
+# For custom passwords: POSTGRES_PASSWORD=xxx docker compose up -d
 
 services:
   postgres:
     image: postgres:16-alpine
     container_name: kavach-postgres
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: kavach
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD for local dev}
+      POSTGRES_DB: ${DB_NAME:-kavach}
     ports:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ../backend/db/migrations:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d kavach"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-kavach}"]
       interval: 5s
       timeout: 3s
       retries: 10

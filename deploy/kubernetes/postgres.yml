@@ -15,6 +15,9 @@ spec:
       labels:
         app: postgres
     spec:
+      securityContext:
+        runAsNonRoot: false  # PostgreSQL requires root initially
+        fsGroup: 999
       containers:
         - name: postgres
           image: postgis/postgis:16-3.4-alpine

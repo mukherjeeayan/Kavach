@@ -27,6 +27,7 @@ import type {
   MoodLog,
   Notification,
   PaginatedResponse,
+  ParentalConsent,
   RewardCatalogItem,
   RewardPoints,
   RewardRedemption,
@@ -938,4 +939,30 @@ export const createRazorpayOrder = async (
     '/subscriptions/checkout/razorpay', { period }
   );
   return response.data.data!;
+};
+
+// ── Parental Consent ─────────────────────────────────────────
+
+export const fetchConsents = async (childId: string): Promise<ParentalConsent[]> => {
+  const response = await apiClient.get<ApiResponse<ParentalConsent[]>>(
+    `/children/${childId}/consents`
+  );
+  return response.data.data ?? [];
+};
+
+export const grantConsent = async (
+  childId: string,
+  consentType: string
+): Promise<ParentalConsent> => {
+  const response = await apiClient.post<ApiResponse<ParentalConsent>>(
+    `/children/${childId}/consents`, { consent_type: consentType }
+  );
+  return response.data.data!;
+};
+
+export const revokeConsent = async (
+  childId: string,
+  consentType: string
+): Promise<void> => {
+  await apiClient.delete(`/children/${childId}/consents/${encodeURIComponent(consentType)}`);
 };

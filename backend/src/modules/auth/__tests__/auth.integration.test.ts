@@ -130,9 +130,12 @@ describe('Auth integration – login', () => {
   });
 
   test('POST /api/v1/auth/login – rejects wrong password (401)', async () => {
-    mockedQuery.mockResolvedValueOnce({
-      rows: [{ id: PARENT_ID, email: 'test@example.com', name: 'Test', password_hash: 'hashed-password' }],
-    } as any);
+    mockedQuery
+      .mockResolvedValueOnce({
+        rows: [{ id: PARENT_ID, email: 'test@example.com', name: 'Test', password_hash: 'hashed-password', failed_login_attempts: 0, login_locked_until: null }],
+      } as any) // SELECT parent
+      .mockResolvedValueOnce({ rows: [] } as any) // UPDATE failed_login_attempts
+      .mockResolvedValueOnce({ rows: [] } as any); // INSERT audit_log
     mockedBcrypt.compare.mockResolvedValueOnce(false as never);
 
     const res = await request(app)

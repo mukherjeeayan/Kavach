@@ -28,6 +28,7 @@ const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
 const SubscriptionPage = lazy(() => import('./pages/SubscriptionPage'));
 const AiSettingsPage = lazy(() => import('./pages/AiSettingsPage'));
+const ConsentPage = lazy(() => import('./pages/ConsentPage'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -114,6 +115,14 @@ function App() {
                   element={
                     <RoleProtectedRoute role="parent">
                       <AiSettingsPage />
+                    </RoleProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/consent"
+                  element={
+                    <RoleProtectedRoute role="parent">
+                      <ConsentPage />
                     </RoleProtectedRoute>
                   }
                 />

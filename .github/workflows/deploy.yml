@@ -19,6 +19,30 @@ env:
   IMAGE_PREFIX: ${{ github.repository }}
 
 jobs:
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Trivy vulnerability scanner (filesystem)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: 'backend/'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '1'
+
+      - name: Run Semgrep static analysis
+        uses: semgrep/semgrep-action@v1
+        with:
+          config: auto
+        env:
+          SEMGREP_RULES: >-
+            p/owasp-top-ten
+            p/security-audit
+            p/typescript
+
   test:
     name: Run Tests
     runs-on: ubuntu-latest
@@ -57,7 +81,7 @@ jobs:
 
   build-backend:
     name: Build Backend Docker Image
-    needs: test
+    needs: [test, security-scan]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -91,6 +115,13 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+
+      - name: Scan built image
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-backend:${{ github.sha }}
+          severity: 'CRITICAL,HIGH'
+          exit-code: '0'
 
   build-frontend:
     name: Build Frontend Docker Image
@@ -194,6 +225,9 @@ jobs:
             docker compose -f deploy/docker-compose.prod.yml exec -T backend npm run db:migrate
             docker image prune -f
           EOF
+      - name: Cleanup SSH key
+        if: always()
+        run: rm -f ~/.ssh/deploy_key
 
   deploy-production:
     name: Deploy to Production
@@ -223,6 +257,9 @@ jobs:
             docker compose -f deploy/docker-compose.prod.yml exec -T backend npm run db:migrate
             docker image prune -f
           EOF
+      - name: Cleanup SSH key
+        if: always()
+        run: rm -f ~/.ssh/deploy_key
 
       - name: Notify deployment
         if: success()

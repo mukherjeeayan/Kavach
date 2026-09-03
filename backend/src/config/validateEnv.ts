@@ -33,14 +33,12 @@ const envSchema = z.object({
   // ─── Authentication & JWT ─────────────────────────────────────────
   JWT_SECRET: z
     .string()
-    .optional()
-    .transform((val) => (val && val.length >= 32 ? val : 'kavach_super_secret_jwt_key_for_dev_32chars_min')),
+    .min(32, 'JWT_SECRET must be at least 32 characters — set a strong secret in production'),
   JWT_REFRESH_SECRET: z
     .string()
-    .optional()
-    .transform((val) => (val && val.length >= 32 ? val : 'kavach_super_secret_refresh_jwt_key_for_dev_32chars_min')),
+    .min(32, 'JWT_REFRESH_SECRET must be at least 32 characters — set a strong secret in production'),
   JWT_EXPIRES_IN: z.string().default('1h'),
-  JWT_REFRESH_EXPIRES_IN: z.string().default('30d'),
+  JWT_REFRESH_EXPIRES_IN: z.string().default('14d'),
 
   // ─── Server ────────────────────────────────────────────────────────
   PORT: z
@@ -66,7 +64,7 @@ const envSchema = z.object({
   CHAMBER_KEY_ALIAS: z.string().default('kavach-chamber-key'),
 
   // ─── Admin panel ──────────────────────────────────────────────────
-  ADMIN_ACCESS_KEY: z.string().default('kavach_admin_secret_key_1234567890'),
+  ADMIN_ACCESS_KEY: z.string().min(16, 'ADMIN_ACCESS_KEY must be at least 16 characters — set a strong key'),
 
   // ─── Razorpay (subscriptions) ─────────────────────────────────────
   RAZORPAY_KEY_ID: z.string().optional(),

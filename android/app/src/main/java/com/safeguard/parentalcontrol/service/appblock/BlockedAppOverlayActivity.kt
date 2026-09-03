@@ -155,7 +155,8 @@ class BlockedAppOverlayActivity : ComponentActivity() {
 
     @Suppress("DEPRECATION")
     override fun onBackPressed() {
-        super.onBackPressed()
+        // SECURITY: Do NOT call super.onBackPressed() — that would dismiss the overlay.
+        // Instead, go home without allowing the child to escape to the blocked app.
         goHome()
     }
 

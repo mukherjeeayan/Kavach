@@ -39,7 +39,10 @@ object DatabaseModule {
             "safeguard_database"
         )
             .openHelperFactory(factory)
-            .fallbackToDestructiveMigration()
+            // SECURITY: Do NOT use fallbackToDestructiveMigration() — it wipes all data on schema change.
+            // Instead, use destructive migration ONLY on downgrade (rare case). For upgrades,
+            // proper Migration objects should be provided. This prevents accidental data loss.
+            .fallbackToDestructiveMigrationOnDowngrade()
             .build()
     }
 

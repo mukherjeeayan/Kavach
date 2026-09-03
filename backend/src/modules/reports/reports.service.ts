@@ -190,8 +190,8 @@ export const getUsageReport = async (
   ]);
 
   // Grand total
-  const grandTotal = dailyTotals.rows.reduce(
-    (acc: number, r: { total_seconds: number }) => acc + r.total_seconds,
+  const grandTotal = dailyTotals.rows.reduce<number>(
+    (acc, r) => acc + Number(r.total_seconds),
     0
   );
 

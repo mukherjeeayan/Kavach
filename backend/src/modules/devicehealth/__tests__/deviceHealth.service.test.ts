@@ -121,7 +121,8 @@ describe('deviceHealth.service', () => {
 
       const result = await deviceHealthService.getLatestHealth(PARENT_ID, CHILD_ID, DEVICE_ID);
 
-      expect(result.battery_level).toBe(70);
+      expect(result).not.toBeNull();
+      expect(result!.battery_level).toBe(70);
       expect(mockedChildren.verifyChildBelongsToParent).toHaveBeenCalledWith(CHILD_ID, PARENT_ID);
     });
 

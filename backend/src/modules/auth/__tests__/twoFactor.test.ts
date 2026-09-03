@@ -238,22 +238,29 @@ describe('twoFactor.service — secret persistence & recovery', () => {
   });
 
   test('consumeRecoveryCode removes the matching code from storage', async () => {
-    const codes = ['AAAAAA11', 'BBBBBB22', 'CCCCCC33'];
+    // Recovery codes are now SHA-256 hashed before storage
+    const plaintextCodes = ['AAAAAA11', 'BBBBBB22', 'CCCCCC33'];
+    const hashedCodes = plaintextCodes.map((c) =>
+      crypto.createHash('sha256').update(c.toUpperCase()).digest('hex')
+    );
     mockedQuery
-      .mockResolvedValueOnce({ rows: [{ two_factor_recovery_codes: JSON.stringify(codes) }] } as any)
+      .mockResolvedValueOnce({ rows: [{ two_factor_recovery_codes: JSON.stringify(hashedCodes) }] } as any)
       .mockResolvedValueOnce({ rows: [] } as any);
 
     expect(await twoFactorService.consumeRecoveryCode(PARENT_ID, 'bbbbbb22')).toBe(true);
 
     const updateCall = mockedQuery.mock.calls[1];
     const persisted = JSON.parse(updateCall![1]![0] as string);
-    expect(persisted).toEqual(['AAAAAA11', 'CCCCCC33']);
+    expect(persisted).toEqual([hashedCodes[0], hashedCodes[2]]);
   });
 
   test('consumeRecoveryCode returns false for a non-matching code', async () => {
-    const codes = ['AAAAAA11'];
+    const plaintextCodes = ['AAAAAA11'];
+    const hashedCodes = plaintextCodes.map((c) =>
+      crypto.createHash('sha256').update(c.toUpperCase()).digest('hex')
+    );
     mockedQuery.mockResolvedValueOnce({
-      rows: [{ two_factor_recovery_codes: JSON.stringify(codes) }],
+      rows: [{ two_factor_recovery_codes: JSON.stringify(hashedCodes) }],
     } as any);
 
     expect(await twoFactorService.consumeRecoveryCode(PARENT_ID, 'not-a-code')).toBe(false);
@@ -359,7 +366,7 @@ describe('twoFactor.controller — login challenge', () => {
           },
         ],
       } as any)
-      .mockResolvedValueOnce({ rows: [] } as any);
+      .mockResolvedValueOnce({ rows: [] } as any); // UPDATE clear failed attempts
 
     mockedBcrypt.compare.mockResolvedValueOnce(true as never);
 
@@ -393,9 +400,9 @@ describe('twoFactor.controller — login challenge', () => {
             two_factor_enabled: false,
           },
         ],
-      } as any)
-      .mockResolvedValueOnce({ rows: [] } as any)
-      .mockResolvedValueOnce({ rows: [] } as any);
+      } as any) // SELECT parents
+      .mockResolvedValueOnce({ rows: [] } as any) // UPDATE clear failed attempts
+      .mockResolvedValueOnce({ rows: [] } as any); // SELECT children
 
     mockedBcrypt.compare.mockResolvedValueOnce(true as never);
 
@@ -468,7 +475,7 @@ describe('twoFactor.controller — login challenge', () => {
     mockedQuery
       .mockResolvedValueOnce({
         rows: [{ two_factor_secret: secret, two_factor_enabled: true }],
-      } as any)
+      } as any) // getTotpSecret query
       .mockResolvedValueOnce({
         rows: [
           {
@@ -478,8 +485,8 @@ describe('twoFactor.controller — login challenge', () => {
             email_verified: true,
           },
         ],
-      } as any)
-      .mockResolvedValueOnce({ rows: [] } as any);
+      } as any) // user lookup
+      .mockResolvedValueOnce({ rows: [] } as any); // children lookup
 
     const res = await request(app)
       .post('/api/v1/auth/2fa/challenge')

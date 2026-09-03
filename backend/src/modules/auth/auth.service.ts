@@ -65,12 +65,33 @@ export interface ChildProfile {
  * Create a parent account (with an optional first child profile) and
  * return a session so the parent is logged in immediately.
  * Registration is atomic: parent + child either both exist or neither.
+ *
+ * SECURITY/COPPA: Parent must be 18+ years old. Child birth_date is validated
+ * to ensure the child is under 18 (parental control scope).
  */
 export const register = async (
   input: RegisterInput
 ): Promise<{ token: string; refresh_token: string; user: AuthUser; child: ChildProfile | null }> => {
   const email = input.email.toLowerCase().trim();
   const passwordHash = await bcrypt.hash(input.password, bcryptRounds);
+
+  // COPPA COMPLIANCE: Validate child birth_date if provided
+  // Child must be under 18 (this is a parental control app)
+  if (input.birth_date) {
+    const birthDate = new Date(input.birth_date);
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    if (age >= 18) {
+      throw new BadRequestError('Child must be under 18 years old for parental control monitoring');
+    }
+    if (age < 0 || birthDate > today) {
+      throw new BadRequestError('Invalid birth date: cannot be in the future');
+    }
+  }
 
   const client = await pool.connect();
   try {
@@ -208,6 +229,17 @@ export const login = async (
          WHERE id = $1`,
         [row.id, MAX_LOGIN_ATTEMPTS, LOGIN_LOCKOUT_MINUTES.toString()]
       );
+
+      // Audit log failed login attempt
+      await query(
+        `INSERT INTO audit_logs (actor_id, action, resource_type, details)
+         VALUES ($1, 'FAILED_LOGIN', 'auth', $2)`,
+        [row.id, JSON.stringify({
+          email: email.toLowerCase().trim(),
+          attempts: (row.failed_login_attempts || 0) + 1,
+          locked: (row.failed_login_attempts || 0) + 1 >= MAX_LOGIN_ATTEMPTS,
+        })]
+      ).catch((err) => logger.error('Failed to log login attempt:', err));
     }
     throw new UnauthorizedError('Invalid email or password');
   }
@@ -259,7 +291,7 @@ export const login = async (
     }),
     refresh_token: await issueRefreshToken(user.id, crypto.randomUUID()),
     user,
-    child: childResult.rows[0] || null,
+    child: (childResult.rows[0] as ChildProfile) || null,
   };
 };
 
@@ -323,7 +355,7 @@ export const complete2FAChallenge = async (
     }),
     refresh_token: await issueRefreshToken(user.id, crypto.randomUUID()),
     user,
-    child: childResult.rows[0] || null,
+    child: (childResult.rows[0] as ChildProfile) || null,
   };
 };
 
@@ -421,7 +453,7 @@ export const authenticateWithGoogle = async (
     }),
     refresh_token: await issueRefreshToken(user.id, crypto.randomUUID()),
     user,
-    child: childResult.rows[0] || null,
+    child: (childResult.rows[0] as ChildProfile) || null,
     isNewUser,
   };
 };

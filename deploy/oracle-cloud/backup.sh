@@ -1,6 +1,9 @@
 #!/bin/bash
 # backup.sh - Automated backup script for Kavach on Oracle Cloud
 # Runs daily at 2 AM via cron
+#
+# SECURITY: This script does NOT backup .env files containing secrets.
+# Secrets should be managed via a secrets manager (Vault, AWS Secrets Manager).
 
 set -euo pipefail
 
@@ -20,27 +23,26 @@ docker compose -f "$COMPOSE_DIR/docker-compose.prod.yml" exec -T postgres \
 
 # Backup Redis data
 echo "[$(date)] Starting Redis backup..."
+# SECURITY: Use --pass instead of -a to avoid leaking password in process listing
 docker compose -f "$COMPOSE_DIR/docker-compose.prod.yml" exec -T redis \
-  redis-cli -a "${REDIS_PASSWORD:-redis_password}" BGSAVE
+  redis-cli --pass "${REDIS_PASSWORD}" BGSAVE
 sleep 5
 docker compose -f "$COMPOSE_DIR/docker-compose.prod.yml" cp \
   redis:/data/dump.rdb "$BACKUP_DIR/redis_$DATE.rdb"
 
-# Backup environment file
-echo "[$(date)] Backing up configuration..."
-cp "$COMPOSE_DIR/.env" "$BACKUP_DIR/env_$DATE"
+# SECURITY: Do NOT backup .env file — it contains JWT secrets, DB passwords, etc.
+# Secrets should be managed via a secrets manager, not backup files.
+echo "[$(date)] Skipping .env backup (secrets must be managed via secrets manager)"
 
 # Compress all backups
 echo "[$(date)] Compressing backups..."
 tar -czf "$BACKUP_DIR/kavach_$DATE.tar.gz" \
   "$BACKUP_DIR/db_$DATE.sql.gz" \
-  "$BACKUP_DIR/redis_$DATE.rdb" \
-  "$BACKUP_DIR/env_$DATE"
+  "$BACKUP_DIR/redis_$DATE.rdb"
 
 # Clean up individual files
 rm -f "$BACKUP_DIR/db_$DATE.sql.gz" \
-      "$BACKUP_DIR/redis_$DATE.rdb" \
-      "$BACKUP_DIR/env_$DATE"
+      "$BACKUP_DIR/redis_$DATE.rdb"
 
 # Remove old backups
 echo "[$(date)] Cleaning up old backups..."

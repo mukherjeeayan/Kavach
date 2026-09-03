@@ -474,3 +474,22 @@ export interface PaginatedResponse<T> {
   data: T[];
   meta: PaginationMeta;
 }
+
+// ── Parental Consent (DPDP Act compliance) ────────────────────
+
+export interface ParentalConsent {
+  id: string;
+  parent_id: string;
+  child_id: string;
+  consent_type: string;
+  status: 'ACTIVE' | 'REVOKED';
+  granted_at: string;
+  revoked_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ConsentInput {
+  child_id: string;
+  consent_type: string;
+}

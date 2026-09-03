@@ -175,7 +175,7 @@ export const getAlerts = async (
   const result = await query(filteredQuery, values);
 
   return {
-    items: result.rows,
+    items: result.rows as Alert[],
     total,
   };
 };
@@ -209,7 +209,7 @@ export const getAlertById = async (
   );
 
   if (result.rows.length > 0) {
-    return result.rows[0];
+    return result.rows[0] as Alert;
   }
 
   // Try keyword_alerts
@@ -231,7 +231,7 @@ export const getAlertById = async (
   );
 
   if (result.rows.length > 0) {
-    return result.rows[0];
+    return result.rows[0] as Alert;
   }
 
   // Try self_harm_alerts
@@ -253,7 +253,7 @@ export const getAlertById = async (
   );
 
   if (result.rows.length > 0) {
-    return result.rows[0];
+    return result.rows[0] as Alert;
   }
 
   // Try sos_events
@@ -275,7 +275,7 @@ export const getAlertById = async (
   );
 
   if (result.rows.length > 0) {
-    return result.rows[0];
+    return result.rows[0] as Alert;
   }
 
   throw new NotFoundError('Alert not found');

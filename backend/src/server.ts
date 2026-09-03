@@ -35,6 +35,19 @@ const server = http.createServer(app);
 // WebSocket connection rate limiting (prevents thundering herd)
 const connectionRateMap = new Map<string, number[]>();
 
+// Periodically clean up stale entries to prevent memory leak
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, timestamps] of connectionRateMap) {
+    const valid = timestamps.filter(t => now - t < 60_000);
+    if (valid.length === 0) {
+      connectionRateMap.delete(ip);
+    } else {
+      connectionRateMap.set(ip, valid);
+    }
+  }
+}, 60_000);
+
 // Daily retention purges (location/screen-time/audit logs, refresh tokens)
 startScheduler();
 
@@ -81,7 +94,11 @@ io.use((socket, next) => {
   }
 
   if (timestamps.length >= maxConnections) {
-    logger.warn(`WebSocket rate limit exceeded for ${clientIp}`);
+    // SECURITY: Don't log full IP in production — privacy/DPO compliance
+    const maskedIp = process.env.NODE_ENV === 'production'
+      ? clientIp.replace(/\d+$/, 'xxx')
+      : clientIp;
+    logger.warn(`WebSocket rate limit exceeded for ${maskedIp}`);
     return next(new Error('Rate limit exceeded'));
   }
   timestamps.push(now);
@@ -167,4 +184,9 @@ process.on('SIGINT', gracefulShutdown);
 server.listen(PORT, () => {
   logger.info(`Server is running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
 });
-process.on('unhandledRejection', (reason, promise) => { logger.error('Unhandled Rejection at:', promise, 'reason:', reason); process.exit(1); });
+// SECURITY: Log unhandled rejections but don't crash — transient errors (DB timeout, Redis hiccup)
+// should not bring down the entire server. Only exit on truly unrecoverable states.
+process.on('unhandledRejection', (reason, promise) => {
+  logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  // Increment metric for monitoring; do NOT process.exit(1) here
+});

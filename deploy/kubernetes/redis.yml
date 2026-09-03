@@ -15,11 +15,22 @@ spec:
       labels:
         app: redis
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
+        runAsGroup: 999
+        fsGroup: 999
       containers:
         - name: redis
           image: redis:7-alpine
           ports:
             - containerPort: 6379
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
           command:
             - redis-server
             - --requirepass
@@ -44,7 +55,7 @@ spec:
             exec:
               command:
                 - redis-cli
-                - -a
+                - --pass
                 - $(REDIS_PASSWORD)
                 - ping
             initialDelaySeconds: 30
@@ -53,7 +64,7 @@ spec:
             exec:
               command:
                 - redis-cli
-                - -a
+                - --pass
                 - $(REDIS_PASSWORD)
                 - ping
             initialDelaySeconds: 5

@@ -24,6 +24,21 @@ export interface UserSettings {
   updated_at: string;
 }
 
+// SECURITY: Whitelist of allowed column names to prevent SQL injection
+const ALLOWED_SETTINGS_COLUMNS = new Set([
+  'notifications_enabled',
+  'email_digest_enabled',
+  'digest_frequency',
+  'screen_time_alerts',
+  'location_alerts',
+  'communication_alerts',
+  'sos_alerts',
+  'self_harm_alerts',
+  'dnd_enabled',
+  'dnd_start_time',
+  'dnd_end_time',
+]);
+
 /**
  * Get or create settings for a user. Settings are created with
  * sensible defaults on first access.
@@ -35,7 +50,7 @@ export const getSettings = async (userId: string): Promise<UserSettings> => {
   );
 
   if (result.rows.length > 0) {
-    return result.rows[0];
+    return result.rows[0] as UserSettings;
   }
 
   // Create default settings
@@ -46,11 +61,12 @@ export const getSettings = async (userId: string): Promise<UserSettings> => {
     [userId]
   );
 
-  return insertResult.rows[0];
+  return insertResult.rows[0] as UserSettings;
 };
 
 /**
  * Update user settings. Only provided fields are updated.
+ * SECURITY: Only columns in the whitelist are allowed to prevent SQL injection.
  */
 export const updateSettings = async (
   userId: string,
@@ -60,13 +76,17 @@ export const updateSettings = async (
   await getSettings(userId);
 
   const fields: string[] = [];
-  const values: any[] = [];
+  const values: (string | boolean | number)[] = [];
   let paramIndex = 1;
 
   for (const [key, value] of Object.entries(input)) {
     if (value !== undefined) {
+      // SECURITY: Validate key is in whitelist before interpolation
+      if (!ALLOWED_SETTINGS_COLUMNS.has(key)) {
+        continue; // Silently skip unknown fields
+      }
       fields.push(`${key} = $${paramIndex}`);
-      values.push(value);
+      values.push(value as string | boolean | number);
       paramIndex++;
     }
   }
@@ -86,7 +106,7 @@ export const updateSettings = async (
     values
   );
 
-  return result.rows[0];
+  return result.rows[0] as UserSettings;
 };
 
 /**

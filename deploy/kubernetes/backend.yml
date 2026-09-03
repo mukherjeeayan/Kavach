@@ -15,11 +15,23 @@ spec:
       labels:
         app: backend
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        runAsGroup: 1001
+        fsGroup: 1001
+        fsGroupChangePolicy: OnRootMismatch
       containers:
         - name: backend
-          image: kavach/backend:latest
+          image: kavach/backend:1.0.0
           ports:
             - containerPort: 3000
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false
+            capabilities:
+              drop:
+                - ALL
           env:
             - name: NODE_ENV
               value: production
@@ -58,6 +70,12 @@ spec:
                 secretKeyRef:
                   name: kavach-secrets
                   key: jwt-refresh-secret
+            - name: ADMIN_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: kavach-secrets
+                  key: admin-access-key
+                  optional: true
             - name: ALLOWED_ORIGINS
               value: https://kavach.example.com
             - name: FRONTEND_URL

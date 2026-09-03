@@ -75,7 +75,7 @@ export const sendToChild = async (
        WHERE child_id = $1 AND fcm_token IS NOT NULL AND fcm_token <> ''`,
       [childId]
     );
-    const tokens = devices.rows.map((r: { fcm_token: string }) => r.fcm_token);
+    const tokens = devices.rows.map((r: Record<string, any>) => r.fcm_token as string);
     if (tokens.length === 0) return;
 
     await m.sendEachForMulticast({

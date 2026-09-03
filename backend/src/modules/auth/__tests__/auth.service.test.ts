@@ -206,7 +206,8 @@ describe('auth.service', () => {
         .mockResolvedValueOnce({
           rows: [{ ...mockParentRowWithLockout, password_hash: 'hashed-password' }],
         } as any) // SELECT parents
-        .mockResolvedValueOnce({ rows: [] } as any); // UPDATE increment failed_login_attempts
+        .mockResolvedValueOnce({ rows: [] } as any) // UPDATE increment failed_login_attempts
+        .mockResolvedValueOnce({ rows: [] } as any); // INSERT audit_logs (failed login)
       const bcrypt = jest.requireMock('bcryptjs');
       bcrypt.compare.mockResolvedValueOnce(false);
 
@@ -245,7 +246,7 @@ describe('auth.service', () => {
       expect(jwt.verify).toHaveBeenCalledWith(
         'valid-refresh-token',
         expect.any(String),
-        { algorithms: ['HS256'] }
+        { algorithms: ['RS256', 'HS256'] }
       );
       // The old token must be revoked during rotation
       expect(client.query).toHaveBeenCalledWith(

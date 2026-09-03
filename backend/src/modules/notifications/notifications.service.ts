@@ -57,7 +57,7 @@ export const getNotifications = async (
   ]);
 
   return {
-    items: itemsResult.rows,
+    items: itemsResult.rows as Notification[],
     total: countResult.rows[0].total,
   };
 };
@@ -78,7 +78,7 @@ export const getNotificationById = async (
     throw new NotFoundError('Notification not found');
   }
 
-  return result.rows[0];
+  return result.rows[0] as Notification;
 };
 
 /**
@@ -102,7 +102,7 @@ export const markAsRead = async (
     [notificationId, userId]
   );
 
-  return result.rows[0];
+  return result.rows[0] as Notification;
 };
 
 /**
@@ -156,7 +156,7 @@ export const createNotification = async (
     [userId, title, body, notificationType, referenceId || null]
   );
 
-  return result.rows[0];
+  return result.rows[0] as Notification;
 };
 
 /**

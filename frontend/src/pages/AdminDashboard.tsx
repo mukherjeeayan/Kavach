@@ -160,6 +160,7 @@ export default function AdminDashboard() {
               <input
                 type="text"
                 placeholder="Search by email or name..."
+                aria-label="Search users by email or name"
                 value={userSearch}
                 onChange={(e) => { setUserSearch(e.target.value); setUserPage(1); }}
                 className="w-full max-w-md px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -304,7 +305,12 @@ function UserRow({
       <td className="px-6 py-4 whitespace-nowrap">
         <select
           value={user.role}
-          onChange={(e) => onUpdateRole(e.target.value)}
+          aria-label={`Role for ${user.name}`}
+          onChange={(e) => {
+            if (window.confirm(`Change ${user.name}'s role to "${e.target.value}"? This grants elevated permissions.`)) {
+              onUpdateRole(e.target.value);
+            }
+          }}
           className="text-sm border rounded px-2 py-1 bg-white dark:bg-gray-700 dark:text-white"
         >
           <option value="parent">Parent</option>
@@ -314,7 +320,12 @@ function UserRow({
       <td className="px-6 py-4 whitespace-nowrap">
         <select
           value={user.subscription_tier}
-          onChange={(e) => onUpdateTier(e.target.value)}
+          aria-label={`Subscription tier for ${user.name}`}
+          onChange={(e) => {
+            if (window.confirm(`Change ${user.name}'s subscription to "${e.target.value}"?`)) {
+              onUpdateTier(e.target.value);
+            }
+          }}
           className="text-sm border rounded px-2 py-1 bg-white dark:bg-gray-700 dark:text-white"
         >
           <option value="FREE">Free</option>
@@ -363,6 +374,9 @@ function FlagRow({
       </td>
       <td className="px-6 py-4 whitespace-nowrap">
         <button
+          role="switch"
+          aria-checked={flag.is_enabled}
+          aria-label={`${flag.key} feature flag: ${flag.is_enabled ? 'enabled' : 'disabled'}`}
           onClick={() => onToggle(!flag.is_enabled)}
           className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
             flag.is_enabled ? 'bg-green-600' : 'bg-gray-300'

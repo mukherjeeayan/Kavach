@@ -36,12 +36,12 @@ class TamperState @Inject constructor(
                 EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
             )
         } catch (_: Exception) {
-            // Fall back to plain prefs if encryption fails (e.g. no key store)
-            try {
-                context?.getSharedPreferences("safeguard_security", Context.MODE_PRIVATE)
-            } catch (_: Exception) {
-                null
-            }
+            // SECURITY: Do NOT fall back to plain SharedPreferences.
+            // If encryption fails, the lockdown state is in-memory only.
+            // This prevents the most critical security state from being
+            // readable/writable on rooted devices.
+            android.util.Log.e("TamperState", "EncryptedSharedPreferences failed — lockdown state is memory-only")
+            null
         }
     }
 

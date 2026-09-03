@@ -34,7 +34,7 @@ export const getAiSettings = async (userId: string): Promise<AiSettingsRecord[]>
     [userId]
   );
 
-  return result.rows.map((row: AiSettingsRecord & { api_key_enc: string }) => ({
+  return result.rows.map((row: Record<string, any>) => ({
     id: row.id,
     user_id: row.user_id,
     provider: row.provider,

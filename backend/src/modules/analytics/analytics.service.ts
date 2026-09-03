@@ -89,8 +89,8 @@ export const generateReport = async (
       daily_totals: dailyTotals.rows,
       by_app: screenTime.rows,
       by_category: categoryBreakdown.rows,
-      grand_total_seconds: dailyTotals.rows.reduce(
-        (acc: number, r: { total_seconds: number }) => acc + r.total_seconds, 0
+      grand_total_seconds: dailyTotals.rows.reduce<number>(
+        (acc, r) => acc + Number(r.total_seconds), 0
       ),
     },
     location: { total_pings: locationCount.rows[0]?.total_pings ?? 0 },

@@ -109,9 +109,6 @@ router.get(
   twoFactorController.recovery
 );
 
-// POST /api/v1/auth/refresh-token
-router.post('/refresh-token', authLimiter, validate(refreshTokenSchema), authController.refreshToken);
-
 // POST /api/v1/auth/logout — revokes the refresh token server-side
 router.post('/logout', authLimiter, validate(refreshTokenSchema), authController.logout);
 

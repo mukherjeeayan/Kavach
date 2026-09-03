@@ -108,6 +108,8 @@ describe('Request timeout middleware', () => {
 
 describe('Swagger UI gated by NODE_ENV', () => {
   it('serves /api/docs in non-production', async () => {
+    process.env.NODE_ENV = 'development';
+    jest.resetModules();
     const app = (await import('../app')).default;
     const res = await request(app).get('/api/docs/');
     expect(res.status).not.toBe(404);

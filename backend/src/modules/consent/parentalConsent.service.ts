@@ -59,7 +59,7 @@ export const grantConsent = async (
     details: { consent_type: consentType },
   });
 
-  return result.rows[0];
+  return result.rows[0] as ParentalConsent;
 };
 
 /**
@@ -121,7 +121,7 @@ export const listConsents = async (
   ]);
 
   return {
-    items: itemsResult.rows,
+    items: itemsResult.rows as ParentalConsent[],
     total: countResult.rows[0].total,
   };
 };

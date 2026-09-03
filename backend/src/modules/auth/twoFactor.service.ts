@@ -13,6 +13,9 @@
 //   * verify2FAChallenge() runs during the post-password step in login.
 //   * Recovery codes are single-use; consumption strips the used code
 //     from the stored JSON array.
+//   * SECURITY: Recovery codes are stored as SHA-256 hashes (like passwords),
+//     never in plaintext. The plaintext is only returned to the user once
+//     during setup.
 
 import crypto from 'crypto';
 import { query } from '../../config/database';
@@ -163,7 +166,11 @@ export const enable2FA = async (
   }
 
   const recoveryCodes = generateRecoveryCodes();
-  const recoveryCodesJson = JSON.stringify(recoveryCodes);
+  // SECURITY: Hash recovery codes before storage (like passwords)
+  const hashedCodes = await Promise.all(
+    recoveryCodes.map(async (code) => hashRecoveryCode(code))
+  );
+  const recoveryCodesJson = JSON.stringify(hashedCodes);
 
   await query(
     `UPDATE parents
@@ -174,6 +181,7 @@ export const enable2FA = async (
     [secret, recoveryCodesJson, parentId]
   );
 
+  // Return plaintext codes ONCE — they can't be recovered after this
   return { success: true, recoveryCodes };
 };
 
@@ -183,6 +191,11 @@ const generateRecoveryCodes = (): string[] => {
     codes.push(crypto.randomBytes(4).toString('hex').toUpperCase());
   }
   return codes;
+};
+
+// SECURITY: Hash a recovery code using SHA-256 for storage
+const hashRecoveryCode = async (code: string): Promise<string> => {
+  return crypto.createHash('sha256').update(code.trim().toUpperCase()).digest('hex');
 };
 
 export const disable2FA = async (parentId: string): Promise<{ success: true }> => {
@@ -215,9 +228,13 @@ export const getRecoveryCodes = async (parentId: string): Promise<string[]> => {
 
 export const rotateRecoveryCodes = async (parentId: string): Promise<string[]> => {
   const newCodes = generateRecoveryCodes();
+  // SECURITY: Hash codes before storage
+  const hashedCodes = await Promise.all(
+    newCodes.map(async (code) => hashRecoveryCode(code))
+  );
   await query(
     `UPDATE parents SET two_factor_recovery_codes = $1 WHERE id = $2`,
-    [JSON.stringify(newCodes), parentId]
+    [JSON.stringify(hashedCodes), parentId]
   );
   return newCodes;
 };
@@ -238,20 +255,24 @@ export const consumeRecoveryCode = async (
   const stored = result.rows[0].two_factor_recovery_codes;
   if (!stored) return false;
 
-  let codes: string[];
+  let hashedCodes: string[];
   try {
-    codes = JSON.parse(stored) as string[];
+    hashedCodes = JSON.parse(stored) as string[];
   } catch {
     return false;
   }
 
-  const idx = codes.indexOf(normalized);
+  // SECURITY: Hash the input code and compare against stored hashes
+  const inputHash = await hashRecoveryCode(normalized);
+  const idx = hashedCodes.indexOf(inputHash);
   if (idx === -1) return false;
-  codes.splice(idx, 1);
+  
+  // Remove the used code
+  hashedCodes.splice(idx, 1);
 
   await query(
     `UPDATE parents SET two_factor_recovery_codes = $1 WHERE id = $2`,
-    [JSON.stringify(codes), parentId]
+    [JSON.stringify(hashedCodes), parentId]
   );
   return true;
 };

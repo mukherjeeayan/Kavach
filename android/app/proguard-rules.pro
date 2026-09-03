@@ -61,3 +61,39 @@
 # --- Firebase ---
 -dontwarn com.google.firebase.**
 -keep class com.google.firebase.** { *; }
+
+# --- Security Classes (prevent R8 from renaming/obfuscating critical security code) ---
+# Tamper detection
+-keep class com.safeguard.parentalcontrol.security.TamperDetector { *; }
+-keep class com.safeguard.parentalcontrol.security.TamperState { *; }
+
+# Device integrity
+-keep class com.safeguard.parentalcontrol.security.DeviceIntegrityChecker { *; }
+
+# Encryption
+-keep class com.safeguard.parentalcontrol.security.SecureMasterKey { *; }
+-keep class com.safeguard.parentalcontrol.security.KeyManager { *; }
+
+# Keyguard/Biometric
+-keep class com.safeguard.parentalcontrol.security.KeyguardManager { *; }
+
+# Content scanning
+-keep class com.safeguard.parentalcontrol.content.ContentScanner { *; }
+
+# Device admin
+-keep class com.safeguard.parentalcontrol.security.DevicePolicyService { *; }
+-keep class com.safeguard.parentalcontrol.security.SafeGuardDeviceAdminReceiver { *; }
+
+# Self-harm detection
+-keep class com.safeguard.parentalcontrol.security.SelfHarmDetector { *; }
+-keep class com.safeguard.parentalcontrol.security.SelfHarmAssessment { *; }
+
+# Screenshot prevention
+-keep class com.safeguard.parentalcontrol.security.ScreenshotPrevention { *; }
+-keep class com.safeguard.parentalcontrol.security.ScreenshotDetector { *; }
+
+# Keylogger detection
+-keep class com.safeguard.parentalcontrol.security.KeyloggerDetector { *; }
+
+# Keep all security model classes
+-keep class com.safeguard.parentalcontrol.security.** { *; }

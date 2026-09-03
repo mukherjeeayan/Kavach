@@ -8,6 +8,14 @@ const maxRequests = parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100', 10);
 
 // Create separate store instances for each limiter so counters are independent.
 // Each store has its own prefix and memory fallback.
+//
+// NOTE: Rate limiting uses Redis-backed FailsafeRedisStore. When Redis is
+// unavailable, the store falls back to per-process in-memory counters. This
+// means rate limits are NOT shared across multiple instances during Redis
+// outages — an attacker could bypass limits by distributing requests across
+// instances. For production deployments with multiple replicas, ensure Redis
+// is highly available (e.g., Redis Sentinel or managed Redis) to maintain
+// distributed rate limiting guarantees.
 const standardRateLimitStore = createRateLimitStore('safeguard-rl:std:');
 const authRateLimitStore = createRateLimitStore('safeguard-rl:auth:');
 const deviceRateLimitStore = createRateLimitStore('safeguard-rl:dev:');

@@ -29,8 +29,9 @@ const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || process.env.CORS_ALLOWED
 const app: Application = express();
 
 // Trust proxy for rate limiting behind reverse proxies
+// Configurable via TRUST_PROXY env var (default: 1 in production)
 if (process.env.NODE_ENV === 'production') {
-  app.set('trust proxy', 1);
+  app.set('trust proxy', process.env.TRUST_PROXY || 1);
 }
 
 // Per-request CSP nonce so script-src can keep banning inline scripts
@@ -48,7 +49,7 @@ app.use(helmet({
     useDefaults: false,
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", (req, res) => `'nonce-${(res as any).locals.cspNonce}'`],
+      scriptSrc: ["'self'", (req, res) => `'nonce-${(res as any).locals?.cspNonce}'`],
       styleSrc: ["'self'", "'unsafe-inline'"],
       imgSrc: ["'self'", "data:", "https://api.mapbox.com", "https://*.tile.openstreetmap.org"],
       connectSrc: ["'self'", "ws:", "wss:"],
@@ -62,16 +63,18 @@ app.use(helmet({
 }));
 app.use(compression());
 // CORS: strict allowlist in production AND in test when CORS_ALLOWED_ORIGINS is set.
-// In development, allow localhost on any port and the explicit allowlist.
+// In development, restrict localhost to Vite's default port range.
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' || ALLOWED_ORIGINS.length > 0
     ? ALLOWED_ORIGINS
     : (origin, callback) => {
-        // Allow requests with no origin (curl, mobile apps, server-to-server)
         if (!origin) return callback(null, true);
-        // In development, allow localhost on any port
+        // In development, allow localhost on Vite dev server ports (5173-5180)
         if (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) {
-          return callback(null, true);
+          const port = parseInt(origin.split(':').pop() || '0', 10);
+          if (port >= 5173 && port <= 5180) {
+            return callback(null, true);
+          }
         }
         callback(new Error('Not allowed by CORS'));
       },
@@ -132,24 +135,9 @@ try {
   const specFile = fs.readFileSync(specPath, 'utf8');
   const openapiSpec = YAML.parse(specFile);
   
-  // Protect Swagger UI in production
+  // Protect Swagger UI in production — use the standard auth middleware
   if (process.env.NODE_ENV === 'production') {
-    app.use('/api/docs', (req, res, next) => {
-      const authHeader = req.headers.authorization;
-      if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return res.status(401).json({ error: 'Authentication required for API docs' });
-      }
-      try {
-        const jwt = require('jsonwebtoken');
-        const decoded = jwt.verify(authHeader.slice(7), process.env.JWT_SECRET!) as { role?: string };
-        if (decoded.role !== 'parent') {
-          return res.status(403).json({ error: 'Access denied' });
-        }
-        next();
-      } catch {
-        return res.status(401).json({ error: 'Invalid or expired token' });
-      }
-    });
+    app.use('/api/docs', authenticateJWT);
   }
   
   app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(openapiSpec, {
@@ -170,6 +158,7 @@ try {
 
 // ── Feature Routes ────────────────────────────────────────────────
 import authRoutes from './modules/auth/auth.routes';
+import { authenticateJWT } from './middleware/auth';
 import appBlockingRoutes from './modules/appblocking/appBlocking.routes';
 import deviceAlertRoutes from './modules/devices/deviceAlert.routes';
 import childrenRoutes from './modules/children/children.routes';
@@ -272,16 +261,19 @@ app.use('/api/v1/subscriptions', subscriptionRoutes);
 // AI Settings
 app.use('/api/v1/ai',           aiSettingsRoutes);
 
-// Dev Seed Endpoint
-import { seedComprehensiveDummyData } from './config/seedDummyData';
-app.post('/api/v1/dev/seed', async (_req, res) => {
-  try {
-    await seedComprehensiveDummyData();
-    res.json({ success: true, message: 'Dummy data seeded successfully', timestamp: new Date().toISOString() });
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
+// Dev Seed Endpoint — ONLY accessible in non-production environments
+if (process.env.NODE_ENV !== 'production') {
+  import('./config/seedDummyData').then(({ seedComprehensiveDummyData }) => {
+    app.post('/api/v1/dev/seed', async (_req, res) => {
+      try {
+        await seedComprehensiveDummyData();
+        res.json({ success: true, message: 'Dummy data seeded successfully', timestamp: new Date().toISOString() });
+      } catch (err: any) {
+        res.status(500).json({ success: false, error: 'Seed failed' });
+      }
+    });
+  });
+}
 
 
 // Global Error Handler (must be last)
@@ -290,8 +282,8 @@ if (process.env.SENTRY_DSN) {
 }
 app.use(errorHandler);
 
-// Prometheus metrics endpoint (for /metrics scraping)
-app.get('/metrics', async (req, res) => {
+// Prometheus metrics endpoint (for /metrics scraping) — requires auth in production
+app.get('/metrics', process.env.NODE_ENV === 'production' ? authenticateJWT : (_req, res, next) => next(), async (req, res) => {
   try {
     res.setHeader('Content-Type', register.contentType);
     const metrics = await register.metrics();

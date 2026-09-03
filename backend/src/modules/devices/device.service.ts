@@ -66,7 +66,7 @@ export const registerDevice = async (
           input.device_id,
         ]
       );
-      const device = updated.rows[0];
+      const device = updated.rows[0] as RegisteredDevice;
       await writeAuditLog({
         actorId: parentId,
         targetChildId: input.child_id,
@@ -91,7 +91,7 @@ export const registerDevice = async (
       input.fcm_token || null,
     ]
   );
-  const device = created.rows[0];
+  const device = created.rows[0] as RegisteredDevice;
   await writeAuditLog({
     actorId: parentId,
     targetChildId: input.child_id,
@@ -143,7 +143,7 @@ export const listDevicesForChild = async (
      LIMIT $2 OFFSET $3`,
     [childId, limit, toOffset(page, limit)]
   );
-  return { items: result.rows, total: count.rows[0].total };
+  return { items: result.rows as RegisteredDevice[], total: count.rows[0].total };
 };
 
 /**
@@ -184,7 +184,7 @@ export const setDeviceAdminStatus = async (
     details: { device_id: deviceId, admin_active: adminActive },
   });
 
-  return updated.rows[0];
+  return updated.rows[0] as RegisteredDevice;
 };
 
 /**
@@ -217,7 +217,7 @@ export const updateFcmToken = async (
     [fcmToken, deviceId]
   );
 
-  return updated.rows[0];
+  return updated.rows[0] as RegisteredDevice;
 };
 /**
  * Unpair (delete) a device the parent owns. Cascades remove all

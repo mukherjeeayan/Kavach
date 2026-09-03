@@ -6,6 +6,7 @@ import android.view.WindowManager
 import android.widget.Button
 import android.widget.TextView
 import androidx.activity.ComponentActivity
+import androidx.activity.OnBackPressedCallback
 import com.safeguard.parentalcontrol.R
 
 /**
@@ -35,6 +36,13 @@ class KioskActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // SECURITY: Register OnBackPressedCallback to prevent kiosk escape on API 33+
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                // Do nothing — child cannot exit kiosk mode via back button
+            }
+        })
 
         // Make activity show over lock screen and be immovable
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {

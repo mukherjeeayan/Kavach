@@ -6,6 +6,8 @@ metadata:
   annotations:
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
     nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/limit-rps: "10"
+    nginx.ingress.kubernetes.io/limit-burst-multiplier: "5"
     cert-manager.io/cluster-issuer: "letsencrypt-prod"
 spec:
   ingressClassName: nginx
@@ -24,13 +26,7 @@ spec:
                 name: backend
                 port:
                   number: 3000
-          - path: /metrics
-            pathType: Prefix
-            backend:
-              service:
-                name: backend
-                port:
-                  number: 3000
+          # SECURITY: /metrics removed from public ingress — accessible only via internal network
           - path: /
             pathType: Prefix
             backend:
@@ -68,11 +64,13 @@ data:
         ssl_certificate_key /etc/letsencrypt/live/kavach.example.com/privkey.pem;
 
         # Security headers
-        add_header X-Frame-Options "SAMEORIGIN" always;
+        server_tokens off;
+        add_header X-Frame-Options "DENY" always;
         add_header X-Content-Type-Options "nosniff" always;
         add_header X-XSS-Protection "1; mode=block" always;
         add_header Referrer-Policy "strict-origin-when-cross-origin" always;
-        add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:;" always;
+        add_header Strict-Transport-Security "max-age=63072000; includeSubDomains; preload" always;
+        add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' wss: https:; font-src 'self' data:;" always;
 
         location /api {
             proxy_pass http://backend;
@@ -84,10 +82,11 @@ data:
 
         location /metrics {
             proxy_pass http://backend;
-            # Restrict to internal network
+            # Restrict to internal network only
             allow 10.0.0.0/8;
             allow 172.16.0.0/12;
             allow 192.168.0.0/16;
+            allow 127.0.0.1;
             deny all;
         }
 

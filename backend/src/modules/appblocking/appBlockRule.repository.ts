@@ -74,7 +74,7 @@ export const createBlockRule = async (rule: CreateAppBlockRuleInput): Promise<Ap
                daily_limit_minutes, created_at, updated_at`,
     [rule.device_id, rule.package_name, rule.app_name || null, rule.block_reason || null]
   );
-  return { ...result.rows[0], child_id: rule.child_id };
+  return { ...(result.rows[0] as AppBlockRule), child_id: rule.child_id };
 };
 
 /**
@@ -94,7 +94,7 @@ export const updateBlockStatus = async (
                daily_limit_minutes, created_at, updated_at`,
     [isBlocked, ruleId]
   );
-  return result.rows[0] || null;
+  return (result.rows[0] as AppBlockRule) || null;
 };
 
 /**
@@ -159,7 +159,7 @@ export const setUnblockRequest = async (
                daily_limit_minutes, created_at, updated_at`,
     [reason, ruleId]
   );
-  return result.rows[0] || null;
+  return (result.rows[0] as AppBlockRule) || null;
 };
 
 /**
@@ -181,7 +181,7 @@ export const getRuleByIdAndChildId = async (
     [ruleId, childId]
   );
   if (result.rows[0]) {
-    return { ...result.rows[0], child_id: childId };
+    return { ...(result.rows[0] as AppBlockRule), child_id: childId };
   }
   return null;
 };
@@ -202,7 +202,7 @@ export const setDailyLimit = async (
                daily_limit_minutes, created_at, updated_at`,
     [dailyLimitMinutes, ruleId]
   );
-  return result.rows[0] || null;
+  return (result.rows[0] as AppBlockRule) || null;
 };
 
 /**
@@ -218,7 +218,7 @@ export const getLimitRulesForDevice = async (
      WHERE device_id = $1 AND daily_limit_minutes IS NOT NULL`,
     [deviceId]
   );
-  return result.rows;
+  return result.rows as Array<{ id: string; package_name: string; daily_limit_minutes: number }>;
 };
 
 /**
@@ -239,7 +239,7 @@ export const getUnblockRequestById = async (
      WHERE abr.id = $1`,
     [requestId]
   );
-  return result.rows[0] || null;
+  return (result.rows[0] as AppBlockRule) || null;
 };
 
 /**

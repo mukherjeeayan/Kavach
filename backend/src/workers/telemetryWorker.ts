@@ -49,48 +49,33 @@ async function ensureConsumerGroup(redis: any): Promise<void> {
 
 /**
  * Batch-insert location pings into PostgreSQL.
- * Uses a single multi-row INSERT for efficiency.
+ * Uses bulk device lookup to avoid N+1 queries.
  */
 async function batchInsert(pings: TelemetryPayload[]): Promise<number> {
   if (pings.length === 0) return 0;
 
-  const values: string[] = [];
-  const params: unknown[] = [];
-  let idx = 1;
-
-  for (const ping of pings) {
-    values.push(
-      `($${idx++}, $${idx++}, ST_SetSRID(ST_MakePoint($${idx++}, $${idx++}), 4326), $${idx++}, $${idx++}, to_timestamp($${idx++} / 1000.0))`
-    );
-    params.push(
-      ping.childId, // device_id will be resolved by trigger or application
-      ping.familyId,
-      ping.longitude,
-      ping.latitude,
-      ping.accuracy,
-      ping.speedKmh ?? null,
-      ping.timestamp
-    );
-  }
-
-  // Use a transaction for atomicity
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
 
-    // Insert each ping individually for now (multi-row with PostGIS is complex)
+    // SECURITY: Pre-fetch all device mappings in a single query to avoid N+1
+    const childIds = [...new Set(pings.map(p => p.childId))];
+    const deviceResult = await client.query(
+      `SELECT id, child_id FROM devices WHERE child_id = ANY($1)`,
+      [childIds]
+    );
+    
+    // Build a map: childId -> deviceId
+    const deviceMap = new Map<string, string>();
+    for (const row of deviceResult.rows) {
+      deviceMap.set(row.child_id, row.id);
+    }
+
     let inserted = 0;
     for (const ping of pings) {
       try {
-        // First, find the device_id for this child
-        const deviceResult = await client.query(
-          `SELECT id FROM devices WHERE child_id = $1 LIMIT 1`,
-          [ping.childId]
-        );
-
-        if (deviceResult.rows.length === 0) continue;
-
-        const deviceId = deviceResult.rows[0].id;
+        const deviceId = deviceMap.get(ping.childId);
+        if (!deviceId) continue;
 
         await client.query(
           `INSERT INTO location_logs (device_id, latitude, longitude, accuracy_m, speed_kmh, recorded_at)

@@ -27,9 +27,14 @@ export default function GoogleAuthButton({
   // Listen for popup postMessage
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
-      // Validate origin is from AI Studio preview or localhost
-      const origin = event.origin || '';
-      if (!origin.endsWith('.run.app') && !origin.includes('localhost') && origin !== window.location.origin) {
+      // SECURITY: Validate exact origin — not a broad pattern like endsWith('.run.app')
+      const allowedOrigins = [
+        window.location.origin,
+        import.meta.env.VITE_API_URL || '',
+        import.meta.env.VITE_BACKEND_URL || '',
+      ].filter(Boolean);
+      
+      if (!allowedOrigins.includes(event.origin)) {
         return;
       }
 
