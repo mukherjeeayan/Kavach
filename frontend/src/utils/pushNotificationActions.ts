@@ -10,6 +10,28 @@
 
 import apiClient from '../services/apiClient';
 
+// ── Service Worker Type Declarations ─────────────────────────────────
+
+interface SWNotificationEvent extends Event {
+  notification: Notification;
+  action: string;
+  waitUntil(promise: Promise<unknown>): void;
+}
+
+interface WindowClient extends EventTarget {
+  focus(): Promise<WindowClient>;
+}
+
+interface ServiceWorkerGlobalScope {
+  clients: {
+    matchAll(options?: { type?: string }): Promise<WindowClient[]>;
+    openWindow(url: string): Promise<WindowClient | null>;
+  };
+  addEventListener(type: string, listener: (event: SWNotificationEvent) => void): void;
+}
+
+declare const self: ServiceWorkerGlobalScope & typeof globalThis;
+
 // ── Service Worker Registration ────────────────────────────────────
 
 /**
@@ -59,7 +81,7 @@ export async function registerPushNotifications(): Promise<string | null> {
  * Called from the service worker's notificationclick event.
  */
 export function handleNotificationAction(
-  notification: NotificationEvent['notification'],
+  notification: Notification,
   action: string
 ): void {
   const data = notification.data as {
@@ -106,7 +128,7 @@ async function handleUnblockRequestAction(
 export function setupNotificationListeners(): void {
   if (typeof self === 'undefined') return; // Not in service worker context
 
-  self.addEventListener('notificationclick', (event) => {
+  self.addEventListener('notificationclick', (event: SWNotificationEvent) => {
     event.notification.close();
 
     if (event.action) {
@@ -115,9 +137,9 @@ export function setupNotificationListeners(): void {
     } else {
       // Handle notification body click — open the app
       event.waitUntil(
-        self.clients.matchAll({ type: 'window' }).then((clients) => {
+        self.clients.matchAll({ type: 'window' }).then((clients: WindowClient[]) => {
           if (clients.length > 0) {
-            return (clients[0] as WindowClient).focus();
+            return clients[0].focus();
           }
           return self.clients.openWindow('/');
         })

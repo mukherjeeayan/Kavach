@@ -58,7 +58,7 @@ export async function importPublicKey(base64Key: string): Promise<CryptoKey> {
   const raw = base64ToBuffer(base64Key);
   return await crypto.subtle.importKey(
     'raw',
-    raw,
+    toArrayBuffer(raw),
     {
       name: ALGO_ECDH,
       namedCurve: 'P-256',
@@ -97,7 +97,7 @@ export async function deriveSharedKey(
   const derivedKey = await crypto.subtle.deriveKey(
     {
       name: ALGO_HKDF,
-      salt: salt || crypto.getRandomValues(new Uint8Array(SALT_LENGTH)),
+      salt: salt ? toArrayBuffer(salt) : toArrayBuffer(crypto.getRandomValues(new Uint8Array(SALT_LENGTH))),
       info: new TextEncoder().encode('kavach-e2ee-v1'),
       hash: ALGO_SHA256,
     },
@@ -144,7 +144,7 @@ export async function deriveKeyFromPassword(
   return await crypto.subtle.deriveKey(
     {
       name: 'PBKDF2',
-      salt,
+      salt: toArrayBuffer(salt),
       iterations: 100000,
       hash: ALGO_SHA256,
     },
@@ -184,17 +184,17 @@ export async function encrypt(
   const encrypted = await crypto.subtle.encrypt(
     {
       name: ALGO_AES_GCM,
-      iv,
+      iv: toArrayBuffer(iv),
       tagLength: TAG_LENGTH,
-      additionalData: associatedData,
+      additionalData: associatedData ? toArrayBuffer(associatedData) : undefined,
     },
     key,
-    data
+    toArrayBuffer(data)
   );
 
   return {
     ciphertext: bufferToBase64(encrypted),
-    iv: bufferToBase64(iv),
+    iv: bufferToBase64(toArrayBuffer(iv)),
   };
 }
 
@@ -219,12 +219,12 @@ export async function decrypt(
   const decrypted = await crypto.subtle.decrypt(
     {
       name: ALGO_AES_GCM,
-      iv: ivBuffer,
+      iv: toArrayBuffer(ivBuffer),
       tagLength: TAG_LENGTH,
-      additionalData: associatedData,
+      additionalData: associatedData ? toArrayBuffer(associatedData) : undefined,
     },
     key,
-    ciphertextBuffer
+    toArrayBuffer(ciphertextBuffer)
   );
 
   return new TextDecoder().decode(decrypted);
@@ -263,7 +263,7 @@ export async function sign(
       hash: ALGO_SHA256,
     },
     privateKey,
-    dataBuffer
+    toArrayBuffer(dataBuffer)
   );
 
   return bufferToBase64(signature);
@@ -288,8 +288,8 @@ export async function verify(
       hash: ALGO_SHA256,
     },
     publicKey,
-    signatureBuffer,
-    dataBuffer
+    toArrayBuffer(signatureBuffer),
+    toArrayBuffer(dataBuffer)
   );
 }
 
@@ -305,6 +305,16 @@ function bufferToBase64(buffer: ArrayBuffer): string {
     binary += String.fromCharCode(bytes[i]);
   }
   return btoa(binary);
+}
+
+/**
+ * Convert Uint8Array to ArrayBuffer (safe for Web Crypto API).
+ * Creates a new ArrayBuffer to handle both ArrayBuffer and SharedArrayBuffer backing.
+ */
+function toArrayBuffer(view: Uint8Array): ArrayBuffer {
+  const buffer = new ArrayBuffer(view.byteLength);
+  new Uint8Array(buffer).set(view);
+  return buffer;
 }
 
 /**

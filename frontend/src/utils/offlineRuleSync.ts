@@ -95,7 +95,7 @@ export async function syncPolicyFromBackend(childId: string): Promise<OfflinePol
       appLimits: response.data.data.app_limits ?? [],
       geofences: response.data.data.geofences ?? [],
       urlFilters: response.data.data.url_filters ?? [],
-      syncedAt: new Date().toISOString(),
+      syncedAt: Date.now(),
     };
 
     await cachePolicy(childId, policy);
@@ -128,7 +128,8 @@ export async function cachePolicy(childId: string, policy: OfflinePolicy): Promi
  */
 export async function getCachedPolicy(childId: string): Promise<OfflinePolicy | null> {
   const db = await getDB();
-  return db.get('policies', `child:${childId}`) ?? null;
+  const result = await db.get('policies', `child:${childId}`);
+  return result ?? null;
 }
 
 /**
