@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useSelector } from 'react-redux';
 import type { RootState } from '../store/store';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -164,18 +164,19 @@ export default function ConsentPage() {
         />
       )}
 
-      <ConfirmDialog
-        open={confirmDialog.open}
-        title={confirmDialog.action === 'grant' ? 'Grant Consent' : 'Revoke Consent'}
-        message={
-          confirmDialog.action === 'grant'
-            ? `Are you sure you want to grant ${CONSENT_TYPES.find((t) => t.value === confirmDialog.consentType)?.label} consent?`
-            : `Are you sure you want to revoke ${CONSENT_TYPES.find((t) => t.value === confirmDialog.consentType)?.label} consent? This will disable the corresponding monitoring feature.`
-        }
-        confirmText={confirmDialog.action === 'grant' ? 'Grant' : 'Revoke'}
-        onConfirm={handleConfirm}
-        onCancel={() => setConfirmDialog({ open: false, consentType: '', action: 'grant' })}
-      />
+      {confirmDialog.open && (
+        <ConfirmDialog
+          title={confirmDialog.action === 'grant' ? 'Grant Consent' : 'Revoke Consent'}
+          message={
+            confirmDialog.action === 'grant'
+              ? `Are you sure you want to grant ${CONSENT_TYPES.find((t) => t.value === confirmDialog.consentType)?.label} consent?`
+              : `Are you sure you want to revoke ${CONSENT_TYPES.find((t) => t.value === confirmDialog.consentType)?.label} consent? This will disable the corresponding monitoring feature.`
+          }
+          confirmLabel={confirmDialog.action === 'grant' ? 'Grant' : 'Revoke'}
+          onConfirm={handleConfirm}
+          onCancel={() => setConfirmDialog({ open: false, consentType: '', action: 'grant' })}
+        />
+      )}
     </div>
   );
 }

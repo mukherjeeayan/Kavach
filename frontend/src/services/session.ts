@@ -14,7 +14,6 @@
 import type { AuthUser } from '../types/api';
 
 const USER_KEY = 'kavach_user';
-const SESSION_KEY = 'kavach_session_key';
 
 // Module-scoped: dies with the page, invisible to storage inspection.
 let accessToken: string | null = null;
@@ -32,40 +31,6 @@ export interface AuthSession {
   user: AuthUser;
 }
 
-// Derive an encryption key from a random session key for localStorage encryption
-async function deriveKey(sessionKey: string): Promise<CryptoKey> {
-  const encoder = new TextEncoder();
-  const keyMaterial = await crypto.subtle.importKey(
-    'raw',
-    encoder.encode(sessionKey),
-    { name: 'PBKDF2' },
-    false,
-    ['deriveKey']
-  );
-  return crypto.subtle.deriveKey(
-    {
-      name: 'PBKDF2',
-      salt: encoder.encode('kavach-user-salt'),
-      iterations: 100000,
-      hash: 'SHA-256',
-    },
-    keyMaterial,
-    { name: 'AES-GCM', length: 256 },
-    false,
-    ['encrypt', 'decrypt']
-  );
-}
-
-// Lazily generate and persist a session-specific encryption key
-function getOrCreateSessionKey(): string {
-  let key = sessionStorage.getItem(SESSION_KEY);
-  if (!key) {
-    key = crypto.randomUUID();
-    sessionStorage.setItem(SESSION_KEY, key);
-  }
-  return key;
-}
-
 export const getStoredUser = (): AuthUser | null => {
   try {
     const raw = localStorage.getItem(USER_KEY);
@@ -73,14 +38,9 @@ export const getStoredUser = (): AuthUser | null => {
     
     // Try to decrypt (new format), fall back to plain JSON (migration)
     try {
-      const sessionKey = getOrCreateSessionKey();
-      // If the stored data is base64-encoded encrypted data, decrypt it
+      // If the stored data is base64-encoded encrypted data, clear it (migration)
       if (raw.startsWith('enc:')) {
-        const encrypted = raw.slice(4);
-        const data = Uint8Array.from(atob(encrypted), c => c.charCodeAt(0));
-        const iv = data.slice(0, 12);
-        const ciphertext = data.slice(12);
-        // For migration: if decryption fails, return null and clear
+        localStorage.removeItem(USER_KEY);
         return null; // Will be re-populated on next login
       }
       return JSON.parse(raw) as AuthUser;
@@ -124,5 +84,4 @@ export const restoreSession = async (): Promise<AuthUser | null> => {
 export const clearStoredSession = (): void => {
   setAccessToken(null);
   localStorage.removeItem(USER_KEY);
-  sessionStorage.removeItem(SESSION_KEY);
 };

@@ -55,6 +55,9 @@ export interface RegisterPayload {
   password: string;
   child_name?: string;
   birth_date?: string;
+  ai_provider?: string;
+  ai_api_key?: string;
+  ai_model?: string;
 }
 
 export interface BlockAppInput {
